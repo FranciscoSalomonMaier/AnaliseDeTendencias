@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:ital,wght@0,100..900;1,100..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-neutral-gray: lab(90.1282 -0.491738 -2.2038);
+  --color-theme: #0b1220;
+  --color-border: #ffffff14;
+  --color-sidebar: #0d1425;
+  --color-card: #111827;
+  --color-placeholder-text: #94a3b8;
+  --color-muted-foreground: #94a3b8;
+  --color-sidebar-accent: #1a2234;
+  --color-light-gray: lab(95.3397 -0.80815 -3.66658);
+  --color-dark-gray: lab(18.4983 -0.0575036 -17.8143); 
+  --color-normal-gray: oklab(0.984998 -0.000693709 -0.00185627 / 0.8);
+  
+  --font-primary: "Inter", sans-serif;
+  
+  
+}
+
+@layer base {
+  html {
+    @apply font-primary;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: linear-gradient(
+      135deg,
+      #3b82f6,
+      #8b5cf6
+    );
+  }
+
+  .gradient-secondary {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+  }
+
+  .gradient-border-secondary {
+    border: 1px solid rgba(139, 92, 246, 0.25);
+  }
+
+
+  /*--- Sidebar ---*/
+  .sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #313b54 transparent;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: #313b54;
+    border-radius: 9999px;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-button {
+    display: none;
+  }
+  /*--- - ---*/
+}
