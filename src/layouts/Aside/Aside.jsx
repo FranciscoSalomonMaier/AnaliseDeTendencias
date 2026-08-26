@@ -27,6 +27,9 @@ export const Aside = ({children}) => {
         <AsideContext.Provider value={{collapsed, setCollapsed}}>
             <aside className={`
                 ${collapsed ? "w-20":"w-65"} 
+                sticky
+                top-0
+                shrink-0
                 bg-sidebar 
                 border-neutral-gray 
                 h-screen 

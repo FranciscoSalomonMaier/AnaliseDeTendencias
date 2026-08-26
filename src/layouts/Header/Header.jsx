@@ -2,7 +2,7 @@ import { BellIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 export const Header = () => {
     return (
-        <header className="flex justify-between gap-3 py-2 px-4 bg-theme border-neutral-gray border-solid border-2 w-full">
+        <header className="flex justify-between gap-3 py-4 px-4 bg-theme border-neutral-gray w-full">
             <MagnifyingGlassIcon 
                 className="absolute h-4 w-4 text-gray-500"
             />
