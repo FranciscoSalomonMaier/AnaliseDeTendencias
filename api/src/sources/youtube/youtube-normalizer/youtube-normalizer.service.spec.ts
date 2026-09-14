@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { YoutubeNormalizerService } from './youtube-normalizer.service';
+import { YouTubeNormalizerService } from './youtube-normalizer.service';
 
-describe('YoutubeNormalizerService', () => {
-  let service: YoutubeNormalizerService;
+describe('YouTubeNormalizerService', () => {
+  let service: YouTubeNormalizerService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [YoutubeNormalizerService],
+      providers: [YouTubeNormalizerService],
     }).compile();
 
-    service = module.get<YoutubeNormalizerService>(YoutubeNormalizerService);
+    service = module.get<YouTubeNormalizerService>(YouTubeNormalizerService);
   });
 
   it('should be defined', () => {

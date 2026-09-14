@@ -22,5 +22,5 @@ export interface TrendItem {
         score?: number;
     };
 
-    raw:? unknown;
+    raw?: unknown;
 }

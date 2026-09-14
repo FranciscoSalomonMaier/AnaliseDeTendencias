@@ -85,9 +85,11 @@ export class YoutubeService {
 
       return (videosData.items ?? []).map((video) => ({
         ...video,
-        numberView: this.formatNumberView(video.statistics.viewCount ?? '0'),
+        numberView: this.formatNumberView(video.statistics?.viewCount ?? '0'),
         categoryTitle:
-          categoriesMap[video.snippet.categoryId] ?? 'Categoria desconhecida',
+          (video.snippet.categoryId
+            ? categoriesMap[video.snippet.categoryId]
+            : undefined) ?? 'Categoria desconhecida',
       }));
     } catch (error) {
       if (error instanceof BadGatewayException) {

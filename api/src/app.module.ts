@@ -2,10 +2,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { YoutubeModule } from './youtube/youtube.module';
-import { RedditModule } from './reddit/reddit.module';
-import { TrendsModule } from './trends/trends.module';
-import { AiModule } from './ai/ai/ai.module';
+import { YoutubeModule } from './sources/youtube/youtube.module';
+import { RedditModule } from './sources/reddit/reddit.module';
+import { TrendsModule } from 'trends/trends.module';
 
 @Module({
   imports: [
@@ -15,7 +14,6 @@ import { AiModule } from './ai/ai/ai.module';
     YoutubeModule,
     RedditModule,
     TrendsModule,
-    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
