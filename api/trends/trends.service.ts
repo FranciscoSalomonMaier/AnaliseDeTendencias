@@ -6,6 +6,8 @@ import { MetricsService } from './metrics/metrics.service';
 import { AnalyzedTrendItem } from './interfaces/analyzed-trend-item/analyzed-trend-item.interface';
 import { TopicCluster } from './interfaces/topic-cluster/topic-cluster.interface';
 import { TopicClusteringService } from './topic-clustering.service';
+import { AiAnalysisService } from 'src/ai/ai-analysis.service';
+import { AiAnalyzedTopicCluster } from './interfaces/ai-analyzed-topic-cluster/ai-analyzed-topic-cluster.interface';
 
 @Injectable()
 export class TrendsService {
@@ -14,6 +16,7 @@ export class TrendsService {
     private readonly youtubeNormalizer: YouTubeNormalizerService,
     private readonly metricsService: MetricsService,
     private readonly topicClusteringService: TopicClusteringService,
+    private readonly aiAnalysisService: AiAnalysisService,
   ) {}
 
   async collectYouTubeTrends(): Promise<TrendItem[]> {
@@ -33,5 +36,35 @@ export class TrendsService {
     const analyzedItems = await this.analyzeYoutube(regionCode);
 
     return this.topicClusteringService.groupByTopic(analyzedItems);
+  }
+
+  async analyzedYoutubeWithAi(regionCode = 'BR',): Promise<AiAnalyzedTopicCluster[]> {
+    const clusters = await this.analyzeGroupedYoutube(regionCode);
+
+    const result = await this.aiAnalysisService.analyzeTopicClusters(clusters);
+
+    const clustersMap = new Map(
+      clusters.map((cluster) => [
+        cluster.id,
+        cluster,
+      ]),
+    );
+
+    return result.analyses.map((analysis) => {
+      const cluster = clustersMap.get(
+        analysis.clusterId,
+      );
+
+      if (!cluster) {
+        throw new Error(
+          `Cluster não encontrado: ${analysis.clusterId}`,
+        );
+      }
+
+      return {
+        cluster,
+        aiAnalysis: analysis,
+      };
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Post, Query } from '@nestjs/common';
 import { TrendsService } from './trends.service';
 
 @Controller('trends')
@@ -13,5 +13,10 @@ export class TrendsController {
   @Get('youtube/grouped')
   analyzeGroupedYoutube(@Query('regionCode') regionCode = 'BR') {
     return this.trendsService.analyzeGroupedYoutube(regionCode);
+  }
+
+  @Post('youtube/ai-analysis')
+  analyzeYoutubeWithAi(@Query('regionCode') regionCode = 'BR') {
+    return this.trendsService.analyzedYoutubeWithAi(regionCode);
   }
 }
