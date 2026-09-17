@@ -25,6 +25,16 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Análise com IA e PostgreSQL
+
+`GET /trends/youtube/ai-analysis/latest?regionCode=BR` lê somente a última análise armazenada; não consulta YouTube ou OpenAI e retorna 404 se ela não existir ou tiver expirado. `POST /trends/youtube/ai-analysis?regionCode=BR` coleta os dados atuais e reutiliza uma análise enquanto o fingerprint e o modelo forem iguais e o TTL estiver válido. `force=true` ignora o cache e pode consumir tokens. O padrão de `AI_ANALYSIS_CACHE_TTL_SECONDS` é 1800 (aceita 60 a 86400).
+
+Os resultados e metadados ficam na tabela `ai_analyses`, criada na inicialização do backend, e sobrevivem ao reinício da aplicação no volume Docker. O TTL ainda determina quando uma análise deixa de ser válida; linhas expiradas são removidas nas consultas. A proteção contra cliques simultâneos continua local à instância NestJS. Para múltiplas instâncias, adicione um lock distribuído (por exemplo, PostgreSQL advisory lock ou Redis) antes de chamar a IA.
+
+No diretório `AnaliseTreads`, inicie o banco com `docker compose up -d postgres`. A API requer `DATABASE_URL` no seu `.env`; veja `.env.example`. O Compose usa uma senha de **desenvolvimento local** e expõe a porta somente em `127.0.0.1`. Antes de uso fora da máquina local, defina `POSTGRES_PASSWORD` no ambiente do Compose e use a mesma senha em `DATABASE_URL`; não versionar credenciais reais. O backend deve ser iniciado depois de o healthcheck do PostgreSQL ficar saudável.
+
+Os testes de cache e orquestração usam `jest.ai-cache.config.cjs` para mapear os imports de `src/` e `trends/`.
+
 ## Project setup
 
 ```bash

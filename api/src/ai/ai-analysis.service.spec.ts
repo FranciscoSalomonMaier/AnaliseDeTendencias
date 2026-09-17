@@ -1,18 +1,62 @@
 import {
   BadGatewayException,
+  HttpException,
+  HttpStatus,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import OpenAI, {
+  APIConnectionTimeoutError,
+  AuthenticationError,
+  RateLimitError,
+} from 'openai';
 import { TopicCluster } from '../../trends/interfaces/topic-cluster/topic-cluster.interface';
 import { AiTrendAnalysis } from './schemas/ai-trend-analysis.schema';
 import { AiAnalysisService } from './ai-analysis.service';
 
 jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
-jest.mock('openai', () => ({
-  __esModule: true,
-  default: jest.fn(),
-}));
+jest.mock('openai', () => {
+  class APIError extends Error {
+    status?: number;
+    code?: string;
+    requestID?: string;
+
+    constructor(
+      statusOrOptions?: number | { message?: string },
+      _error?: object,
+      message?: string,
+    ) {
+      const resolvedMessage =
+        typeof statusOrOptions === 'object' ? statusOrOptions.message : message;
+      super(resolvedMessage);
+      if (typeof statusOrOptions === 'number') this.status = statusOrOptions;
+    }
+  }
+  class APIConnectionError extends APIError {}
+  class APIConnectionTimeoutError extends APIConnectionError {}
+  class AuthenticationError extends APIError {}
+  class PermissionDeniedError extends APIError {}
+  class RateLimitError extends APIError {}
+  class BadRequestError extends APIError {}
+  class NotFoundError extends APIError {}
+  class UnprocessableEntityError extends APIError {}
+  class InternalServerError extends APIError {}
+
+  return {
+    __esModule: true,
+    default: jest.fn(),
+    APIError,
+    APIConnectionError,
+    APIConnectionTimeoutError,
+    AuthenticationError,
+    PermissionDeniedError,
+    RateLimitError,
+    BadRequestError,
+    NotFoundError,
+    UnprocessableEntityError,
+    InternalServerError,
+  };
+});
 jest.mock('openai/helpers/zod.mjs', () => ({
   zodTextFormat: jest.fn(() => ({
     type: 'json_schema',
@@ -156,6 +200,11 @@ describe('AiAnalysisService', () => {
       'medium',
     ]);
     expect(request.model).toBe('gpt-5.6-luna');
+    expect(OpenAIMock).toHaveBeenCalledWith({
+      apiKey: 'test-only-key',
+      timeout: 120_000,
+      maxRetries: 1,
+    });
     expect(JSON.stringify(payload)).not.toContain('secret');
     expect(input.map((entry) => entry.id)).toEqual(originalOrder);
   });
@@ -189,5 +238,45 @@ describe('AiAnalysisService', () => {
         OPENAI_API_KEY: 'test-only-key',
       }).analyzeTopicClusters([cluster('a')]),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('returns 429 for provider rate limits', async () => {
+    parse.mockRejectedValue(
+      new RateLimitError(429, {}, 'limit', new Headers()),
+    );
+    const request = serviceWithConfig({
+      OPENAI_API_KEY: 'test-only-key',
+    }).analyzeTopicClusters([cluster('a')]);
+    await expect(request).rejects.toBeInstanceOf(HttpException);
+    await expect(request).rejects.toMatchObject({
+      status: HttpStatus.TOO_MANY_REQUESTS,
+    });
+  });
+
+  it('returns gateway timeout when OpenAI exceeds the configured timeout', async () => {
+    parse.mockRejectedValue(new APIConnectionTimeoutError());
+    await expect(
+      serviceWithConfig({
+        OPENAI_API_KEY: 'test-only-key',
+        OPENAI_TIMEOUT_MS: '180000',
+      }).analyzeTopicClusters([cluster('a')]),
+    ).rejects.toMatchObject({
+      status: HttpStatus.GATEWAY_TIMEOUT,
+      message: 'A OpenAI não respondeu dentro de 180 segundos',
+    });
+  });
+
+  it('reports rejected OpenAI credentials explicitly', async () => {
+    parse.mockRejectedValue(
+      new AuthenticationError(401, {}, 'invalid key', new Headers()),
+    );
+    await expect(
+      serviceWithConfig({
+        OPENAI_API_KEY: 'test-only-key',
+      }).analyzeTopicClusters([cluster('a')]),
+    ).rejects.toMatchObject({
+      status: HttpStatus.SERVICE_UNAVAILABLE,
+      message: 'A chave da OpenAI foi rejeitada. Verifique OPENAI_API_KEY',
+    });
   });
 });

@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { StatsCard } from "../../components/dashboard/StatsCard";
 import { Trends } from "../../components/trend/Trends";
+import { AiAnalysisPanel } from "../../components/trend/AiAnalysisPanel";
 
 export const Home = () => {
     return (
@@ -77,6 +78,9 @@ export const Home = () => {
             </div>
             <div className="rounded-2xl border border-slate-700/60">
                 <Trends/>
+            </div>
+            <div className="mt-4">
+                <AiAnalysisPanel/>
             </div>
         </div>
     );
