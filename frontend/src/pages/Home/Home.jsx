@@ -12,7 +12,7 @@ import { StatsCard } from "../../components/dashboard/StatsCard";
 import { Trends } from "../../components/trend/Trends";
 import { AiAnalysisPanel } from "../../components/trend/AiAnalysisPanel";
 
-export const Home = () => {
+export const Home = ({ onNavigate }) => {
     return (
         <div className="p-4 bg-theme">
             <div className=" grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -80,7 +80,7 @@ export const Home = () => {
                 <Trends/>
             </div>
             <div className="mt-4">
-                <AiAnalysisPanel/>
+                <AiAnalysisPanel onAnalysisClick={() => onNavigate('content-creation')}/>
             </div>
         </div>
     );

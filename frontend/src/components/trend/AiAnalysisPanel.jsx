@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getLatestAiAnalysis, generateAiAnalysis } from '../../services/aiAnalysisService';
 
-export function AiAnalysisPanel() {
+export function AiAnalysisPanel({ onAnalysisClick }) {
   const [status, setStatus] = useState('loading-latest');
   const [response, setResponse] = useState(null);
   const [message, setMessage] = useState('');
@@ -78,14 +78,15 @@ export function AiAnalysisPanel() {
         {message}
       </p>}
       {response && <div className="mt-4 grid gap-3 md:grid-cols-2">
-        {response.data.map(({ cluster, aiAnalysis }) => <article key={cluster.id}
-          className="rounded-xl border border-border p-4">
+        {response.data.map(({ cluster, aiAnalysis }) => <button type="button" key={cluster.id}
+          onClick={onAnalysisClick}
+          className="rounded-xl border border-border p-4 text-left transition hover:border-violet-400/60 hover:bg-white/[0.025]">
           <h4 className="font-semibold">{aiAnalysis.refinedTopic}</h4>
           <p className="mt-2 text-sm text-muted-foreground">{aiAnalysis.summary}</p>
           <p className="mt-2 text-xs text-muted-foreground">
             {cluster.metrics.itemCount} conteúdos · relevância {cluster.relevanceScore}
           </p>
-        </article>)}
+        </button>)}
       </div>}
     </section>
   );

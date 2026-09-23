@@ -70,14 +70,19 @@ export const AsideHeader = () => {
     );
 }
 
-export const AsideBody = () => {
+export const AsideBody = ({ currentPage, onNavigate }) => {
+    const [youtubeOpen, setYoutubeOpen] = useState(currentPage === 'youtube-list');
+
     return (
         <div className="sidebar-scroll overflow-y-auto h-screen">
             <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-                <AsideOption name="Dashboard" icon={Squares2X2Icon}/>
+                <AsideOption name="Dashboard" icon={Squares2X2Icon} active={currentPage === 'home'} onClick={() => onNavigate('home')}/>
                 <AsideOption name="Trending Now" icon={FireIcon}/>
                 <AsideOption name="Trend Explorer" icon={ChartBarIcon}/>
-                <AsideOption name="YouTube" icon={PlayCircleIcon}/>
+                <AsideOption name="YouTube" icon={PlayCircleIcon} active={currentPage === 'youtube-list'} onClick={() => setYoutubeOpen(!youtubeOpen)}/>
+                {youtubeOpen && <div className="ml-8 mb-1 border-l border-border pl-2">
+                    <AsideOption name="Listar" icon={ChartBarIcon} active={currentPage === 'youtube-list'} onClick={() => onNavigate('youtube-list')}/>
+                </div>}
                 <AsideOption name="TikTok" icon={MusicalNoteIcon}/>
                 <AsideOption name="Instagram" icon={CameraIcon}/>
                 <AsideOption name="X (Twitter)" icon={ChatBubbleLeftRightIcon}/>
@@ -132,11 +137,11 @@ export const AsideBottom = () => {
     );
 }
 
-const AsideOption = ({ name, icon: Icon }) => {
+const AsideOption = ({ name, icon: Icon, onClick, active = false }) => {
     const { collapsed } = useContext(AsideContext);
     return (
-        <button className="flex gap-1 font-extralight text-muted-foreground transition-all text-sm rounded-lg w-full py-2 px-3 hover:text-white hover:bg-sidebar-accent/60">
-            <Icon className="w-5 h-5 text-muted-foreground"/>
+        <button type="button" onClick={onClick} className={`flex gap-1 font-extralight transition-all text-sm rounded-lg w-full py-2 px-3 hover:text-white hover:bg-sidebar-accent/60 ${active ? 'bg-sidebar-accent text-white' : 'text-muted-foreground'}`}>
+            <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-muted-foreground'}`}/>
             {!collapsed && (
                 <span className="text-sm text-muted-foreground">
                     {name}
