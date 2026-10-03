@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: trend_app
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-trend_dev_change_me}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - trend_postgres_data:/var/lib/postgresql/data
     healthcheck:

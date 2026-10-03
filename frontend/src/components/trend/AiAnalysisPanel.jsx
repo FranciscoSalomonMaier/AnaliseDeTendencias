@@ -79,7 +79,10 @@ export function AiAnalysisPanel({ onAnalysisClick }) {
       </p>}
       {response && <div className="mt-4 grid gap-3 md:grid-cols-2">
         {response.data.map(({ cluster, aiAnalysis }) => <button type="button" key={cluster.id}
-          onClick={onAnalysisClick}
+          onClick={() => onAnalysisClick({
+            title: aiAnalysis.refinedTopic,
+            summary: aiAnalysis.summary,
+          })}
           className="rounded-xl border border-border p-4 text-left transition hover:border-violet-400/60 hover:bg-white/[0.025]">
           <h4 className="font-semibold">{aiAnalysis.refinedTopic}</h4>
           <p className="mt-2 text-sm text-muted-foreground">{aiAnalysis.summary}</p>

@@ -19,19 +19,17 @@ export class AiAnalysisCacheService {
   constructor(private readonly database: PostgresDatabaseService) {}
 
   async get(key: string): Promise<CachedAiAnalysis | undefined> {
-    await this.removeExpired();
     const rows = await this.database.query<AnalysisRow>(
-      `SELECT * FROM ai_analyses WHERE cache_key = $1 AND expires_at > NOW()`,
+      `SELECT * FROM ai_analyses WHERE cache_key = $1`,
       [key],
     );
     return rows.rows[0] ? this.toEntry(rows.rows[0]) : undefined;
   }
 
   async getLatest(regionCode: string): Promise<CachedAiAnalysis | undefined> {
-    await this.removeExpired();
     const rows = await this.database.query<AnalysisRow>(
       `SELECT * FROM ai_analyses
-       WHERE region_code = $1 AND expires_at > NOW()
+       WHERE region_code = $1
        ORDER BY last_accessed_at DESC LIMIT 1`,
       [regionCode],
     );
@@ -62,12 +60,6 @@ export class AiAnalysisCacheService {
       ],
     );
     return entry;
-  }
-
-  private async removeExpired(): Promise<void> {
-    await this.database.query(
-      `DELETE FROM ai_analyses WHERE expires_at <= NOW()`,
-    );
   }
 
   private toEntry(row: AnalysisRow): CachedAiAnalysis {

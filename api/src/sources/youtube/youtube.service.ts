@@ -8,7 +8,6 @@ import { TrendItem } from '../interfaces/trend-item/trend-item.interface';
 import { YouTubeNormalizerService } from './youtube-normalizer/youtube-normalizer.service';
 import { YouTubeVideo } from './interfaces/youtube-video.interface';
 
-
 interface YoutubeCategory {
   id: string;
   snippet: {
@@ -29,7 +28,10 @@ export class YoutubeService {
   private readonly baseUrl = 'https://www.googleapis.com/youtube/v3';
   private readonly apiKey: string;
 
-  constructor( private readonly configService: ConfigService, private readonly normalizer: YouTubeNormalizerService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly normalizer: YouTubeNormalizerService,
+  ) {
     this.apiKey = this.configService.get<string>('YOUTUBE_V3_API_KEY') ?? '';
 
     if (!this.apiKey) {

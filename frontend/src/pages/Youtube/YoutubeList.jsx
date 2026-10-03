@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { MagnifyingGlassIcon, PlayCircleIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
-import { getPopularVideos } from "../../services/youtubeService";
+import { MagnifyingGlassIcon, PlayCircleIcon, ArrowPathIcon, DocumentPlusIcon } from "@heroicons/react/24/outline";
+import { getAnalyzedVideos, getPopularVideos } from "../../services/youtubeService";
 import { AiAnalysisPanel } from "../../components/trend/AiAnalysisPanel";
 
 const compactNumber = new Intl.NumberFormat("pt-BR", {
@@ -13,8 +13,16 @@ function formatViews(value) {
   return Number.isFinite(number) ? compactNumber.format(number) : "0";
 }
 
+function getTrendStatus(trendScore) {
+  if (!Number.isFinite(Number(trendScore))) return null;
+  if (trendScore >= 70) return { label: "Em alta", classes: "bg-emerald-500/15 text-emerald-300" };
+  if (trendScore >= 40) return { label: "Crescendo", classes: "bg-sky-500/15 text-sky-300" };
+  return { label: "Estável", classes: "bg-slate-500/15 text-slate-300" };
+}
+
 export function YoutubeList({ onNavigate }) {
   const [videos, setVideos] = useState([]);
+  const [analyzedVideos, setAnalyzedVideos] = useState([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todas");
   const [regionCode, setRegionCode] = useState("BR");
@@ -25,7 +33,14 @@ export function YoutubeList({ onNavigate }) {
     setLoading(true);
     setError("");
     try {
-      setVideos(await getPopularVideos(regionCode));
+      const [popularResult, analyzedResult] = await Promise.allSettled([
+        getPopularVideos(regionCode),
+        getAnalyzedVideos(regionCode),
+      ]);
+      if (popularResult.status === "rejected") throw popularResult.reason;
+      setVideos(popularResult.value);
+      setAnalyzedVideos(analyzedResult.status === "fulfilled" ? analyzedResult.value : []);
+      if (analyzedResult.status === "rejected") console.error(analyzedResult.reason);
     } catch (loadError) {
       console.error(loadError);
       setError("Não foi possível carregar os vídeos populares do YouTube.");
@@ -35,14 +50,25 @@ export function YoutubeList({ onNavigate }) {
   }
 
   useEffect(() => {
-    getPopularVideos()
+    getPopularVideos(regionCode)
       .then(setVideos)
       .catch((loadError) => {
         console.error(loadError);
         setError("Não foi possível carregar os vídeos populares do YouTube.");
       })
       .finally(() => setLoading(false));
+
+    getAnalyzedVideos(regionCode)
+      .then(setAnalyzedVideos)
+      .catch((loadError) => {
+        console.error(loadError);
+        setAnalyzedVideos([]);
+      });
   }, [regionCode]);
+
+  const analyzedByVideoId = useMemo(() => new Map(
+    analyzedVideos.map((video) => [video.externalId, video]),
+  ), [analyzedVideos]);
 
   const categories = useMemo(() => [
     "Todas",
@@ -59,6 +85,20 @@ export function YoutubeList({ onNavigate }) {
       return matchesSearch && matchesCategory;
     });
   }, [category, search, videos]);
+
+  function openCreationInNewTab(video) {
+    const params = new URLSearchParams({
+      page: "content-creation",
+      source: "youtube-video",
+      referenceTitle: video.snippet?.title ?? "",
+      category: video.categoryTitle ?? "",
+      channel: video.snippet?.channelTitle ?? "",
+    });
+    (video.snippet?.tags ?? []).forEach((tag) => params.append("tag", tag));
+    const url = new URL(window.location.href);
+    url.search = params.toString();
+    window.open(url.toString(), "_blank", "noopener,noreferrer");
+  }
 
   return (
     <div className="min-h-screen bg-theme p-4 text-white md:p-6">
@@ -126,13 +166,15 @@ export function YoutubeList({ onNavigate }) {
         {error && <div className="flex flex-wrap items-center justify-between gap-3 p-6 text-sm text-red-300"><span>{error}</span><button type="button" onClick={loadVideos} className="rounded-lg border border-red-300/30 px-3 py-2">Tentar novamente</button></div>}
         {!loading && !error && filteredVideos.length === 0 && <p className="p-6 text-sm text-muted-foreground">Nenhum vídeo corresponde aos filtros.</p>}
         {!loading && !error && filteredVideos.length > 0 && <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
+          <table className="w-full min-w-[1080px] text-left text-sm">
             <thead className="border-b border-border bg-white/[0.02] text-[11px] uppercase tracking-wider text-muted-foreground">
-              <tr><th className="px-5 py-3">#</th><th className="px-5 py-3">Vídeo</th><th className="px-5 py-3">Tema</th><th className="px-5 py-3">Visualizações</th><th className="px-5 py-3">Publicado</th></tr>
+              <tr><th className="px-5 py-3">#</th><th className="px-5 py-3">Vídeo</th><th className="px-5 py-3">Tema</th><th className="px-5 py-3">Visualizações</th><th className="px-5 py-3">Publicado</th><th className="px-5 py-3">Velocidade</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Ação</th></tr>
             </thead>
             <tbody>
               {filteredVideos.map((video) => {
                 const index = videos.indexOf(video) + 1;
+                const analyzedVideo = analyzedByVideoId.get(video.id);
+                const trendStatus = getTrendStatus(analyzedVideo?.calculatedMetrics?.trendScore);
                 return <tr key={video.id} className="border-b border-border/60 last:border-0 hover:bg-white/[0.025]">
                   <td className="px-5 py-4 font-semibold text-sky-300">{index}</td>
                   <td className="max-w-[420px] px-5 py-4"><a href={`https://www.youtube.com/watch?v=${video.id}`} target="_blank" rel="noreferrer" className="flex items-center gap-3 hover:text-sky-300">
@@ -142,6 +184,19 @@ export function YoutubeList({ onNavigate }) {
                   <td className="px-5 py-4 text-muted-foreground">{video.categoryTitle ?? "Sem categoria"}</td>
                   <td className="px-5 py-4 text-white">{formatViews(video.statistics?.viewCount)}</td>
                   <td className="px-5 py-4 text-xs text-muted-foreground">{video.snippet?.publishedAt ? new Date(video.snippet.publishedAt).toLocaleDateString("pt-BR") : "—"}</td>
+                  <td className="px-5 py-4 whitespace-nowrap text-emerald-300">
+                    {analyzedVideo ? `+${formatViews(analyzedVideo.calculatedMetrics?.viewsPerHour)}/h` : "—"}
+                  </td>
+                  <td className="px-5 py-4">
+                    {trendStatus ? <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${trendStatus.classes}`}>{trendStatus.label}</span> : "—"}
+                  </td>
+                  <td className="px-5 py-4">
+                    <button type="button" onClick={() => openCreationInNewTab(video)}
+                      aria-label={`Criar conteúdo a partir de ${video.snippet?.title ?? "vídeo"}`}
+                      className="inline-flex items-center gap-2 rounded-lg border border-sky-400/40 px-3 py-2 text-xs font-medium text-sky-200 transition hover:bg-sky-400/10">
+                      <DocumentPlusIcon className="size-4" /> Criar
+                    </button>
+                  </td>
                 </tr>;
               })}
             </tbody>
@@ -149,7 +204,7 @@ export function YoutubeList({ onNavigate }) {
         </div>}
       </section>
 
-      <div className="mt-4"><AiAnalysisPanel onAnalysisClick={() => onNavigate("content-creation")} /></div>
+      <div className="mt-4"><AiAnalysisPanel onAnalysisClick={(analysis) => onNavigate("content-creation", analysis)} /></div>
     </div>
   );
 }

@@ -15,7 +15,7 @@ const entry = (expiresAt: string): CachedAiAnalysis => ({
 });
 
 describe('AiAnalysisCacheService', () => {
-  it('stores and retrieves the latest unexpired result', async () => {
+  it('stores and retrieves the latest result', async () => {
     const { database } = createFakeDatabase();
     const cache = new AiAnalysisCacheService(database);
     const saved = entry(new Date(Date.now() + 60_000).toISOString());
@@ -25,13 +25,13 @@ describe('AiAnalysisCacheService', () => {
     expect(await cache.getLatest('US')).toBeUndefined();
   });
 
-  it('removes expired entries', async () => {
+  it('keeps results available after their informational expiration date', async () => {
     const { database } = createFakeDatabase();
     const cache = new AiAnalysisCacheService(database);
     const saved = entry(new Date(Date.now() - 1000).toISOString());
     await cache.save(saved);
-    expect(await cache.get(saved.key)).toBeUndefined();
-    expect(await cache.getLatest('BR')).toBeUndefined();
+    expect(await cache.get(saved.key)).toEqual(saved);
+    expect(await cache.getLatest('BR')).toEqual(saved);
   });
 
   it('persists across service restarts when the database survives', async () => {

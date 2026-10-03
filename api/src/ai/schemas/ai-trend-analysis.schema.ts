@@ -20,19 +20,9 @@ export const AiTrendAnalysisSchema = z.object({
   refinedTopic: z.string(),
   summary: z.string(),
 
-  trendStage: z.enum([
-    'emerging',
-    'growing',
-    'stable',
-    'declining',
-    'unknown',
-  ]),
+  trendStage: z.enum(['emerging', 'growing', 'stable', 'declining', 'unknown']),
 
-  confidence: z.enum([
-    'low',
-    'medium',
-    'high',
-  ]),
+  confidence: z.enum(['low', 'medium', 'high']),
 
   confidenceScore: z.number().min(0).max(100),
 
@@ -42,9 +32,7 @@ export const AiTrendAnalysisSchema = z.object({
   audienceInterests: z.array(z.string()).max(8),
   relatedTerms: z.array(z.string()).max(10),
 
-  contentOpportunities: z
-    .array(ContentOpportunitySchema)
-    .max(5),
+  contentOpportunities: z.array(ContentOpportunitySchema).max(5),
 
   limitations: z.array(z.string()).max(5),
   risks: z.array(z.string()).max(5),
@@ -54,10 +42,6 @@ export const AiAnalysisResultSchema = z.object({
   analyses: z.array(AiTrendAnalysisSchema),
 });
 
-export type AiTrendAnalysis = z.infer<
-  typeof AiTrendAnalysisSchema
->;
+export type AiTrendAnalysis = z.infer<typeof AiTrendAnalysisSchema>;
 
-export type AiAnalysisResult = z.infer<
-  typeof AiAnalysisResultSchema
->;
+export type AiAnalysisResult = z.infer<typeof AiAnalysisResultSchema>;

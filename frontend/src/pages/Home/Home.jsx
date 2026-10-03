@@ -80,7 +80,7 @@ export const Home = ({ onNavigate }) => {
                 <Trends/>
             </div>
             <div className="mt-4">
-                <AiAnalysisPanel onAnalysisClick={() => onNavigate('content-creation')}/>
+                <AiAnalysisPanel onAnalysisClick={(analysis) => onNavigate('content-creation', analysis)}/>
             </div>
         </div>
     );

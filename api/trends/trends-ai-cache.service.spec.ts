@@ -176,7 +176,7 @@ describe('TrendsService AI cache', () => {
     expect(ai.analyzeTopicClusters).toHaveBeenCalledTimes(2);
   });
 
-  it('does not reuse expired analyses', async () => {
+  it('keeps analyses available after the informational expiration date', async () => {
     const { service, cache, ai } = setup();
     const first = await service.generateYoutubeAiAnalysis('BR');
     const key = `youtube:BR:model-a:${first.meta.fingerprint}`;
@@ -186,11 +186,9 @@ describe('TrendsService AI cache', () => {
       ...saved,
       expiresAt: new Date(Date.now() - 1000).toISOString(),
     });
-    await expect(
-      service.getLatestYoutubeAiAnalysis('BR'),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.getLatestYoutubeAiAnalysis('BR')).resolves.toBeDefined();
     const second = await service.generateYoutubeAiAnalysis('BR');
-    expect(second.meta.cached).toBe(false);
-    expect(ai.analyzeTopicClusters).toHaveBeenCalledTimes(2);
+    expect(second.meta.cached).toBe(true);
+    expect(ai.analyzeTopicClusters).toHaveBeenCalledTimes(1);
   });
 });

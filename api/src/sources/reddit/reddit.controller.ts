@@ -6,7 +6,7 @@ export class RedditController {
   constructor(private readonly redditService: RedditService) {}
 
   @Get('popular')
-  getPopularPosts(){
+  getPopularPosts() {
     return this.redditService.getPopularPosts();
   }
 }
