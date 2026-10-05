@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getLatestAiAnalysis, generateAiAnalysis } from '../../services/aiAnalysisService';
 
-export function AiAnalysisPanel({ onAnalysisClick }) {
+export function AiAnalysisPanel({ onAnalysisClick, regionCode = 'BR' }) {
   const [status, setStatus] = useState('loading-latest');
   const [response, setResponse] = useState(null);
   const [message, setMessage] = useState('');
@@ -9,7 +9,7 @@ export function AiAnalysisPanel({ onAnalysisClick }) {
 
   useEffect(() => {
     let active = true;
-    getLatestAiAnalysis()
+    getLatestAiAnalysis(regionCode)
       .then((latest) => {
         if (!active) return;
         setResponse(latest);
@@ -21,7 +21,7 @@ export function AiAnalysisPanel({ onAnalysisClick }) {
         setStatus('error');
       });
     return () => { active = false; };
-  }, []);
+  }, [regionCode]);
 
   async function generate(force = false) {
     if (generating.current) return;
@@ -33,7 +33,7 @@ export function AiAnalysisPanel({ onAnalysisClick }) {
     setStatus('generating');
     setMessage('A análise pode levar alguns segundos.');
     try {
-      const result = await generateAiAnalysis('BR', force);
+      const result = await generateAiAnalysis(regionCode, force);
       setResponse(result);
       setMessage(result.meta.cached
         ? 'Análise carregada do cache; nenhum novo processamento de IA foi necessário.'
@@ -80,8 +80,16 @@ export function AiAnalysisPanel({ onAnalysisClick }) {
       {response && <div className="mt-4 grid gap-3 md:grid-cols-2">
         {response.data.map(({ cluster, aiAnalysis }) => <button type="button" key={cluster.id}
           onClick={() => onAnalysisClick({
+            source: 'ai-analysis',
+            trendId: cluster.id,
+            videoId: cluster.items[0]?.externalId,
+            regionCode: response.meta.regionCode,
             title: aiAnalysis.refinedTopic,
             summary: aiAnalysis.summary,
+            referenceTitle: cluster.topic,
+            category: cluster.categories.join(', '),
+            channel: [...new Set(cluster.items.map((item) => item.author))].join(', '),
+            tags: cluster.keywords,
           })}
           className="rounded-xl border border-border p-4 text-left transition hover:border-violet-400/60 hover:bg-white/[0.025]">
           <h4 className="font-semibold">{aiAnalysis.refinedTopic}</h4>

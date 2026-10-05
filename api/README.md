@@ -31,6 +31,25 @@
 
 Os resultados e metadados ficam na tabela `ai_analyses`, criada na inicialização do backend, e sobrevivem ao reinício da aplicação no volume Docker. A data `expires_at` é mantida apenas como metadado de compatibilidade e não invalida mais os resultados. A proteção contra cliques simultâneos continua local à instância NestJS. Para múltiplas instâncias, adicione um lock distribuído (por exemplo, PostgreSQL advisory lock ou Redis) antes de chamar a IA.
 
+## Geração de conteúdo narrado
+
+O pipeline recebe o `id` de um cluster retornado por `GET /trends/youtube/grouped?regionCode=BR`. As etapas são independentes e usam `pt-BR` por padrão:
+
+- `POST /trends/:trendId/content/ideas?regionCode=BR&language=pt-BR` gera 3 a 5 ideias. O corpo pode incluir `durationPreference` (`5-8`, `8-10` ou `10-15`) e `additionalInstructions`. Cada ideia retornada inclui `ideaId`, `generationId`, `trendId`, `regionCode` e `language` para continuar o fluxo.
+- `GET /trends/content/:generationId` retoma snapshot, ideias, seleção, roteiro e plano salvos.
+- `GET /trends/content?limit=50&offset=0&regionCode=BR` lista gerações paginadas; omita `regionCode` para consultar todas as regiões. A resposta inclui o snapshot do vídeo de referência, ideias, roteiro e cenas disponíveis para a Biblioteca do frontend.
+- `GET /trends/content?limit=50&offset=0&regionCode=BR` lista as gerações salvas, inclusive roteiro e cenas, em páginas de até 100 registros. Omitir `regionCode` consulta todas as regiões.
+- `PATCH /trends/content/:generationId/selection` recebe `{ "idea": <ideia retornada> }` e persiste a seleção.
+- `POST /trends/content/script` recebe a ideia selecionada no corpo JSON e gera o roteiro narrado.
+- `PATCH /trends/content/:generationId/script` recebe `{ "script": <roteiro editado> }` para salvar revisões sem consumir tokens.
+- `POST /trends/content/scenes` recebe o roteiro retornado e gera cenas com descrições e prompts textuais. Nenhuma imagem é gerada.
+- `PATCH /trends/content/:generationId/plan` recebe `{ "script": <roteiro>, "videoPlan": <plano revisado>, "approved": false }` para autosalvar cenas; `approved: true` registra a aprovação e libera a etapa visual de Produção. Nenhuma das operações consome tokens.
+- `POST /trends/:trendId/content/plan?regionCode=BR&language=pt-BR` sem `selectedIdea` gera ideias; com `{ "selectedIdea": <ideia retornada> }` executa roteiro e cenas em sequência.
+
+O snapshot da trend, as ideias, a escolha, o roteiro, o plano de cenas e os tokens usados são salvos em `content_generation_runs`. A tabela é criada com `CREATE TABLE IF NOT EXISTS`; nenhuma tabela ou dado existente é apagado. As etapas posteriores usam o snapshot persistido, não dependem de uma nova coleta de tendências. `provider`, `model` e os contadores cumulativos `input_tokens`, `output_tokens` e `total_tokens` ficam registrados por geração.
+
+Os prompts vivem em `src/ai/content-generation/prompts/` e as saídas são validadas com Zod e Structured Outputs. O provider OpenAI é compartilhado com a análise de trends. Os testes usam mocks e não fazem chamadas externas.
+
 No diretório `AnaliseTreads`, inicie o banco com `docker compose up -d postgres`. A API requer `DATABASE_URL` no seu `.env`; veja `.env.example`. O Compose publica o PostgreSQL local na porta `5433` para evitar conflito com outros serviços na porta padrão `5432`, e expõe essa porta somente em `127.0.0.1`. O Compose usa uma senha de **desenvolvimento local**. Antes de uso fora da máquina local, defina `POSTGRES_PASSWORD` no ambiente do Compose e use a mesma senha em `DATABASE_URL`; não versionar credenciais reais. O backend deve ser iniciado depois de o healthcheck do PostgreSQL ficar saudável.
 
 Os testes de cache e orquestração usam `jest.ai-cache.config.cjs` para mapear os imports de `src/` e `trends/`.

@@ -1,76 +1,29 @@
-import {
-  BadGatewayException,
-  HttpException,
-  HttpStatus,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { BadGatewayException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OpenAI, {
-  APIConnectionTimeoutError,
-  AuthenticationError,
-  RateLimitError,
-} from 'openai';
 import { TopicCluster } from '../../trends/interfaces/topic-cluster/topic-cluster.interface';
 import { AiTrendAnalysis } from './schemas/ai-trend-analysis.schema';
 import { AiAnalysisService } from './ai-analysis.service';
+import { LlmProvider } from './llm.provider';
 
 jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
-jest.mock('openai', () => {
-  class APIError extends Error {
-    status?: number;
-    code?: string;
-    requestID?: string;
 
-    constructor(
-      statusOrOptions?: number | { message?: string },
-      _error?: object,
-      message?: string,
-    ) {
-      const resolvedMessage =
-        typeof statusOrOptions === 'object' ? statusOrOptions.message : message;
-      super(resolvedMessage);
-      if (typeof statusOrOptions === 'number') this.status = statusOrOptions;
-    }
-  }
-  class APIConnectionError extends APIError {}
-  class APIConnectionTimeoutError extends APIConnectionError {}
-  class AuthenticationError extends APIError {}
-  class PermissionDeniedError extends APIError {}
-  class RateLimitError extends APIError {}
-  class BadRequestError extends APIError {}
-  class NotFoundError extends APIError {}
-  class UnprocessableEntityError extends APIError {}
-  class InternalServerError extends APIError {}
-
-  return {
-    __esModule: true,
-    default: jest.fn(),
-    APIError,
-    APIConnectionError,
-    APIConnectionTimeoutError,
-    AuthenticationError,
-    PermissionDeniedError,
-    RateLimitError,
-    BadRequestError,
-    NotFoundError,
-    UnprocessableEntityError,
-    InternalServerError,
-  };
-});
-jest.mock('openai/helpers/zod.mjs', () => ({
-  zodTextFormat: jest.fn(() => ({
-    type: 'json_schema',
-    name: 'trend_analysis',
-  })),
-}));
-
-interface ParsedRequest {
+interface MockStructuredRequest {
   model: string;
-  input: Array<{ content: string }>;
+  schemaName: string;
+  userPrompt: string;
 }
 
-const parse = jest.fn<Promise<unknown>, [ParsedRequest]>();
-const OpenAIMock = OpenAI as jest.MockedClass<typeof OpenAI>;
+interface MockStructuredResult {
+  data: { analyses: AiTrendAnalysis[] };
+  provider: string;
+  model: string;
+  usage: { inputTokens: number; outputTokens: number; totalTokens: number };
+}
+
+const generateStructuredOutput = jest.fn<
+  Promise<MockStructuredResult>,
+  [MockStructuredRequest]
+>();
 
 const cluster = (id: string, relevanceScore = 50): TopicCluster => ({
   id,
@@ -140,41 +93,35 @@ const serviceWithConfig = (
   const config = {
     get: jest.fn((key: string) => values[key]),
   } as unknown as ConfigService;
-  return new AiAnalysisService(config);
+  const provider = { generateStructuredOutput } as unknown as LlmProvider;
+  return new AiAnalysisService(config, provider);
 };
 
 describe('AiAnalysisService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    OpenAIMock.mockImplementation(
-      () =>
-        ({
-          responses: { parse },
-        }) as unknown as OpenAI,
-    );
+    generateStructuredOutput.mockReset();
   });
 
-  it('returns an empty result without an API key or a provider call', async () => {
+  it('returns an empty result without calling the provider', async () => {
     await expect(serviceWithConfig().analyzeTopicClusters([])).resolves.toEqual(
       {
         analyses: [],
+        provider: 'openai',
+        model: 'gpt-5.6-luna',
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
       },
     );
-    expect(OpenAIMock).not.toHaveBeenCalled();
-  });
-
-  it('rejects missing API configuration before calling the provider', async () => {
-    await expect(
-      serviceWithConfig().analyzeTopicClusters([cluster('a')]),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
-    expect(OpenAIMock).not.toHaveBeenCalled();
+    expect(generateStructuredOutput).not.toHaveBeenCalled();
   });
 
   it('selects the most relevant clusters up to the configured limit', async () => {
-    parse.mockResolvedValue({
-      output_parsed: {
+    generateStructuredOutput.mockResolvedValue({
+      data: {
         analyses: [analysis('high'), analysis('medium')],
       },
+      provider: 'openai',
+      model: 'gpt-5.6-luna',
+      usage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
     });
     const input = [
       cluster('low', 10),
@@ -183,39 +130,28 @@ describe('AiAnalysisService', () => {
     ];
     const originalOrder = input.map((entry) => entry.id);
     const service = serviceWithConfig({
-      OPENAI_API_KEY: 'test-only-key',
       OPENAI_AI_ANALYSIS_LIMIT: '2',
       OPENAI_MODEL: 'gpt-5.6-luna',
     });
 
     await expect(service.analyzeTopicClusters(input)).resolves.toEqual({
       analyses: [analysis('high'), analysis('medium')],
+      provider: 'openai',
+      model: 'gpt-5.6-luna',
+      usage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
     });
-    const request = parse.mock.calls[0][0];
-    const payload = JSON.parse(request.input[1].content) as unknown as {
-      clusters: Array<{ clusterId: string }>;
-    };
+    const request = generateStructuredOutput.mock.calls[0][0];
+    const payload: { clusters: Array<{ clusterId: string }> } = JSON.parse(
+      request.userPrompt,
+    ) as { clusters: Array<{ clusterId: string }> };
     expect(payload.clusters.map((entry) => entry.clusterId)).toEqual([
       'high',
       'medium',
     ]);
     expect(request.model).toBe('gpt-5.6-luna');
-    expect(OpenAIMock).toHaveBeenCalledWith({
-      apiKey: 'test-only-key',
-      timeout: 120_000,
-      maxRetries: 1,
-    });
+    expect(request.schemaName).toBe('trend_analysis');
     expect(JSON.stringify(payload)).not.toContain('secret');
     expect(input.map((entry) => entry.id)).toEqual(originalOrder);
-  });
-
-  it('rejects a missing parsed output', async () => {
-    parse.mockResolvedValue({ output_parsed: null });
-    await expect(
-      serviceWithConfig({
-        OPENAI_API_KEY: 'test-only-key',
-      }).analyzeTopicClusters([cluster('a')]),
-    ).rejects.toBeInstanceOf(BadGatewayException);
   });
 
   it.each([
@@ -223,60 +159,23 @@ describe('AiAnalysisService', () => {
     ['unknown IDs', [analysis('a'), analysis('other')]],
     ['missing IDs', [analysis('a')]],
   ])('rejects %s returned by the provider', async (_case, analyses) => {
-    parse.mockResolvedValue({ output_parsed: { analyses } });
+    generateStructuredOutput.mockResolvedValue({
+      data: { analyses },
+      provider: 'openai',
+      model: 'model',
+      usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+    });
     await expect(
-      serviceWithConfig({
-        OPENAI_API_KEY: 'test-only-key',
-      }).analyzeTopicClusters([cluster('a'), cluster('b')]),
+      serviceWithConfig().analyzeTopicClusters([cluster('a'), cluster('b')]),
     ).rejects.toBeInstanceOf(BadGatewayException);
   });
 
-  it('converts provider failures to service unavailable', async () => {
-    parse.mockRejectedValue(new Error('provider failure'));
+  it('propagates provider failures', async () => {
+    generateStructuredOutput.mockRejectedValue(new Error('provider failure'));
     await expect(
-      serviceWithConfig({
-        OPENAI_API_KEY: 'test-only-key',
-      }).analyzeTopicClusters([cluster('a')]),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
-  });
-
-  it('returns 429 for provider rate limits', async () => {
-    parse.mockRejectedValue(
-      new RateLimitError(429, {}, 'limit', new Headers()),
-    );
-    const request = serviceWithConfig({
-      OPENAI_API_KEY: 'test-only-key',
-    }).analyzeTopicClusters([cluster('a')]);
-    await expect(request).rejects.toBeInstanceOf(HttpException);
-    await expect(request).rejects.toMatchObject({
-      status: HttpStatus.TOO_MANY_REQUESTS,
-    });
-  });
-
-  it('returns gateway timeout when OpenAI exceeds the configured timeout', async () => {
-    parse.mockRejectedValue(new APIConnectionTimeoutError());
-    await expect(
-      serviceWithConfig({
-        OPENAI_API_KEY: 'test-only-key',
-        OPENAI_TIMEOUT_MS: '180000',
-      }).analyzeTopicClusters([cluster('a')]),
+      serviceWithConfig().analyzeTopicClusters([cluster('a')]),
     ).rejects.toMatchObject({
-      status: HttpStatus.GATEWAY_TIMEOUT,
-      message: 'A OpenAI não respondeu dentro de 180 segundos',
-    });
-  });
-
-  it('reports rejected OpenAI credentials explicitly', async () => {
-    parse.mockRejectedValue(
-      new AuthenticationError(401, {}, 'invalid key', new Headers()),
-    );
-    await expect(
-      serviceWithConfig({
-        OPENAI_API_KEY: 'test-only-key',
-      }).analyzeTopicClusters([cluster('a')]),
-    ).rejects.toMatchObject({
-      status: HttpStatus.SERVICE_UNAVAILABLE,
-      message: 'A chave da OpenAI foi rejeitada. Verifique OPENAI_API_KEY',
+      message: 'provider failure',
     });
   });
 });

@@ -10,6 +10,7 @@ import { TopicClusteringService } from './topic-clustering.service';
 import { AiAnalysisService } from 'src/ai/ai-analysis.service';
 import { AiAnalysisCacheService } from 'src/ai/cache/ai-analysis-cache.service';
 import { AiAnalysisFingerprintService } from 'src/ai/ai-analysis-fingerprint.service';
+import { AiTrendAnalysis } from 'src/ai/schemas/ai-trend-analysis.schema';
 import {
   AiAnalysisResponse,
   CachedAiAnalysis,
@@ -50,6 +51,23 @@ export class TrendsService {
     const analyzedItems = await this.analyzeYoutube(regionCode);
 
     return this.topicClusteringService.groupByTopic(analyzedItems);
+  }
+
+  async getYoutubeTrendContext(
+    trendId: string,
+    regionCode = 'BR',
+  ): Promise<{ trend: TopicCluster; aiAnalysis?: AiTrendAnalysis }> {
+    const clusters = await this.analyzeGroupedYoutube(regionCode);
+    const trend = clusters.find((cluster) => cluster.id === trendId);
+    if (!trend) {
+      throw new NotFoundException(`Trend não encontrada: ${trendId}`);
+    }
+
+    const latestAnalysis = await this.cacheService.getLatest(regionCode);
+    const aiAnalysis = latestAnalysis?.result.find(
+      (entry) => entry.cluster.id === trendId,
+    )?.aiAnalysis;
+    return { trend, aiAnalysis };
   }
 
   async getLatestYoutubeAiAnalysis(
@@ -130,6 +148,8 @@ export class TrendsService {
       regionCode,
       fingerprint,
       model,
+      provider: result.provider,
+      usage: result.usage,
       generatedAt: generatedAt.toISOString(),
       expiresAt: new Date(
         generatedAt.getTime() + this.getTtlSeconds() * 1000,
@@ -157,6 +177,8 @@ export class TrendsService {
       meta: {
         regionCode: cached.regionCode,
         model: cached.model,
+        provider: cached.provider,
+        usage: cached.usage,
         generatedAt: cached.generatedAt,
         expiresAt: cached.expiresAt,
         cached: reused,

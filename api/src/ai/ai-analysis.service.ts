@@ -3,30 +3,10 @@ import {
   AiAnalysisResult,
   AiAnalysisResultSchema,
 } from './schemas/ai-trend-analysis.schema';
-import {
-  BadGatewayException,
-  GatewayTimeoutException,
-  HttpException,
-  HttpStatus,
-  Injectable,
-  Logger,
-  ServiceUnavailableException,
-} from '@nestjs/common';
-import OpenAI, {
-  APIConnectionError,
-  APIConnectionTimeoutError,
-  APIError,
-  AuthenticationError,
-  BadRequestError,
-  InternalServerError,
-  NotFoundError,
-  PermissionDeniedError,
-  RateLimitError,
-  UnprocessableEntityError,
-} from 'openai';
-import { zodTextFormat } from 'openai/helpers/zod.mjs';
+import { BadGatewayException, Injectable } from '@nestjs/common';
 import { TopicCluster } from 'trends/interfaces/topic-cluster/topic-cluster.interface';
 import { TREND_ANALYSIS_SYSTEM_PROMPT } from './prompts/trend-analysis.prompt';
+import { LlmProvider, LlmUsage } from './llm.provider';
 
 interface AiClusterPayload {
   clusterId: string;
@@ -59,16 +39,17 @@ interface AiClusterPayload {
 
 @Injectable()
 export class AiAnalysisService {
-  private readonly logger = new Logger(AiAnalysisService.name);
   private readonly model: string;
   private readonly analysisLimit: number;
-  private readonly timeoutMs: number;
 
   getModel(): string {
     return this.model;
   }
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly llmProvider: LlmProvider,
+  ) {
     this.model =
       this.configService.get<string>('OPENAI_MODEL') ?? 'gpt-5.6-luna';
 
@@ -77,30 +58,20 @@ export class AiAnalysisService {
     );
 
     this.analysisLimit = Math.min(Math.max(configuredLimit, 1), 20);
-
-    const configuredTimeout = Number(
-      this.configService.get<string>('OPENAI_TIMEOUT_MS') ?? 120_000,
-    );
-    this.timeoutMs = Number.isFinite(configuredTimeout)
-      ? Math.min(Math.max(configuredTimeout, 30_000), 300_000)
-      : 120_000;
   }
 
   async analyzeTopicClusters(
     clusters: TopicCluster[],
-  ): Promise<AiAnalysisResult> {
+  ): Promise<
+    AiAnalysisResult & { provider: string; model: string; usage: LlmUsage }
+  > {
     if (clusters.length === 0) {
       return {
         analyses: [],
+        provider: 'openai',
+        model: this.model,
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
       };
-    }
-
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
-
-    if (!apiKey) {
-      throw new ServiceUnavailableException(
-        'A análise com IA não está configurada',
-      );
     }
 
     const selectedClusters = [...clusters]
@@ -109,118 +80,22 @@ export class AiAnalysisService {
 
     const payload = this.buildPayload(selectedClusters);
 
-    const openai = new OpenAI({
-      apiKey,
-      timeout: this.timeoutMs,
-      maxRetries: 1,
+    const generation = await this.llmProvider.generateStructuredOutput({
+      model: this.model,
+      schemaName: 'trend_analysis',
+      schema: AiAnalysisResultSchema,
+      systemPrompt: TREND_ANALYSIS_SYSTEM_PROMPT,
+      userPrompt: JSON.stringify({ clusters: payload }),
     });
 
-    try {
-      const response = await openai.responses.parse({
-        model: this.model,
+    this.validateClusterIds(selectedClusters, generation.data);
 
-        input: [
-          {
-            role: 'system',
-            content: TREND_ANALYSIS_SYSTEM_PROMPT,
-          },
-          {
-            role: 'user',
-            content: JSON.stringify({
-              clusters: payload,
-            }),
-          },
-        ],
-
-        text: {
-          format: zodTextFormat(AiAnalysisResultSchema, 'trend_analysis'),
-        },
-      });
-
-      const result = response.output_parsed;
-
-      if (!result) {
-        throw new BadGatewayException('A IA não retornou uma análise válida');
-      }
-
-      this.validateClusterIds(selectedClusters, result);
-
-      return result;
-    } catch (error) {
-      if (error instanceof BadGatewayException) {
-        throw error;
-      }
-
-      this.logProviderError(error);
-
-      if (error instanceof AuthenticationError) {
-        throw new ServiceUnavailableException(
-          'A chave da OpenAI foi rejeitada. Verifique OPENAI_API_KEY',
-        );
-      }
-
-      if (error instanceof PermissionDeniedError) {
-        throw new ServiceUnavailableException(
-          'A chave da OpenAI não tem permissão para usar o modelo configurado',
-        );
-      }
-
-      if (error instanceof RateLimitError) {
-        throw new HttpException(
-          'Limite de requisições ou saldo da OpenAI atingido',
-          HttpStatus.TOO_MANY_REQUESTS,
-        );
-      }
-
-      if (error instanceof APIConnectionTimeoutError) {
-        throw new GatewayTimeoutException(
-          `A OpenAI não respondeu dentro de ${Math.round(this.timeoutMs / 1000)} segundos`,
-        );
-      }
-
-      if (error instanceof APIConnectionError) {
-        throw new ServiceUnavailableException(
-          'Não foi possível conectar à OpenAI',
-        );
-      }
-
-      if (error instanceof NotFoundError) {
-        throw new BadGatewayException(
-          `O modelo ${this.model} não foi encontrado ou não está disponível para este projeto`,
-        );
-      }
-
-      if (
-        error instanceof BadRequestError ||
-        error instanceof UnprocessableEntityError
-      ) {
-        throw new BadGatewayException(
-          'A OpenAI rejeitou os dados enviados para análise',
-        );
-      }
-
-      if (error instanceof InternalServerError) {
-        throw new BadGatewayException(
-          'A OpenAI apresentou uma falha temporária',
-        );
-      }
-
-      throw new ServiceUnavailableException(
-        'Não foi possível realizar a análise com IA',
-      );
-    }
-  }
-
-  private logProviderError(error: unknown): void {
-    if (error instanceof APIError) {
-      this.logger.error(
-        `OpenAI request failed: type=${error.constructor.name} status=${error.status ?? 'network'} code=${error.code ?? 'unknown'} requestId=${error.requestID ?? 'unknown'} message=${error.message}`,
-      );
-      return;
-    }
-
-    const message = error instanceof Error ? error.message : String(error);
-    this.logger.error(`Unexpected AI analysis error: ${message}`);
+    return {
+      ...generation.data,
+      provider: generation.provider,
+      model: generation.model,
+      usage: generation.usage,
+    };
   }
 
   private buildPayload(clusters: TopicCluster[]): AiClusterPayload[] {

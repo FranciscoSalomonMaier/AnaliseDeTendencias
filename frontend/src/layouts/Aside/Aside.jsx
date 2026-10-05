@@ -21,7 +21,9 @@ import { useState, createContext, useContext } from "react";
 const AsideContext = createContext();
 
 export const Aside = ({children}) => {
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(() => (
+        typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+    ));
     
     return (
         <AsideContext.Provider value={{collapsed, setCollapsed}}>
@@ -71,7 +73,8 @@ export const AsideHeader = () => {
 }
 
 export const AsideBody = ({ currentPage, onNavigate }) => {
-    const [youtubeOpen, setYoutubeOpen] = useState(currentPage === 'youtube-list');
+    const isYoutubeSection = currentPage === 'youtube-list' || currentPage === 'content-library';
+    const [youtubeOpen, setYoutubeOpen] = useState(isYoutubeSection);
 
     return (
         <div className="sidebar-scroll overflow-y-auto h-screen">
@@ -79,9 +82,10 @@ export const AsideBody = ({ currentPage, onNavigate }) => {
                 <AsideOption name="Dashboard" icon={Squares2X2Icon} active={currentPage === 'home'} onClick={() => onNavigate('home')}/>
                 <AsideOption name="Trending Now" icon={FireIcon}/>
                 <AsideOption name="Trend Explorer" icon={ChartBarIcon}/>
-                <AsideOption name="YouTube" icon={PlayCircleIcon} active={currentPage === 'youtube-list'} onClick={() => setYoutubeOpen(!youtubeOpen)}/>
+                <AsideOption name="YouTube" icon={PlayCircleIcon} active={isYoutubeSection} onClick={() => setYoutubeOpen(!youtubeOpen)}/>
                 {youtubeOpen && <div className="ml-8 mb-1 border-l border-border pl-2">
                     <AsideOption name="Listar" icon={ChartBarIcon} active={currentPage === 'youtube-list'} onClick={() => onNavigate('youtube-list')}/>
+                    <AsideOption name="Conteúdos" icon={DocumentChartBarIcon} active={currentPage === 'content-library'} onClick={() => onNavigate('content-library')}/>
                 </div>}
                 <AsideOption name="TikTok" icon={MusicalNoteIcon}/>
                 <AsideOption name="Instagram" icon={CameraIcon}/>

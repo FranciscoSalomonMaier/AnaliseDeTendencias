@@ -70,9 +70,12 @@ function setup(
   const youtube = { getNormalizedPopularVideos: jest.fn() };
   const ai = {
     getModel: jest.fn(() => model),
-    analyzeTopicClusters: jest
-      .fn()
-      .mockResolvedValue({ analyses: [{ clusterId: 'topic' }] }),
+    analyzeTopicClusters: jest.fn().mockResolvedValue({
+      analyses: [{ clusterId: 'topic' }],
+      provider: 'openai',
+      model,
+      usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+    }),
   };
   const service = new TrendsService(
     youtube as unknown as YoutubeService,
@@ -121,7 +124,13 @@ describe('TrendsService AI cache', () => {
     ai.analyzeTopicClusters.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          release = () => resolve({ analyses: [{ clusterId: 'topic' }] });
+          release = () =>
+            resolve({
+              analyses: [{ clusterId: 'topic' }],
+              provider: 'openai',
+              model: 'model-a',
+              usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+            });
         }),
     );
     const first = service.generateYoutubeAiAnalysis('BR', true);
@@ -140,7 +149,13 @@ describe('TrendsService AI cache', () => {
     ai.analyzeTopicClusters.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          release = () => resolve({ analyses: [{ clusterId: 'topic' }] });
+          release = () =>
+            resolve({
+              analyses: [{ clusterId: 'topic' }],
+              provider: 'openai',
+              model: 'model-a',
+              usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+            });
         }),
     );
     const first = service.generateYoutubeAiAnalysis('BR');
@@ -186,7 +201,9 @@ describe('TrendsService AI cache', () => {
       ...saved,
       expiresAt: new Date(Date.now() - 1000).toISOString(),
     });
-    await expect(service.getLatestYoutubeAiAnalysis('BR')).resolves.toBeDefined();
+    await expect(
+      service.getLatestYoutubeAiAnalysis('BR'),
+    ).resolves.toBeDefined();
     const second = await service.generateYoutubeAiAnalysis('BR');
     expect(second.meta.cached).toBe(true);
     expect(ai.analyzeTopicClusters).toHaveBeenCalledTimes(1);

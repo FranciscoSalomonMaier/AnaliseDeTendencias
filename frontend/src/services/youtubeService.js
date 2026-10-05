@@ -24,3 +24,14 @@ export async function getAnalyzedVideos(regionCode = "BR") {
 
   return response.json();
 }
+
+export async function getGroupedYoutubeTrends(regionCode = "BR") {
+  const params = new URLSearchParams({ regionCode });
+  const response = await fetch(`${API_URL}/trends/youtube/grouped?${params}`);
+
+  if (!response.ok) {
+    throw new Error("Erro ao buscar grupos de tendências");
+  }
+
+  return response.json();
+}

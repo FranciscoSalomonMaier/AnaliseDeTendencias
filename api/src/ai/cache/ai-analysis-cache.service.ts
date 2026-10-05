@@ -3,12 +3,15 @@ import { QueryResultRow } from 'pg';
 import { PostgresDatabaseService } from 'src/database/postgres-database.service';
 import { AiAnalyzedTopicCluster } from 'trends/interfaces/ai-analyzed-topic-cluster/ai-analyzed-topic-cluster.interface';
 import { CachedAiAnalysis } from './interfaces/cached-ai-analysis.interface';
+import { LlmUsage } from '../llm.provider';
 
 interface AnalysisRow extends QueryResultRow {
   cache_key: string;
   region_code: string;
   fingerprint: string;
   model: string;
+  provider: string;
+  usage: LlmUsage;
   generated_at: Date;
   expires_at: Date;
   result: AiAnalyzedTopicCluster[];
@@ -39,12 +42,14 @@ export class AiAnalysisCacheService {
   async save(entry: CachedAiAnalysis): Promise<CachedAiAnalysis> {
     await this.database.query(
       `INSERT INTO ai_analyses
-       (cache_key, region_code, fingerprint, model, generated_at, expires_at, result)
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+        (cache_key, region_code, fingerprint, model, provider, usage, generated_at, expires_at, result)
+        VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9::jsonb)
        ON CONFLICT (cache_key) DO UPDATE SET
          region_code = EXCLUDED.region_code,
          fingerprint = EXCLUDED.fingerprint,
          model = EXCLUDED.model,
+         provider = EXCLUDED.provider,
+         usage = EXCLUDED.usage,
          generated_at = EXCLUDED.generated_at,
          expires_at = EXCLUDED.expires_at,
          result = EXCLUDED.result,
@@ -54,6 +59,8 @@ export class AiAnalysisCacheService {
         entry.regionCode,
         entry.fingerprint,
         entry.model,
+        entry.provider,
+        JSON.stringify(entry.usage),
         entry.generatedAt,
         entry.expiresAt,
         JSON.stringify(entry.result),
@@ -68,6 +75,8 @@ export class AiAnalysisCacheService {
       regionCode: row.region_code.trim(),
       fingerprint: row.fingerprint.trim(),
       model: row.model,
+      provider: row.provider,
+      usage: row.usage,
       generatedAt: row.generated_at.toISOString(),
       expiresAt: row.expires_at.toISOString(),
       result: row.result.map(({ cluster, aiAnalysis }) => ({

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, PlayCircleIcon, ArrowPathIcon, DocumentPlusIcon } from "@heroicons/react/24/outline";
-import { getAnalyzedVideos, getPopularVideos } from "../../services/youtubeService";
+import { getAnalyzedVideos, getGroupedYoutubeTrends, getPopularVideos } from "../../services/youtubeService";
 import { AiAnalysisPanel } from "../../components/trend/AiAnalysisPanel";
 
 const compactNumber = new Intl.NumberFormat("pt-BR", {
@@ -23,6 +23,7 @@ function getTrendStatus(trendScore) {
 export function YoutubeList({ onNavigate }) {
   const [videos, setVideos] = useState([]);
   const [analyzedVideos, setAnalyzedVideos] = useState([]);
+  const [topicClusters, setTopicClusters] = useState([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todas");
   const [regionCode, setRegionCode] = useState("BR");
@@ -33,14 +34,17 @@ export function YoutubeList({ onNavigate }) {
     setLoading(true);
     setError("");
     try {
-      const [popularResult, analyzedResult] = await Promise.allSettled([
+      const [popularResult, analyzedResult, groupedResult] = await Promise.allSettled([
         getPopularVideos(regionCode),
         getAnalyzedVideos(regionCode),
+        getGroupedYoutubeTrends(regionCode),
       ]);
       if (popularResult.status === "rejected") throw popularResult.reason;
       setVideos(popularResult.value);
       setAnalyzedVideos(analyzedResult.status === "fulfilled" ? analyzedResult.value : []);
+      setTopicClusters(groupedResult.status === "fulfilled" ? groupedResult.value : []);
       if (analyzedResult.status === "rejected") console.error(analyzedResult.reason);
+      if (groupedResult.status === "rejected") console.error(groupedResult.reason);
     } catch (loadError) {
       console.error(loadError);
       setError("Não foi possível carregar os vídeos populares do YouTube.");
@@ -64,11 +68,26 @@ export function YoutubeList({ onNavigate }) {
         console.error(loadError);
         setAnalyzedVideos([]);
       });
+
+    getGroupedYoutubeTrends(regionCode)
+      .then(setTopicClusters)
+      .catch((loadError) => {
+        console.error(loadError);
+        setTopicClusters([]);
+      });
   }, [regionCode]);
 
   const analyzedByVideoId = useMemo(() => new Map(
     analyzedVideos.map((video) => [video.externalId, video]),
   ), [analyzedVideos]);
+
+  const clusterByVideoId = useMemo(() => {
+    const clusters = new Map();
+    topicClusters.forEach((cluster) => {
+      cluster.items.forEach((item) => clusters.set(item.externalId, cluster));
+    });
+    return clusters;
+  }, [topicClusters]);
 
   const categories = useMemo(() => [
     "Todas",
@@ -86,10 +105,13 @@ export function YoutubeList({ onNavigate }) {
     });
   }, [category, search, videos]);
 
-  function openCreationInNewTab(video) {
+  function openCreationInNewTab(video, trendId) {
     const params = new URLSearchParams({
       page: "content-creation",
       source: "youtube-video",
+      trendId,
+      videoId: video.id,
+      regionCode,
       referenceTitle: video.snippet?.title ?? "",
       category: video.categoryTitle ?? "",
       channel: video.snippet?.channelTitle ?? "",
@@ -174,6 +196,7 @@ export function YoutubeList({ onNavigate }) {
               {filteredVideos.map((video) => {
                 const index = videos.indexOf(video) + 1;
                 const analyzedVideo = analyzedByVideoId.get(video.id);
+                const cluster = clusterByVideoId.get(video.id);
                 const trendStatus = getTrendStatus(analyzedVideo?.calculatedMetrics?.trendScore);
                 return <tr key={video.id} className="border-b border-border/60 last:border-0 hover:bg-white/[0.025]">
                   <td className="px-5 py-4 font-semibold text-sky-300">{index}</td>
@@ -191,9 +214,10 @@ export function YoutubeList({ onNavigate }) {
                     {trendStatus ? <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${trendStatus.classes}`}>{trendStatus.label}</span> : "—"}
                   </td>
                   <td className="px-5 py-4">
-                    <button type="button" onClick={() => openCreationInNewTab(video)}
+                    <button type="button" disabled={!cluster} onClick={() => openCreationInNewTab(video, cluster.id)}
                       aria-label={`Criar conteúdo a partir de ${video.snippet?.title ?? "vídeo"}`}
-                      className="inline-flex items-center gap-2 rounded-lg border border-sky-400/40 px-3 py-2 text-xs font-medium text-sky-200 transition hover:bg-sky-400/10">
+                      title={!cluster ? "Este vídeo não está associado a uma trend analisável." : undefined}
+                      className="inline-flex items-center gap-2 rounded-lg border border-sky-400/40 px-3 py-2 text-xs font-medium text-sky-200 transition hover:bg-sky-400/10 disabled:cursor-not-allowed disabled:opacity-40">
                       <DocumentPlusIcon className="size-4" /> Criar
                     </button>
                   </td>
@@ -204,7 +228,7 @@ export function YoutubeList({ onNavigate }) {
         </div>}
       </section>
 
-      <div className="mt-4"><AiAnalysisPanel onAnalysisClick={(analysis) => onNavigate("content-creation", analysis)} /></div>
+      <div className="mt-4"><AiAnalysisPanel regionCode={regionCode} onAnalysisClick={(analysis) => onNavigate("content-creation", analysis)} /></div>
     </div>
   );
 }

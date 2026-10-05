@@ -8,6 +8,8 @@ const entry = (expiresAt: string): CachedAiAnalysis => ({
   key: 'youtube:BR:model:fingerprint',
   regionCode: 'BR',
   model: 'model',
+  provider: 'openai',
+  usage: { inputTokens: 12, outputTokens: 8, totalTokens: 20 },
   fingerprint: 'fingerprint',
   generatedAt: new Date().toISOString(),
   expiresAt,

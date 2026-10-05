@@ -6,6 +6,8 @@ interface FakeRow extends QueryResultRow {
   region_code: string;
   fingerprint: string;
   model: string;
+  provider: string;
+  usage: { inputTokens: number; outputTokens: number; totalTokens: number };
   generated_at: Date;
   expires_at: Date;
   last_accessed_at: Date;
@@ -23,13 +25,24 @@ export function createFakeDatabase() {
       return { rows: [] };
     }
     if (sql.includes('INSERT INTO ai_analyses')) {
-      const [key, region, fingerprint, model, generatedAt, expiresAt, result] =
-        values;
+      const [
+        key,
+        region,
+        fingerprint,
+        model,
+        provider,
+        usage,
+        generatedAt,
+        expiresAt,
+        result,
+      ] = values;
       entries.set(String(key), {
         cache_key: String(key),
         region_code: String(region),
         fingerprint: String(fingerprint),
         model: String(model),
+        provider: String(provider),
+        usage: JSON.parse(String(usage)) as FakeRow['usage'],
         generated_at: new Date(String(generatedAt)),
         expires_at: new Date(String(expiresAt)),
         last_accessed_at: new Date(),
