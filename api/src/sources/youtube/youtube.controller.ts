@@ -6,7 +6,10 @@ export class YoutubeController {
   constructor(private readonly youtubeService: YoutubeService) {}
 
   @Get('popular')
-  getPopularVideos(@Query('regionCode') regionCode = 'BR') {
-    return this.youtubeService.getPopularVideos(regionCode);
+  getPopularVideos(
+    @Query('regionCode') regionCode = 'BR',
+    @Query('period') period = 'today',
+  ) {
+    return this.youtubeService.getRanking(regionCode, period);
   }
 }

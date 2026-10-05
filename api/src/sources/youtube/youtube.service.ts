@@ -1,11 +1,14 @@
 import {
   BadGatewayException,
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TrendItem } from '../interfaces/trend-item/trend-item.interface';
 import { YouTubeNormalizerService } from './youtube-normalizer/youtube-normalizer.service';
+import { YoutubeMetricsRepository } from './youtube-metrics.repository';
+import { periodStart } from './youtube-period';
 import { YouTubeVideo } from './interfaces/youtube-video.interface';
 
 interface YoutubeCategory {
@@ -31,11 +34,37 @@ export class YoutubeService {
   constructor(
     private readonly configService: ConfigService,
     private readonly normalizer: YouTubeNormalizerService,
+    private readonly metrics: YoutubeMetricsRepository,
   ) {
     this.apiKey = this.configService.get<string>('YOUTUBE_V3_API_KEY') ?? '';
 
     if (!this.apiKey) {
       throw new Error('YOUTUBE_V3_API_KEY não está configurada');
+    }
+  }
+
+  async getRanking(regionCode = 'BR', period = 'today') {
+    periodStart(period);
+    if (!/^[A-Z]{2}$/.test(regionCode))
+      throw new BadRequestException('Região inválida');
+    return this.metrics.ranking(regionCode, period);
+  }
+
+  async refreshKnownVideos(alreadyCaptured = new Set<string>()) {
+    const ids = (await this.metrics.knownIds()).filter(
+      (id) => !alreadyCaptured.has(id),
+    );
+    for (let offset = 0; offset < ids.length; offset += 50) {
+      const params = new URLSearchParams({
+        part: 'snippet,statistics',
+        id: ids.slice(offset, offset + 50).join(','),
+        key: this.apiKey,
+      });
+      const response = await fetch(`${this.baseUrl}/videos?${params}`);
+      if (!response.ok)
+        throw new BadGatewayException('Erro ao atualizar métricas do YouTube');
+      const data = (await response.json()) as YoutubeVideosResponse;
+      await this.metrics.capture(data.items ?? []);
     }
   }
 
@@ -85,7 +114,7 @@ export class YoutubeService {
         ]),
       );
 
-      return (videosData.items ?? []).map((video) => ({
+      const videos = (videosData.items ?? []).map((video) => ({
         ...video,
         numberView: this.formatNumberView(video.statistics?.viewCount ?? '0'),
         categoryTitle:
@@ -93,6 +122,8 @@ export class YoutubeService {
             ? categoriesMap[video.snippet.categoryId]
             : undefined) ?? 'Categoria desconhecida',
       }));
+      await this.metrics.capture(videos, regionCode);
+      return videos;
     } catch (error) {
       if (error instanceof BadGatewayException) {
         throw error;

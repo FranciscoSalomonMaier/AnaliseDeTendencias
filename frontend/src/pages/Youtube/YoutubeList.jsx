@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon, PlayCircleIcon, ArrowPathIcon, DocumentPlusIcon } from "@heroicons/react/24/outline";
 import { getAnalyzedVideos, getGroupedYoutubeTrends, getPopularVideos } from "../../services/youtubeService";
+import { describeRankingHistory, formatHistoryDuration, youtubePeriods } from "../../utils/youtubeHistory";
 import { AiAnalysisPanel } from "../../components/trend/AiAnalysisPanel";
 
 const compactNumber = new Intl.NumberFormat("pt-BR", {
@@ -21,6 +22,9 @@ function getTrendStatus(trendScore) {
 }
 
 export function YoutubeList({ onNavigate }) {
+  const [period, setPeriod] = useState("today");
+  const [loadedPeriod, setLoadedPeriod] = useState("today");
+  const [reload, setReload] = useState(0);
   const [videos, setVideos] = useState([]);
   const [analyzedVideos, setAnalyzedVideos] = useState([]);
   const [topicClusters, setTopicClusters] = useState([]);
@@ -30,38 +34,27 @@ export function YoutubeList({ onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function loadVideos() {
-    setLoading(true);
-    setError("");
-    try {
-      const [popularResult, analyzedResult, groupedResult] = await Promise.allSettled([
-        getPopularVideos(regionCode),
-        getAnalyzedVideos(regionCode),
-        getGroupedYoutubeTrends(regionCode),
-      ]);
-      if (popularResult.status === "rejected") throw popularResult.reason;
-      setVideos(popularResult.value);
-      setAnalyzedVideos(analyzedResult.status === "fulfilled" ? analyzedResult.value : []);
-      setTopicClusters(groupedResult.status === "fulfilled" ? groupedResult.value : []);
-      if (analyzedResult.status === "rejected") console.error(analyzedResult.reason);
-      if (groupedResult.status === "rejected") console.error(groupedResult.reason);
-    } catch (loadError) {
-      console.error(loadError);
-      setError("Não foi possível carregar os vídeos populares do YouTube.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  function loadVideos() { setReload((value) => value + 1); }
 
   useEffect(() => {
-    getPopularVideos(regionCode)
-      .then(setVideos)
-      .catch((loadError) => {
-        console.error(loadError);
-        setError("Não foi possível carregar os vídeos populares do YouTube.");
+    const controller = new AbortController();
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) { setLoading(true); setError(""); }
+    });
+    getPopularVideos(regionCode, period, controller.signal)
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        setVideos(result);
+        setLoadedPeriod(period);
       })
-      .finally(() => setLoading(false));
+      .catch((loadError) => {
+        if (loadError.name !== "AbortError") setError("Não foi possível carregar o ranking do YouTube.");
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [regionCode, period, reload]);
 
+  useEffect(() => {
     getAnalyzedVideos(regionCode)
       .then(setAnalyzedVideos)
       .catch((loadError) => {
@@ -129,7 +122,7 @@ export function YoutubeList({ onNavigate }) {
           <p className="mb-2 text-xs uppercase tracking-[0.2em] text-sky-300">YouTube / Listar</p>
           <h1 className="text-2xl font-semibold md:text-3xl">Top 50 do YouTube</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Explore os vídeos mais populares no Brasil e encontre temas prontos para virar conteúdo.
+            Vídeos acompanhados pelo projeto, ordenados pelas visualizações ganhas no período.
           </p>
         </div>
         <button type="button" onClick={loadVideos} disabled={loading}
@@ -138,6 +131,19 @@ export function YoutubeList({ onNavigate }) {
         </button>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Período do ranking">
+        <span className="mr-2 text-sm text-muted-foreground">Período</span>
+        {Object.entries(youtubePeriods).map(([value, label]) => (
+          <button key={value} type="button" aria-pressed={period === value} onClick={() => {
+              if (value === period) return;
+              setLoading(true);
+              setError("");
+              setPeriod(value);
+            }}
+            className={`rounded-xl border px-4 py-2 text-sm ${period === value ? "border-sky-400 bg-sky-400/15 text-sky-200" : "border-border text-muted-foreground"}`}>{label}</button>
+        ))}
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">Coleta horária. Históricos parciais podem não ser diretamente comparáveis. Hoje considera o horário de Brasília.</p>
       <section className="mb-4 rounded-2xl border border-border bg-card p-4">
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px_180px]">
           <label className="relative block">
@@ -183,11 +189,18 @@ export function YoutubeList({ onNavigate }) {
         <p className="mt-3 text-xs text-muted-foreground">{filteredVideos.length} de {videos.length} vídeos</p>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-border bg-card">
+      <section aria-busy={loading} className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="border-b border-border px-5 py-4" role="status" aria-live="polite">
+          <p className="text-sm font-medium text-sky-200">
+            {loading ? `Atualizando ranking: ${youtubePeriods[period]}…` : `Ranking exibido: ${youtubePeriods[loadedPeriod]}`}
+          </p>
+          {!loading && !error && <p className="mt-1 text-xs text-muted-foreground">{describeRankingHistory(videos)}</p>}
+          {(loading || error) && videos.length > 0 && <p className="mt-1 text-xs text-muted-foreground">A lista abaixo mantém o último resultado carregado: {youtubePeriods[loadedPeriod]}.</p>}
+        </div>
         {loading && <p className="p-6 text-sm text-muted-foreground">Carregando top 50 do YouTube…</p>}
         {error && <div className="flex flex-wrap items-center justify-between gap-3 p-6 text-sm text-red-300"><span>{error}</span><button type="button" onClick={loadVideos} className="rounded-lg border border-red-300/30 px-3 py-2">Tentar novamente</button></div>}
         {!loading && !error && filteredVideos.length === 0 && <p className="p-6 text-sm text-muted-foreground">Nenhum vídeo corresponde aos filtros.</p>}
-        {!loading && !error && filteredVideos.length > 0 && <div className="overflow-x-auto">
+        {filteredVideos.length > 0 && <div className="overflow-x-auto">
           <table className="w-full min-w-[1080px] text-left text-sm">
             <thead className="border-b border-border bg-white/[0.02] text-[11px] uppercase tracking-wider text-muted-foreground">
               <tr><th className="px-5 py-3">#</th><th className="px-5 py-3">Vídeo</th><th className="px-5 py-3">Tema</th><th className="px-5 py-3">Visualizações</th><th className="px-5 py-3">Publicado</th><th className="px-5 py-3">Velocidade</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Ação</th></tr>
@@ -205,7 +218,12 @@ export function YoutubeList({ onNavigate }) {
                     <span><strong className="block font-medium text-white">{video.snippet?.title ?? "Sem título"}</strong><small className="text-muted-foreground">{video.snippet?.channelTitle ?? "Canal desconhecido"}</small></span>
                   </a></td>
                   <td className="px-5 py-4 text-muted-foreground">{video.categoryTitle ?? "Sem categoria"}</td>
-                  <td className="px-5 py-4 text-white">{formatViews(video.statistics?.viewCount)}</td>
+                  <td className="px-5 py-4 text-white">
+                    <span className="block">{formatViews(video.currentViews)} totais</span>
+                    <span className="block text-emerald-300">+{formatViews(video.viewsInPeriod)} / {({ today: "hoje", "7d": "7 dias", "30d": "30 dias", "1y": "1 ano" })[loadedPeriod]}</span>
+                    {!video.hasFullPeriodData && <small className="block text-amber-200" title="Crescimento apenas no intervalo observado. Históricos diferentes não são diretamente comparáveis.">Dados parciais · {formatHistoryDuration(video.actualHistorySeconds)} de histórico</small>}
+                    <small className="block text-muted-foreground">Coleta: {new Date(video.capturedAt).toLocaleString("pt-BR")}</small>
+                  </td>
                   <td className="px-5 py-4 text-xs text-muted-foreground">{video.snippet?.publishedAt ? new Date(video.snippet.publishedAt).toLocaleDateString("pt-BR") : "—"}</td>
                   <td className="px-5 py-4 whitespace-nowrap text-emerald-300">
                     {analyzedVideo ? `+${formatViews(analyzedVideo.calculatedMetrics?.viewsPerHour)}/h` : "—"}

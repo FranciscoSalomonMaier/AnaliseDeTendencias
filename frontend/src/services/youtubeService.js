@@ -1,11 +1,12 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
-export async function getPopularVideos(regionCode = "BR") {
+export async function getPopularVideos(regionCode = "BR", period = "today", signal) {
   const params = new URLSearchParams({
     regionCode,
+    period,
   });
 
-  const response = await fetch(`${API_URL}/youtube/popular?${params}`);
+  const response = await fetch(`${API_URL}/youtube/popular?${params}`, { signal });
 
   if (!response.ok) {
     throw new Error("Erro ao buscar vídeos");
