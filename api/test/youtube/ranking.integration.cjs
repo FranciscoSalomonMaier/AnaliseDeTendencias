@@ -2,7 +2,9 @@
 const { Client } = require('pg');
 const { readFileSync } = require('node:fs');
 const assert = require('node:assert/strict');
-const sql = readFileSync('src/sources/youtube/youtube-metrics.repository.ts', 'utf8').match(/RANKING_SQL = `([\s\S]*?)`;/)[1];
+const source = readFileSync('src/sources/youtube/youtube-period.sql.ts', 'utf8');
+const baseSql = source.match(/VIDEO_PERIOD_SQL = `([\s\S]*?)`;/)[1];
+const sql = source.match(/RANKING_SQL = `([\s\S]*?)`;/)[1].replace('${VIDEO_PERIOD_SQL}', baseSql);
 async function main() {
   if (!process.env.YOUTUBE_TEST_DATABASE_URL) throw new Error('Define YOUTUBE_TEST_DATABASE_URL for a disposable test database');
   const client = new Client({ connectionString: process.env.YOUTUBE_TEST_DATABASE_URL });

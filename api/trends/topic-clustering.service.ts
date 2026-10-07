@@ -1,3 +1,13 @@
+import {
+  SemanticVideo,
+  SemanticCluster,
+} from './semantic/semantic-topic.interface';
+import {
+  cosineSimilarity,
+  centroid,
+  clusterDistribution,
+} from './semantic/semantic-math';
+import { TrendItem } from '../src/sources/interfaces/trend-item/trend-item.interface';
 import { Injectable } from '@nestjs/common';
 import { AnalyzedTrendItem } from './interfaces/analyzed-trend-item/analyzed-trend-item.interface';
 import { TopicClusterMetrics } from './interfaces/topic-cluster-metrics/topic-cluster-metrics.interface';
@@ -6,7 +16,7 @@ import { TopicCluster } from './interfaces/topic-cluster/topic-cluster.interface
 type WeightedTerms = Map<string, number>;
 
 interface PreparedItem {
-  item: AnalyzedTrendItem;
+  item: TrendItem;
   terms: WeightedTerms;
   titleTerms: WeightedTerms;
 }
@@ -95,18 +105,7 @@ export class TopicClusteringService {
       return [];
     }
 
-    const preparedItems = items.map((item) => this.prepareItem(item));
-    const drafts: ClusterDraft[] = [];
-
-    for (const prepared of preparedItems) {
-      const candidate = this.findBestCluster(prepared, drafts);
-
-      if (candidate) {
-        candidate.members.push(prepared);
-      } else {
-        drafts.push({ members: [prepared] });
-      }
-    }
+    const drafts = this.groupDrafts(items);
 
     const clusters = drafts.map((draft) => this.createCluster(draft));
     const maximumViewsPerHour = Math.max(
@@ -129,7 +128,134 @@ export class TopicClusteringService {
       );
   }
 
-  private prepareItem(item: AnalyzedTrendItem): PreparedItem {
+  diagnostics(sizes: number[]) {
+    return clusterDistribution(sizes);
+  }
+
+  groupSemantically(
+    input: SemanticVideo[],
+    threshold: number,
+  ): SemanticCluster[] {
+    if (!Number.isFinite(threshold) || threshold < 0.5 || threshold > 0.95)
+      throw new Error('Invalid semantic threshold');
+    const unique = [
+      ...new Map(input.map((item) => [item.video.id, item])).values(),
+    ].sort((a, b) => a.video.id.localeCompare(b.video.id));
+    if (!unique.length) return [];
+    const dimensions = unique[0].vector.length;
+    if (
+      !dimensions ||
+      unique.some(
+        (item) =>
+          item.vector.length !== dimensions ||
+          item.vector.some((v) => !Number.isFinite(v)) ||
+          !item.vector.some((v) => v !== 0),
+      )
+    )
+      throw new Error('Invalid semantic vectors');
+    const groups = new Map(unique.map((member, index) => [index, [member]]));
+    const distances = new Map<string, number>();
+    const key = (a: number, b: number) => `${Math.min(a, b)}:${Math.max(a, b)}`;
+    const domains = new Set([
+      'Batman',
+      'GTA 5',
+      'GTA 6',
+      'Minecraft',
+      'Roblox',
+      'Fortnite',
+    ]);
+    for (let a = 0; a < unique.length; a++)
+      for (let b = a + 1; b < unique.length; b++) {
+        const first = unique[a],
+          second = unique[b];
+        const firstDomains =
+          first.specificEntities ??
+          first.entities.filter((e) => domains.has(e));
+        const secondDomains =
+          second.specificEntities ??
+          second.entities.filter((e) => domains.has(e));
+        const conflict =
+          firstDomains.length &&
+          secondDomains.length &&
+          !firstDomains.some((e) => secondDomains.includes(e));
+        // Entity agreement is a small corroborating signal, never sufficient by itself.
+        const sharedEntity = first.entities.some((e) =>
+          second.entities.includes(e),
+        );
+        distances.set(
+          key(a, b),
+          conflict
+            ? -1
+            : Math.min(
+                1,
+                cosineSimilarity(first.vector, second.vector) +
+                  (sharedEntity ? 0.04 : 0),
+              ),
+        );
+      }
+    // Complete-link agglomeration: every pair in a merged group must meet the threshold.
+    // Deterministic tie/order and cached linkage avoid single-link chains and input-order effects.
+    while (groups.size > 1) {
+      const ids = [...groups.keys()].sort((a, b) => a - b);
+      let best: [number, number] | undefined;
+      let similarity = threshold;
+      for (let i = 0; i < ids.length; i++)
+        for (let j = i + 1; j < ids.length; j++) {
+          const value = distances.get(key(ids[i], ids[j])) ?? -1;
+          if (value >= similarity && (!best || value > similarity)) {
+            best = [ids[i], ids[j]];
+            similarity = value;
+          }
+        }
+      if (!best) break;
+      const [a, b] = best;
+      groups.set(a, [...groups.get(a)!, ...groups.get(b)!]);
+      for (const other of ids)
+        if (other !== a && other !== b)
+          distances.set(
+            key(a, other),
+            Math.min(
+              distances.get(key(a, other)) ?? -1,
+              distances.get(key(b, other)) ?? -1,
+            ),
+          );
+      groups.delete(b);
+    }
+    return [...groups.values()].map((members) => ({
+      members: members.sort((a, b) => a.video.id.localeCompare(b.video.id)),
+      centroid: centroid(members.map((item) => item.vector)),
+    }));
+  }
+
+  // Same lexical grouping and naming as existing consumers, without score calculation.
+  groupByContent(items: TrendItem[]) {
+    const unique = [
+      ...new Map(items.map((item) => [item.externalId, item])).values(),
+    ].sort((a, b) => a.externalId.localeCompare(b.externalId));
+    return this.groupDrafts(unique).map((draft) => ({
+      ...this.describeCluster(draft),
+      items: draft.members.map(({ item }) => item),
+    }));
+  }
+
+  private groupDrafts(items: TrendItem[]): ClusterDraft[] {
+    const preparedItems = items.map((item) => this.prepareItem(item));
+    const drafts: ClusterDraft[] = [];
+
+    for (const prepared of preparedItems) {
+      const candidate = this.findBestCluster(prepared, drafts);
+
+      if (candidate) {
+        candidate.members.push(prepared);
+      } else {
+        drafts.push({ members: [prepared] });
+      }
+    }
+
+    return drafts;
+  }
+
+  private prepareItem(item: TrendItem): PreparedItem {
     const titleTokens = this.tokenize(item.title);
     const tagTokens = this.tokenize(item.tags.join(' '));
     const descriptionTokens = this.tokenize(item.description).slice(
@@ -262,6 +388,32 @@ export class TopicClusteringService {
   }
 
   private createCluster(draft: ClusterDraft): TopicCluster {
+    const { id, topic, keywords } = this.describeCluster(draft);
+    const items = draft.members.map(({ item }) =>
+      this.withoutRawPayload(item as AnalyzedTrendItem),
+    );
+    const metrics = this.calculateMetrics(items);
+
+    return {
+      id,
+      topic,
+      keywords: keywords.slice(0, Math.max(3, Math.min(8, keywords.length))),
+      categories: [
+        ...new Set(
+          items
+            .map((item) => item.category)
+            .filter((category): category is string => Boolean(category)),
+        ),
+      ],
+      sources: [...new Set(items.map((item) => item.source))],
+      items,
+      metrics,
+      isRecurringTopic: items.length >= 2,
+      relevanceScore: 0,
+    };
+  }
+
+  private describeCluster(draft: ClusterDraft) {
     const aggregateTerms = new Map<string, number>();
 
     for (const member of draft.members) {
@@ -277,25 +429,11 @@ export class TopicClusteringService {
       )
       .slice(0, 8)
       .map(([term]) => term);
-    const items = draft.members.map(({ item }) => this.withoutRawPayload(item));
-    const metrics = this.calculateMetrics(items);
-
+    const items = draft.members.map(({ item }) => item);
     return {
       id: this.createStableId(keywords, items),
       topic: this.createTopic(keywords, items[0].title),
-      keywords: keywords.slice(0, Math.max(3, Math.min(8, keywords.length))),
-      categories: [
-        ...new Set(
-          items
-            .map((item) => item.category)
-            .filter((category): category is string => Boolean(category)),
-        ),
-      ],
-      sources: [...new Set(items.map((item) => item.source))],
-      items,
-      metrics,
-      isRecurringTopic: items.length >= 2,
-      relevanceScore: 0,
+      keywords,
     };
   }
 
@@ -355,10 +493,7 @@ export class TopicClusteringService {
     return this.round(Math.min(100, this.finiteOrZero(score)));
   }
 
-  private createStableId(
-    keywords: string[],
-    items: AnalyzedTrendItem[],
-  ): string {
+  private createStableId(keywords: string[], items: TrendItem[]): string {
     const base = keywords.slice(0, 4).join('-') || items[0].externalId;
     return base.replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-');
   }

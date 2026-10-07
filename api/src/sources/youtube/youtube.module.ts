@@ -16,6 +16,6 @@ import { YoutubeCollector } from './youtube-collector';
     YoutubeCollector,
   ],
   controllers: [YoutubeController],
-  exports: [YoutubeService, YouTubeNormalizerService],
+  exports: [YoutubeService, YouTubeNormalizerService, YoutubeMetricsRepository],
 })
 export class YoutubeModule {}

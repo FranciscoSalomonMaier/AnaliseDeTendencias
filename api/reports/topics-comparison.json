@@ -1,0 +1,1050 @@
+{
+  "generatedAt": "2026-10-06T00:29:14.897Z",
+  "sameVideoIds": true,
+  "model": "text-embedding-3-small",
+  "before": {
+    "videos": 60,
+    "clusters": 58,
+    "singletons": 56,
+    "pairs": 2,
+    "threeOrMore": 0,
+    "largest": 2,
+    "average": 1.0344827586206897
+  },
+  "after": {
+    "threshold": 0.75,
+    "videos": 60,
+    "clusters": 45,
+    "singletons": 36,
+    "pairs": 7,
+    "threeOrMore": 2,
+    "largest": 5,
+    "average": 1.3333333333333333,
+    "groups": [
+      {
+        "titles": [
+          "PABLO 💖 SÓ AS ANTIGAS PLAYLIST 💝 ANTIGAS AS MELHORES",
+          "🌟LÉO MAGALHÃES – SÓ AS ANTIGAS / PLAYLIST OFICIAL / MÚSICAS ROMÂNTICAS🌟"
+        ],
+        "entities": []
+      },
+      {
+        "titles": [
+          "Guilherme e Santiago, Mariana Fagundes - Pra Desbotar A Saudade [Vídeo Oficial]",
+          "Bruno & Marrone - Essa História eu Conheço (Ao Vivo) De Volta aos Bares II"
+        ],
+        "entities": [
+          {
+            "name": "Guilherme e Santiago",
+            "support": 1
+          },
+          {
+            "name": "Mariana Fagundes",
+            "support": 1
+          }
+        ]
+      },
+      {
+        "titles": [
+          "QUANDO SUA MONTARIA É A MAIS ÁGIL DE TODAS NO ROBLOX",
+          "ROUBANDO OVOS NO ROBLOX!",
+          "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+          "ROUBANDO OVOS NO ROBLOX...",
+          "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!"
+        ],
+        "entities": [
+          {
+            "name": "Roblox",
+            "support": 5
+          }
+        ]
+      },
+      {
+        "titles": [
+          "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+          "Virei PEQUENO no Esconde Esconde para Trollar!",
+          "Limpe Todas as Folhas em 1 Hora!",
+          "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+          "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ"
+        ],
+        "entities": [
+          {
+            "name": "Minecraft",
+            "support": 5
+          },
+          {
+            "name": "Roblox",
+            "support": 1
+          }
+        ]
+      },
+      {
+        "titles": [
+          "RAP DO SILVA - LULA",
+          "Olê Olá Lula Lula (Axé Vermelho)"
+        ],
+        "entities": [
+          {
+            "name": "Olê Olá Lula Lula Axé Vermelho",
+            "support": 1
+          }
+        ]
+      },
+      {
+        "titles": [
+          "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES💿",
+          "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES🎶"
+        ],
+        "entities": [
+          {
+            "name": "Raça Negra",
+            "support": 2
+          }
+        ]
+      },
+      {
+        "titles": [
+          "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+          "EU TESTEI A VERSÃO TERROR do ROBLOX…"
+        ],
+        "entities": [
+          {
+            "name": "Roblox",
+            "support": 2
+          }
+        ]
+      },
+      {
+        "titles": [
+          "“A BEBÊ QUER OQUE 2” MC Cebezinho, MC Don Juan, MC GP, Menor Richard , MC Lele JP - DJ OREIA",
+          "Vai Matar Papai - Diovane - Forró 2026 - Dj Keflem O Dj Das Comitivas"
+        ],
+        "entities": [
+          {
+            "name": "Vai Matar Papai",
+            "support": 1
+          }
+        ]
+      },
+      {
+        "titles": [
+          "Lula Presidente Brasil - Música Eleitoral e Cultura Brasileira",
+          "VOTA VOTA E CONFIRMA I 22 E BOLSONARO - JINGLE FLAVIO BOLSONARO ATUALIZADO"
+        ],
+        "entities": [
+          {
+            "name": "Lula Presidente Brasil",
+            "support": 1
+          }
+        ]
+      }
+    ]
+  },
+  "thresholds": [
+    {
+      "threshold": 0.6,
+      "videos": 60,
+      "clusters": 18,
+      "singletons": 5,
+      "pairs": 6,
+      "threeOrMore": 7,
+      "largest": 10,
+      "average": 3.3333333333333335,
+      "groups": [
+        {
+          "titles": [
+            "MILSINHO TOQUE DEZ 2026 - CD NOVO SETEMBRO 2026 - MÚSICAS ATUALIZADAS - MÚIDO NA MÁXIMA PRA PAREDÃO",
+            "Partido do Desmantelo",
+            "SE EU PEDIR TU JOGA DENTRO VIRAL TIKTOK - MC Rica, Pop Na Batida, Caio da Nova Geração",
+            "“A BEBÊ QUER OQUE 2” MC Cebezinho, MC Don Juan, MC GP, Menor Richard , MC Lele JP - DJ OREIA",
+            "FAMOSO IMÃ - O PODEROSO CHATÃO - MC Lele JP, MC Leozinho ZS, MC Poze do Rodo (DJ Gordinho da VF)",
+            "Vai Matar Papai - Diovane - Forró 2026 - Dj Keflem O Dj Das Comitivas",
+            "ABRE A PORTA SUA PUTINH4 - Bloquinho do D7 - HIT DO VERÃO"
+          ],
+          "entities": [
+            {
+              "name": "Vai Matar Papai",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "PABLO 💖 SÓ AS ANTIGAS PLAYLIST 💝 ANTIGAS AS MELHORES",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES💿",
+            "🌟LÉO MAGALHÃES – SÓ AS ANTIGAS / PLAYLIST OFICIAL / MÚSICAS ROMÂNTICAS🌟",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES🎶"
+          ],
+          "entities": [
+            {
+              "name": "Raça Negra",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Guilherme e Santiago, Mariana Fagundes - Pra Desbotar A Saudade [Vídeo Oficial]",
+            "Amado Batista - As melhores músicas para relembrar 💝 Sucessos de Amado Batista 💖🎧",
+            "Bruno & Marrone - Essa História eu Conheço (Ao Vivo) De Volta aos Bares II"
+          ],
+          "entities": [
+            {
+              "name": "Guilherme e Santiago",
+              "support": 1
+            },
+            {
+              "name": "Mariana Fagundes",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "QUANDO SUA MONTARIA É A MAIS ÁGIL DE TODAS NO ROBLOX",
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "NUNCA tente se fingir de NPC no meio do trânsito...",
+            "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+            "EU TESTEI A VERSÃO TERROR do ROBLOX…",
+            "ROUBANDO OVOS NO ROBLOX...",
+            "LOKIS NO CAMINHO DO CARRO MALUCO | Roblox - Jeep Ride Into Toilet",
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 8
+            },
+            {
+              "name": "GTA 5",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "All The Things She Said",
+            "Algarete (Neoperreo)"
+          ],
+          "entities": [
+            {
+              "name": "Algarete Neoperreo",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+            "TÁ CALOR, ENTÃO EU COMECEI A VENDER SORVETE... DE MADRUGADA!",
+            "sobrevivendo ao NOVO CAT HAT com CHAT DE VOZ",
+            "Virei PEQUENO no Esconde Esconde para Trollar!",
+            "REAGI AO TRAILER DE ALGORITHOMUS 3",
+            "ESL PRO LEAGUE SEASON 24 | DIA 2 - !socio - Siga @Gaules nas redes sociais!",
+            "Limpe Todas as Folhas em 1 Hora!",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+            "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ",
+            "EM BUSCA DO MEU MAIN! - DEADLOCK COM OS AMIGOS"
+          ],
+          "entities": [
+            {
+              "name": "Minecraft",
+              "support": 5
+            },
+            {
+              "name": "Roblox",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Tapete vermelho Janja & Kleber Lucas",
+            "Tariflavio Bolsomaster",
+            "RAP DO SILVA - LULA",
+            "Pai, Eu Entrego Nas Tuas Mãos",
+            "Olê Olá Lula Lula (Axé Vermelho)",
+            "Diário de um Menor Calmo",
+            "Não Sei Dançar Rodando"
+          ],
+          "entities": [
+            {
+              "name": "Olê Olá Lula Lula Axé Vermelho",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Liga Joe - Pra Ser Sincero - Ao Vivo em São Paulo - Flashbacks 20 Anos",
+            "Stand By Me"
+          ],
+          "entities": [
+            {
+              "name": "Liga Joe",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Steal an Egg But I Turned My Friends Into BOSSES!",
+            "A Bizarre Run | Trailer 2 (SBR Game)"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "GRIEF VERIFIED",
+            "Call of Duty: Modern Warfare 4 | DMZ Worldbuilder Trailer"
+          ],
+          "entities": []
+        },
+        {
+          "titles": [
+            "Patrick Costa - Até De Manhã - Part. Rey Vaqueiro",
+            "Simone Mendes - CÊ PERDEU (O MELHOR DE MIM)",
+            "Willy Vaqueiro feat. Tayrone - SEU BUDEGUEIRO (Clipe Oficial)"
+          ],
+          "entities": [
+            {
+              "name": "Simone Mendes",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Lula Presidente Brasil - Música Eleitoral e Cultura Brasileira",
+            "VOTA VOTA E CONFIRMA I 22 E BOLSONARO - JINGLE FLAVIO BOLSONARO ATUALIZADO"
+          ],
+          "entities": [
+            {
+              "name": "Lula Presidente Brasil",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "SCHOOLBOY RUNAWAY SEM JANELAS E PORTAS!! 😱🔥",
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero"
+          ],
+          "entities": [
+            {
+              "name": "Batman",
+              "support": 1
+            },
+            {
+              "name": "GTA 5",
+              "support": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "threshold": 0.65,
+      "videos": 60,
+      "clusters": 21,
+      "singletons": 8,
+      "pairs": 5,
+      "threeOrMore": 8,
+      "largest": 8,
+      "average": 2.857142857142857,
+      "groups": [
+        {
+          "titles": [
+            "MILSINHO TOQUE DEZ 2026 - CD NOVO SETEMBRO 2026 - MÚSICAS ATUALIZADAS - MÚIDO NA MÁXIMA PRA PAREDÃO",
+            "Partido do Desmantelo",
+            "SE EU PEDIR TU JOGA DENTRO VIRAL TIKTOK - MC Rica, Pop Na Batida, Caio da Nova Geração",
+            "“A BEBÊ QUER OQUE 2” MC Cebezinho, MC Don Juan, MC GP, Menor Richard , MC Lele JP - DJ OREIA",
+            "FAMOSO IMÃ - O PODEROSO CHATÃO - MC Lele JP, MC Leozinho ZS, MC Poze do Rodo (DJ Gordinho da VF)",
+            "Vai Matar Papai - Diovane - Forró 2026 - Dj Keflem O Dj Das Comitivas",
+            "ABRE A PORTA SUA PUTINH4 - Bloquinho do D7 - HIT DO VERÃO"
+          ],
+          "entities": [
+            {
+              "name": "Vai Matar Papai",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "PABLO 💖 SÓ AS ANTIGAS PLAYLIST 💝 ANTIGAS AS MELHORES",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES💿",
+            "🌟LÉO MAGALHÃES – SÓ AS ANTIGAS / PLAYLIST OFICIAL / MÚSICAS ROMÂNTICAS🌟",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES🎶"
+          ],
+          "entities": [
+            {
+              "name": "Raça Negra",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Guilherme e Santiago, Mariana Fagundes - Pra Desbotar A Saudade [Vídeo Oficial]",
+            "Amado Batista - As melhores músicas para relembrar 💝 Sucessos de Amado Batista 💖🎧",
+            "Bruno & Marrone - Essa História eu Conheço (Ao Vivo) De Volta aos Bares II"
+          ],
+          "entities": [
+            {
+              "name": "Guilherme e Santiago",
+              "support": 1
+            },
+            {
+              "name": "Mariana Fagundes",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "QUANDO SUA MONTARIA É A MAIS ÁGIL DE TODAS NO ROBLOX",
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+            "EU TESTEI A VERSÃO TERROR do ROBLOX…",
+            "ROUBANDO OVOS NO ROBLOX...",
+            "LOKIS NO CAMINHO DO CARRO MALUCO | Roblox - Jeep Ride Into Toilet",
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 8
+            }
+          ]
+        },
+        {
+          "titles": [
+            "All The Things She Said",
+            "Algarete (Neoperreo)"
+          ],
+          "entities": [
+            {
+              "name": "Algarete Neoperreo",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+            "sobrevivendo ao NOVO CAT HAT com CHAT DE VOZ",
+            "Virei PEQUENO no Esconde Esconde para Trollar!",
+            "Limpe Todas as Folhas em 1 Hora!",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+            "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ"
+          ],
+          "entities": [
+            {
+              "name": "Minecraft",
+              "support": 5
+            },
+            {
+              "name": "Roblox",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Tapete vermelho Janja & Kleber Lucas",
+            "Tariflavio Bolsomaster",
+            "RAP DO SILVA - LULA",
+            "Pai, Eu Entrego Nas Tuas Mãos",
+            "Olê Olá Lula Lula (Axé Vermelho)",
+            "Diário de um Menor Calmo",
+            "Não Sei Dançar Rodando"
+          ],
+          "entities": [
+            {
+              "name": "Olê Olá Lula Lula Axé Vermelho",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Liga Joe - Pra Ser Sincero - Ao Vivo em São Paulo - Flashbacks 20 Anos",
+            "Stand By Me"
+          ],
+          "entities": [
+            {
+              "name": "Liga Joe",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "TÁ CALOR, ENTÃO EU COMECEI A VENDER SORVETE... DE MADRUGADA!",
+            "REAGI AO TRAILER DE ALGORITHOMUS 3",
+            "ESL PRO LEAGUE SEASON 24 | DIA 2 - !socio - Siga @Gaules nas redes sociais!",
+            "EM BUSCA DO MEU MAIN! - DEADLOCK COM OS AMIGOS"
+          ],
+          "entities": []
+        },
+        {
+          "titles": [
+            "Steal an Egg But I Turned My Friends Into BOSSES!",
+            "A Bizarre Run | Trailer 2 (SBR Game)"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Patrick Costa - Até De Manhã - Part. Rey Vaqueiro",
+            "Simone Mendes - CÊ PERDEU (O MELHOR DE MIM)",
+            "Willy Vaqueiro feat. Tayrone - SEU BUDEGUEIRO (Clipe Oficial)"
+          ],
+          "entities": [
+            {
+              "name": "Simone Mendes",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Lula Presidente Brasil - Música Eleitoral e Cultura Brasileira",
+            "VOTA VOTA E CONFIRMA I 22 E BOLSONARO - JINGLE FLAVIO BOLSONARO ATUALIZADO"
+          ],
+          "entities": [
+            {
+              "name": "Lula Presidente Brasil",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "SCHOOLBOY RUNAWAY SEM JANELAS E PORTAS!! 😱🔥",
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero"
+          ],
+          "entities": [
+            {
+              "name": "Batman",
+              "support": 1
+            },
+            {
+              "name": "GTA 5",
+              "support": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "threshold": 0.7,
+      "videos": 60,
+      "clusters": 35,
+      "singletons": 23,
+      "pairs": 6,
+      "threeOrMore": 6,
+      "largest": 7,
+      "average": 1.7142857142857142,
+      "groups": [
+        {
+          "titles": [
+            "PABLO 💖 SÓ AS ANTIGAS PLAYLIST 💝 ANTIGAS AS MELHORES",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES💿",
+            "🌟LÉO MAGALHÃES – SÓ AS ANTIGAS / PLAYLIST OFICIAL / MÚSICAS ROMÂNTICAS🌟",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES🎶"
+          ],
+          "entities": [
+            {
+              "name": "Raça Negra",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Guilherme e Santiago, Mariana Fagundes - Pra Desbotar A Saudade [Vídeo Oficial]",
+            "Bruno & Marrone - Essa História eu Conheço (Ao Vivo) De Volta aos Bares II"
+          ],
+          "entities": [
+            {
+              "name": "Guilherme e Santiago",
+              "support": 1
+            },
+            {
+              "name": "Mariana Fagundes",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "QUANDO SUA MONTARIA É A MAIS ÁGIL DE TODAS NO ROBLOX",
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+            "EU TESTEI A VERSÃO TERROR do ROBLOX…",
+            "ROUBANDO OVOS NO ROBLOX...",
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 7
+            }
+          ]
+        },
+        {
+          "titles": [
+            "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+            "Virei PEQUENO no Esconde Esconde para Trollar!",
+            "Limpe Todas as Folhas em 1 Hora!",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+            "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ"
+          ],
+          "entities": [
+            {
+              "name": "Minecraft",
+              "support": 5
+            },
+            {
+              "name": "Roblox",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Tapete vermelho Janja & Kleber Lucas",
+            "Tariflavio Bolsomaster"
+          ],
+          "entities": []
+        },
+        {
+          "titles": [
+            "Partido do Desmantelo",
+            "“A BEBÊ QUER OQUE 2” MC Cebezinho, MC Don Juan, MC GP, Menor Richard , MC Lele JP - DJ OREIA",
+            "Vai Matar Papai - Diovane - Forró 2026 - Dj Keflem O Dj Das Comitivas"
+          ],
+          "entities": [
+            {
+              "name": "Vai Matar Papai",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Steal an Egg But I Turned My Friends Into BOSSES!",
+            "A Bizarre Run | Trailer 2 (SBR Game)"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "RAP DO SILVA - LULA",
+            "Olê Olá Lula Lula (Axé Vermelho)",
+            "Não Sei Dançar Rodando"
+          ],
+          "entities": [
+            {
+              "name": "Olê Olá Lula Lula Axé Vermelho",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "SE EU PEDIR TU JOGA DENTRO VIRAL TIKTOK - MC Rica, Pop Na Batida, Caio da Nova Geração",
+            "FAMOSO IMÃ - O PODEROSO CHATÃO - MC Lele JP, MC Leozinho ZS, MC Poze do Rodo (DJ Gordinho da VF)",
+            "ABRE A PORTA SUA PUTINH4 - Bloquinho do D7 - HIT DO VERÃO"
+          ],
+          "entities": []
+        },
+        {
+          "titles": [
+            "Patrick Costa - Até De Manhã - Part. Rey Vaqueiro",
+            "Simone Mendes - CÊ PERDEU (O MELHOR DE MIM)"
+          ],
+          "entities": [
+            {
+              "name": "Simone Mendes",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Lula Presidente Brasil - Música Eleitoral e Cultura Brasileira",
+            "VOTA VOTA E CONFIRMA I 22 E BOLSONARO - JINGLE FLAVIO BOLSONARO ATUALIZADO"
+          ],
+          "entities": [
+            {
+              "name": "Lula Presidente Brasil",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "ESL PRO LEAGUE SEASON 24 | DIA 2 - !socio - Siga @Gaules nas redes sociais!",
+            "EM BUSCA DO MEU MAIN! - DEADLOCK COM OS AMIGOS"
+          ],
+          "entities": []
+        }
+      ]
+    },
+    {
+      "threshold": 0.72,
+      "videos": 60,
+      "clusters": 40,
+      "singletons": 29,
+      "pairs": 7,
+      "threeOrMore": 4,
+      "largest": 5,
+      "average": 1.5,
+      "groups": [
+        {
+          "titles": [
+            "PABLO 💖 SÓ AS ANTIGAS PLAYLIST 💝 ANTIGAS AS MELHORES",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES💿",
+            "🌟LÉO MAGALHÃES – SÓ AS ANTIGAS / PLAYLIST OFICIAL / MÚSICAS ROMÂNTICAS🌟",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES🎶"
+          ],
+          "entities": [
+            {
+              "name": "Raça Negra",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Guilherme e Santiago, Mariana Fagundes - Pra Desbotar A Saudade [Vídeo Oficial]",
+            "Bruno & Marrone - Essa História eu Conheço (Ao Vivo) De Volta aos Bares II"
+          ],
+          "entities": [
+            {
+              "name": "Guilherme e Santiago",
+              "support": 1
+            },
+            {
+              "name": "Mariana Fagundes",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "QUANDO SUA MONTARIA É A MAIS ÁGIL DE TODAS NO ROBLOX",
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "ROUBANDO OVOS NO ROBLOX...",
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 5
+            }
+          ]
+        },
+        {
+          "titles": [
+            "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+            "Virei PEQUENO no Esconde Esconde para Trollar!",
+            "Limpe Todas as Folhas em 1 Hora!",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+            "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ"
+          ],
+          "entities": [
+            {
+              "name": "Minecraft",
+              "support": 5
+            },
+            {
+              "name": "Roblox",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Tapete vermelho Janja & Kleber Lucas",
+            "Tariflavio Bolsomaster"
+          ],
+          "entities": []
+        },
+        {
+          "titles": [
+            "Partido do Desmantelo",
+            "“A BEBÊ QUER OQUE 2” MC Cebezinho, MC Don Juan, MC GP, Menor Richard , MC Lele JP - DJ OREIA",
+            "Vai Matar Papai - Diovane - Forró 2026 - Dj Keflem O Dj Das Comitivas"
+          ],
+          "entities": [
+            {
+              "name": "Vai Matar Papai",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Steal an Egg But I Turned My Friends Into BOSSES!",
+            "A Bizarre Run | Trailer 2 (SBR Game)"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "RAP DO SILVA - LULA",
+            "Olê Olá Lula Lula (Axé Vermelho)"
+          ],
+          "entities": [
+            {
+              "name": "Olê Olá Lula Lula Axé Vermelho",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+            "EU TESTEI A VERSÃO TERROR do ROBLOX…"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Lula Presidente Brasil - Música Eleitoral e Cultura Brasileira",
+            "VOTA VOTA E CONFIRMA I 22 E BOLSONARO - JINGLE FLAVIO BOLSONARO ATUALIZADO"
+          ],
+          "entities": [
+            {
+              "name": "Lula Presidente Brasil",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "FAMOSO IMÃ - O PODEROSO CHATÃO - MC Lele JP, MC Leozinho ZS, MC Poze do Rodo (DJ Gordinho da VF)",
+            "ABRE A PORTA SUA PUTINH4 - Bloquinho do D7 - HIT DO VERÃO"
+          ],
+          "entities": []
+        }
+      ]
+    },
+    {
+      "threshold": 0.75,
+      "videos": 60,
+      "clusters": 45,
+      "singletons": 36,
+      "pairs": 7,
+      "threeOrMore": 2,
+      "largest": 5,
+      "average": 1.3333333333333333,
+      "groups": [
+        {
+          "titles": [
+            "PABLO 💖 SÓ AS ANTIGAS PLAYLIST 💝 ANTIGAS AS MELHORES",
+            "🌟LÉO MAGALHÃES – SÓ AS ANTIGAS / PLAYLIST OFICIAL / MÚSICAS ROMÂNTICAS🌟"
+          ],
+          "entities": []
+        },
+        {
+          "titles": [
+            "Guilherme e Santiago, Mariana Fagundes - Pra Desbotar A Saudade [Vídeo Oficial]",
+            "Bruno & Marrone - Essa História eu Conheço (Ao Vivo) De Volta aos Bares II"
+          ],
+          "entities": [
+            {
+              "name": "Guilherme e Santiago",
+              "support": 1
+            },
+            {
+              "name": "Mariana Fagundes",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "QUANDO SUA MONTARIA É A MAIS ÁGIL DE TODAS NO ROBLOX",
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "ROUBANDO OVOS NO ROBLOX...",
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 5
+            }
+          ]
+        },
+        {
+          "titles": [
+            "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+            "Virei PEQUENO no Esconde Esconde para Trollar!",
+            "Limpe Todas as Folhas em 1 Hora!",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+            "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ"
+          ],
+          "entities": [
+            {
+              "name": "Minecraft",
+              "support": 5
+            },
+            {
+              "name": "Roblox",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "RAP DO SILVA - LULA",
+            "Olê Olá Lula Lula (Axé Vermelho)"
+          ],
+          "entities": [
+            {
+              "name": "Olê Olá Lula Lula Axé Vermelho",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES💿",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES🎶"
+          ],
+          "entities": [
+            {
+              "name": "Raça Negra",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+            "EU TESTEI A VERSÃO TERROR do ROBLOX…"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "“A BEBÊ QUER OQUE 2” MC Cebezinho, MC Don Juan, MC GP, Menor Richard , MC Lele JP - DJ OREIA",
+            "Vai Matar Papai - Diovane - Forró 2026 - Dj Keflem O Dj Das Comitivas"
+          ],
+          "entities": [
+            {
+              "name": "Vai Matar Papai",
+              "support": 1
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Lula Presidente Brasil - Música Eleitoral e Cultura Brasileira",
+            "VOTA VOTA E CONFIRMA I 22 E BOLSONARO - JINGLE FLAVIO BOLSONARO ATUALIZADO"
+          ],
+          "entities": [
+            {
+              "name": "Lula Presidente Brasil",
+              "support": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "threshold": 0.8,
+      "videos": 60,
+      "clusters": 55,
+      "singletons": 52,
+      "pairs": 2,
+      "threeOrMore": 1,
+      "largest": 4,
+      "average": 1.0909090909090908,
+      "groups": [
+        {
+          "titles": [
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "ROUBANDO OVOS NO ROBLOX...",
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!"
+          ],
+          "entities": [
+            {
+              "name": "Roblox",
+              "support": 4
+            }
+          ]
+        },
+        {
+          "titles": [
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES💿",
+            "💿RAÇA NEGRA SÓ RECORDAÇÕES ANTIGAS AS MELHORES🎶"
+          ],
+          "entities": [
+            {
+              "name": "Raça Negra",
+              "support": 2
+            }
+          ]
+        },
+        {
+          "titles": [
+            "Limpe Todas as Folhas em 1 Hora!",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!"
+          ],
+          "entities": [
+            {
+              "name": "Minecraft",
+              "support": 2
+            },
+            {
+              "name": "Roblox",
+              "support": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

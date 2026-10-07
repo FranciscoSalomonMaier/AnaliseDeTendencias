@@ -1,0 +1,758 @@
+{
+  "periods": [
+    {
+      "period": "today",
+      "count": 20,
+      "topics": [
+        {
+          "id": "f78a0496-6714-43ba-b656-3869552a76ff",
+          "name": "GTA 5 com super-heróis",
+          "videos": 2,
+          "viewsInPeriod": "867983",
+          "totalViews": "2789593",
+          "keywords": [
+            "GTA 5",
+            "Batman",
+            "Homem-Aranha",
+            "Venom",
+            "Iron Man"
+          ],
+          "topVideos": [
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero",
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero"
+          ]
+        },
+        {
+          "id": "e327a9bf-e0c4-487b-9012-d1a040f627be",
+          "name": "Roblox",
+          "videos": 2,
+          "viewsInPeriod": "453096",
+          "totalViews": "1939927",
+          "keywords": [
+            "Roblox",
+            "Gameplay"
+          ],
+          "topVideos": [
+            "Steal an Egg But I Turned My Friends Into BOSSES!",
+            "Steal an Egg Bosses Characters in REAL LIFE!"
+          ]
+        },
+        {
+          "id": "8b771a19-c4e2-4c7f-b6a8-b6ffbf9f539d",
+          "name": "The Sweet Spot",
+          "videos": 1,
+          "viewsInPeriod": "434656",
+          "totalViews": "2818356",
+          "keywords": [
+            "The Sweet Spot",
+            "sorveteria",
+            "sorvete",
+            "venda de sorvete"
+          ],
+          "topVideos": [
+            "TÁ CALOR, ENTÃO EU COMECEI A VENDER SORVETE... DE MADRUGADA!"
+          ]
+        },
+        {
+          "id": "d1ab59a5-f539-445c-8efa-dd4e349f611f",
+          "name": "Simone Mendes",
+          "videos": 1,
+          "viewsInPeriod": "392014",
+          "totalViews": "5073531",
+          "keywords": [
+            "Simone Mendes"
+          ],
+          "topVideos": [
+            "Simone Mendes - CÊ PERDEU (O MELHOR DE MIM)"
+          ]
+        },
+        {
+          "id": "f9748f49-2980-420a-a5d2-527512727f71",
+          "name": "Trailer de Vision Quest",
+          "videos": 1,
+          "viewsInPeriod": "355767",
+          "totalViews": "502927",
+          "keywords": [
+            "Vision Quest",
+            "Ultron",
+            "Marvel",
+            "Visão",
+            "Jocasta"
+          ],
+          "topVideos": [
+            "ULTRON ESCAPOU! É O FIM DO MUNDO? ANÁLISE COMPLETA DO TRAILER DE VISION QUEST"
+          ]
+        },
+        {
+          "id": "7a7715a9-96f5-46ae-a70a-e4c271816151",
+          "name": "Roblox",
+          "videos": 5,
+          "viewsInPeriod": "298144",
+          "totalViews": "648930",
+          "keywords": [
+            "Roblox"
+          ],
+          "topVideos": [
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!",
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "TODOS OS SEGREDOS DESSA ATUALIZAÇÃO DO ROUBE UM OVO no ROBLOX!",
+            "ENCONTREI OVO SECRETO no BIOMA FLORESTA ENCANTADA do ROUBE UM OVO"
+          ]
+        },
+        {
+          "id": "2c204693-adf7-4f0b-83bc-654db230d280",
+          "name": "Se Cuida Aí",
+          "videos": 1,
+          "viewsInPeriod": "252236",
+          "totalViews": "2584045",
+          "keywords": [
+            "Se Cuida Aí",
+            "Sertanejo"
+          ],
+          "topVideos": [
+            "Se Cuida Aí | Cleber & Cauan, Panda [ Resenha na Fazenda ]"
+          ]
+        },
+        {
+          "id": "42f0d3a7-fc60-4cba-9bfe-9aed9a386d94",
+          "name": "Minecraft",
+          "videos": 8,
+          "viewsInPeriod": "226590",
+          "totalViews": "1677598",
+          "keywords": [
+            "Minecraft",
+            "Sobrevivência",
+            "Roblox"
+          ],
+          "topVideos": [
+            "Limpe Todas as Folhas em 1 Hora!",
+            "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+            "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ",
+            "Sobrevivi Escondido na Civilização das Armaduras!"
+          ]
+        },
+        {
+          "id": "1f671e52-5664-402c-8de5-a417b6d6f295",
+          "name": "Roblox",
+          "videos": 2,
+          "viewsInPeriod": "212779",
+          "totalViews": "347603",
+          "keywords": [
+            "Roblox"
+          ],
+          "topVideos": [
+            "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+            "NUNCA ENTRE NA CASA DE DOCES DA BRUXA MALVADA (Escape Roblox)"
+          ]
+        },
+        {
+          "id": "5cb01197-57bd-4327-87da-aa99478baa67",
+          "name": "Call of Duty: Modern Warfare 4 — DMZ",
+          "videos": 1,
+          "viewsInPeriod": "197544",
+          "totalViews": "632236",
+          "keywords": [
+            "Call of Duty",
+            "Modern Warfare 4",
+            "DMZ",
+            "Worldbuilder Trailer",
+            "Activision"
+          ],
+          "topVideos": [
+            "Call of Duty: Modern Warfare 4 | DMZ Worldbuilder Trailer"
+          ]
+        }
+      ]
+    },
+    {
+      "period": "7d",
+      "count": 20,
+      "topics": [
+        {
+          "id": "f78a0496-6714-43ba-b656-3869552a76ff",
+          "name": "GTA 5 com super-heróis",
+          "videos": 2,
+          "viewsInPeriod": "867983",
+          "totalViews": "2789593",
+          "keywords": [
+            "GTA 5",
+            "Batman",
+            "Homem-Aranha",
+            "Venom",
+            "Iron Man"
+          ],
+          "topVideos": [
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero",
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero"
+          ]
+        },
+        {
+          "id": "e327a9bf-e0c4-487b-9012-d1a040f627be",
+          "name": "Roblox",
+          "videos": 2,
+          "viewsInPeriod": "453096",
+          "totalViews": "1939927",
+          "keywords": [
+            "Roblox",
+            "Gameplay"
+          ],
+          "topVideos": [
+            "Steal an Egg But I Turned My Friends Into BOSSES!",
+            "Steal an Egg Bosses Characters in REAL LIFE!"
+          ]
+        },
+        {
+          "id": "8b771a19-c4e2-4c7f-b6a8-b6ffbf9f539d",
+          "name": "The Sweet Spot",
+          "videos": 1,
+          "viewsInPeriod": "434656",
+          "totalViews": "2818356",
+          "keywords": [
+            "The Sweet Spot",
+            "sorveteria",
+            "sorvete",
+            "venda de sorvete"
+          ],
+          "topVideos": [
+            "TÁ CALOR, ENTÃO EU COMECEI A VENDER SORVETE... DE MADRUGADA!"
+          ]
+        },
+        {
+          "id": "d1ab59a5-f539-445c-8efa-dd4e349f611f",
+          "name": "Simone Mendes",
+          "videos": 1,
+          "viewsInPeriod": "392014",
+          "totalViews": "5073531",
+          "keywords": [
+            "Simone Mendes"
+          ],
+          "topVideos": [
+            "Simone Mendes - CÊ PERDEU (O MELHOR DE MIM)"
+          ]
+        },
+        {
+          "id": "f9748f49-2980-420a-a5d2-527512727f71",
+          "name": "Trailer de Vision Quest",
+          "videos": 1,
+          "viewsInPeriod": "355767",
+          "totalViews": "502927",
+          "keywords": [
+            "Vision Quest",
+            "Ultron",
+            "Marvel",
+            "Visão",
+            "Jocasta"
+          ],
+          "topVideos": [
+            "ULTRON ESCAPOU! É O FIM DO MUNDO? ANÁLISE COMPLETA DO TRAILER DE VISION QUEST"
+          ]
+        },
+        {
+          "id": "7a7715a9-96f5-46ae-a70a-e4c271816151",
+          "name": "Roblox",
+          "videos": 5,
+          "viewsInPeriod": "298144",
+          "totalViews": "648930",
+          "keywords": [
+            "Roblox"
+          ],
+          "topVideos": [
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!",
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "TODOS OS SEGREDOS DESSA ATUALIZAÇÃO DO ROUBE UM OVO no ROBLOX!",
+            "ENCONTREI OVO SECRETO no BIOMA FLORESTA ENCANTADA do ROUBE UM OVO"
+          ]
+        },
+        {
+          "id": "2c204693-adf7-4f0b-83bc-654db230d280",
+          "name": "Se Cuida Aí",
+          "videos": 1,
+          "viewsInPeriod": "252236",
+          "totalViews": "2584045",
+          "keywords": [
+            "Se Cuida Aí",
+            "Sertanejo"
+          ],
+          "topVideos": [
+            "Se Cuida Aí | Cleber & Cauan, Panda [ Resenha na Fazenda ]"
+          ]
+        },
+        {
+          "id": "42f0d3a7-fc60-4cba-9bfe-9aed9a386d94",
+          "name": "Minecraft",
+          "videos": 8,
+          "viewsInPeriod": "226590",
+          "totalViews": "1677598",
+          "keywords": [
+            "Minecraft",
+            "Sobrevivência",
+            "Roblox"
+          ],
+          "topVideos": [
+            "Limpe Todas as Folhas em 1 Hora!",
+            "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+            "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ",
+            "Sobrevivi Escondido na Civilização das Armaduras!"
+          ]
+        },
+        {
+          "id": "1f671e52-5664-402c-8de5-a417b6d6f295",
+          "name": "Roblox",
+          "videos": 2,
+          "viewsInPeriod": "212779",
+          "totalViews": "347603",
+          "keywords": [
+            "Roblox"
+          ],
+          "topVideos": [
+            "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+            "NUNCA ENTRE NA CASA DE DOCES DA BRUXA MALVADA (Escape Roblox)"
+          ]
+        },
+        {
+          "id": "5cb01197-57bd-4327-87da-aa99478baa67",
+          "name": "Call of Duty: Modern Warfare 4 — DMZ",
+          "videos": 1,
+          "viewsInPeriod": "197544",
+          "totalViews": "632236",
+          "keywords": [
+            "Call of Duty",
+            "Modern Warfare 4",
+            "DMZ",
+            "Worldbuilder Trailer",
+            "Activision"
+          ],
+          "topVideos": [
+            "Call of Duty: Modern Warfare 4 | DMZ Worldbuilder Trailer"
+          ]
+        }
+      ]
+    },
+    {
+      "period": "30d",
+      "count": 20,
+      "topics": [
+        {
+          "id": "f78a0496-6714-43ba-b656-3869552a76ff",
+          "name": "GTA 5 com super-heróis",
+          "videos": 2,
+          "viewsInPeriod": "867983",
+          "totalViews": "2789593",
+          "keywords": [
+            "GTA 5",
+            "Batman",
+            "Homem-Aranha",
+            "Venom",
+            "Iron Man"
+          ],
+          "topVideos": [
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero",
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero"
+          ]
+        },
+        {
+          "id": "e327a9bf-e0c4-487b-9012-d1a040f627be",
+          "name": "Roblox",
+          "videos": 2,
+          "viewsInPeriod": "453096",
+          "totalViews": "1939927",
+          "keywords": [
+            "Roblox",
+            "Gameplay"
+          ],
+          "topVideos": [
+            "Steal an Egg But I Turned My Friends Into BOSSES!",
+            "Steal an Egg Bosses Characters in REAL LIFE!"
+          ]
+        },
+        {
+          "id": "8b771a19-c4e2-4c7f-b6a8-b6ffbf9f539d",
+          "name": "The Sweet Spot",
+          "videos": 1,
+          "viewsInPeriod": "434656",
+          "totalViews": "2818356",
+          "keywords": [
+            "The Sweet Spot",
+            "sorveteria",
+            "sorvete",
+            "venda de sorvete"
+          ],
+          "topVideos": [
+            "TÁ CALOR, ENTÃO EU COMECEI A VENDER SORVETE... DE MADRUGADA!"
+          ]
+        },
+        {
+          "id": "d1ab59a5-f539-445c-8efa-dd4e349f611f",
+          "name": "Simone Mendes",
+          "videos": 1,
+          "viewsInPeriod": "392014",
+          "totalViews": "5073531",
+          "keywords": [
+            "Simone Mendes"
+          ],
+          "topVideos": [
+            "Simone Mendes - CÊ PERDEU (O MELHOR DE MIM)"
+          ]
+        },
+        {
+          "id": "f9748f49-2980-420a-a5d2-527512727f71",
+          "name": "Trailer de Vision Quest",
+          "videos": 1,
+          "viewsInPeriod": "355767",
+          "totalViews": "502927",
+          "keywords": [
+            "Vision Quest",
+            "Ultron",
+            "Marvel",
+            "Visão",
+            "Jocasta"
+          ],
+          "topVideos": [
+            "ULTRON ESCAPOU! É O FIM DO MUNDO? ANÁLISE COMPLETA DO TRAILER DE VISION QUEST"
+          ]
+        },
+        {
+          "id": "7a7715a9-96f5-46ae-a70a-e4c271816151",
+          "name": "Roblox",
+          "videos": 5,
+          "viewsInPeriod": "298144",
+          "totalViews": "648930",
+          "keywords": [
+            "Roblox"
+          ],
+          "topVideos": [
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!",
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "TODOS OS SEGREDOS DESSA ATUALIZAÇÃO DO ROUBE UM OVO no ROBLOX!",
+            "ENCONTREI OVO SECRETO no BIOMA FLORESTA ENCANTADA do ROUBE UM OVO"
+          ]
+        },
+        {
+          "id": "2c204693-adf7-4f0b-83bc-654db230d280",
+          "name": "Se Cuida Aí",
+          "videos": 1,
+          "viewsInPeriod": "252236",
+          "totalViews": "2584045",
+          "keywords": [
+            "Se Cuida Aí",
+            "Sertanejo"
+          ],
+          "topVideos": [
+            "Se Cuida Aí | Cleber & Cauan, Panda [ Resenha na Fazenda ]"
+          ]
+        },
+        {
+          "id": "42f0d3a7-fc60-4cba-9bfe-9aed9a386d94",
+          "name": "Minecraft",
+          "videos": 8,
+          "viewsInPeriod": "226590",
+          "totalViews": "1677598",
+          "keywords": [
+            "Minecraft",
+            "Sobrevivência",
+            "Roblox"
+          ],
+          "topVideos": [
+            "Limpe Todas as Folhas em 1 Hora!",
+            "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+            "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ",
+            "Sobrevivi Escondido na Civilização das Armaduras!"
+          ]
+        },
+        {
+          "id": "1f671e52-5664-402c-8de5-a417b6d6f295",
+          "name": "Roblox",
+          "videos": 2,
+          "viewsInPeriod": "212779",
+          "totalViews": "347603",
+          "keywords": [
+            "Roblox"
+          ],
+          "topVideos": [
+            "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+            "NUNCA ENTRE NA CASA DE DOCES DA BRUXA MALVADA (Escape Roblox)"
+          ]
+        },
+        {
+          "id": "5cb01197-57bd-4327-87da-aa99478baa67",
+          "name": "Call of Duty: Modern Warfare 4 — DMZ",
+          "videos": 1,
+          "viewsInPeriod": "197544",
+          "totalViews": "632236",
+          "keywords": [
+            "Call of Duty",
+            "Modern Warfare 4",
+            "DMZ",
+            "Worldbuilder Trailer",
+            "Activision"
+          ],
+          "topVideos": [
+            "Call of Duty: Modern Warfare 4 | DMZ Worldbuilder Trailer"
+          ]
+        }
+      ]
+    },
+    {
+      "period": "1y",
+      "count": 20,
+      "topics": [
+        {
+          "id": "f78a0496-6714-43ba-b656-3869552a76ff",
+          "name": "GTA 5 com super-heróis",
+          "videos": 2,
+          "viewsInPeriod": "867983",
+          "totalViews": "2789593",
+          "keywords": [
+            "GTA 5",
+            "Batman",
+            "Homem-Aranha",
+            "Venom",
+            "Iron Man"
+          ],
+          "topVideos": [
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero",
+            "الرجل العنكبوت انقاذ باتمان Spider-Man Rescue batman vs iron man vs venom funny Game GTA 5 superhero"
+          ]
+        },
+        {
+          "id": "e327a9bf-e0c4-487b-9012-d1a040f627be",
+          "name": "Roblox",
+          "videos": 2,
+          "viewsInPeriod": "453096",
+          "totalViews": "1939927",
+          "keywords": [
+            "Roblox",
+            "Gameplay"
+          ],
+          "topVideos": [
+            "Steal an Egg But I Turned My Friends Into BOSSES!",
+            "Steal an Egg Bosses Characters in REAL LIFE!"
+          ]
+        },
+        {
+          "id": "8b771a19-c4e2-4c7f-b6a8-b6ffbf9f539d",
+          "name": "The Sweet Spot",
+          "videos": 1,
+          "viewsInPeriod": "434656",
+          "totalViews": "2818356",
+          "keywords": [
+            "The Sweet Spot",
+            "sorveteria",
+            "sorvete",
+            "venda de sorvete"
+          ],
+          "topVideos": [
+            "TÁ CALOR, ENTÃO EU COMECEI A VENDER SORVETE... DE MADRUGADA!"
+          ]
+        },
+        {
+          "id": "d1ab59a5-f539-445c-8efa-dd4e349f611f",
+          "name": "Simone Mendes",
+          "videos": 1,
+          "viewsInPeriod": "392014",
+          "totalViews": "5073531",
+          "keywords": [
+            "Simone Mendes"
+          ],
+          "topVideos": [
+            "Simone Mendes - CÊ PERDEU (O MELHOR DE MIM)"
+          ]
+        },
+        {
+          "id": "f9748f49-2980-420a-a5d2-527512727f71",
+          "name": "Trailer de Vision Quest",
+          "videos": 1,
+          "viewsInPeriod": "355767",
+          "totalViews": "502927",
+          "keywords": [
+            "Vision Quest",
+            "Ultron",
+            "Marvel",
+            "Visão",
+            "Jocasta"
+          ],
+          "topVideos": [
+            "ULTRON ESCAPOU! É O FIM DO MUNDO? ANÁLISE COMPLETA DO TRAILER DE VISION QUEST"
+          ]
+        },
+        {
+          "id": "7a7715a9-96f5-46ae-a70a-e4c271816151",
+          "name": "Roblox",
+          "videos": 5,
+          "viewsInPeriod": "298144",
+          "totalViews": "648930",
+          "keywords": [
+            "Roblox"
+          ],
+          "topVideos": [
+            "🦋 NOVO BIOMA FLORESTA ENCANTADA NO ROUBE UM OVO DO ROBLOX! SEGREDOS E NOVIDADES!",
+            "ROUBANDO OVOS NO ROBLOX!",
+            "PEGAMOS OS NOVOS OVOS SECRETOS DO LEÃO GIGANTE DE CRISTAL!!",
+            "TODOS OS SEGREDOS DESSA ATUALIZAÇÃO DO ROUBE UM OVO no ROBLOX!",
+            "ENCONTREI OVO SECRETO no BIOMA FLORESTA ENCANTADA do ROUBE UM OVO"
+          ]
+        },
+        {
+          "id": "2c204693-adf7-4f0b-83bc-654db230d280",
+          "name": "Se Cuida Aí",
+          "videos": 1,
+          "viewsInPeriod": "252236",
+          "totalViews": "2584045",
+          "keywords": [
+            "Se Cuida Aí",
+            "Sertanejo"
+          ],
+          "topVideos": [
+            "Se Cuida Aí | Cleber & Cauan, Panda [ Resenha na Fazenda ]"
+          ]
+        },
+        {
+          "id": "42f0d3a7-fc60-4cba-9bfe-9aed9a386d94",
+          "name": "Minecraft",
+          "videos": 8,
+          "viewsInPeriod": "226590",
+          "totalViews": "1677598",
+          "keywords": [
+            "Minecraft",
+            "Sobrevivência",
+            "Roblox"
+          ],
+          "topVideos": [
+            "Limpe Todas as Folhas em 1 Hora!",
+            "CRIEI A DIMENSÃO QUE A MOJANG NÃO TEVE CORAGEM",
+            "Primeiro dia na ESCOLA de SUPER HEROI no Minecraft!",
+            "GAROTA TITÃ APAIXONADA pelo GAROTO TITÃ",
+            "Sobrevivi Escondido na Civilização das Armaduras!"
+          ]
+        },
+        {
+          "id": "1f671e52-5664-402c-8de5-a417b6d6f295",
+          "name": "Roblox",
+          "videos": 2,
+          "viewsInPeriod": "212779",
+          "totalViews": "347603",
+          "keywords": [
+            "Roblox"
+          ],
+          "topVideos": [
+            "AJUDEI o SR ABOBORA do HALLOWEEN na NOVA ATUALIZAÇÃO do 99 NOITES NA FLORESTA 🎃🦇",
+            "NUNCA ENTRE NA CASA DE DOCES DA BRUXA MALVADA (Escape Roblox)"
+          ]
+        },
+        {
+          "id": "5cb01197-57bd-4327-87da-aa99478baa67",
+          "name": "Call of Duty: Modern Warfare 4 — DMZ",
+          "videos": 1,
+          "viewsInPeriod": "197544",
+          "totalViews": "632236",
+          "keywords": [
+            "Call of Duty",
+            "Modern Warfare 4",
+            "DMZ",
+            "Worldbuilder Trailer",
+            "Activision"
+          ],
+          "topVideos": [
+            "Call of Duty: Modern Warfare 4 | DMZ Worldbuilder Trailer"
+          ]
+        }
+      ]
+    }
+  ],
+  "usage": [
+    {
+      "model": "text-embedding-3-small",
+      "threshold": 0.72,
+      "diagnostics": {
+        "pairs": 6,
+        "failed": 0,
+        "reused": 0,
+        "videos": 60,
+        "average": 1.5384615384615385,
+        "largest": 5,
+        "clusters": 39,
+        "generated": 60,
+        "singletons": 28,
+        "namingCalls": 4,
+        "threeOrMore": 5,
+        "unidentified": 5,
+        "heuristicNames": 6
+      },
+      "embedding_usage": {
+        "inputTokens": 7591,
+        "totalTokens": 7591,
+        "outputTokens": 0
+      },
+      "naming_usage": {
+        "inputTokens": 8201,
+        "totalTokens": 11242,
+        "outputTokens": 3041
+      }
+    },
+    {
+      "model": "text-embedding-3-small",
+      "threshold": 0.75,
+      "diagnostics": {
+        "pairs": 7,
+        "failed": 0,
+        "reused": 60,
+        "videos": 60,
+        "average": 1.3333333333333333,
+        "largest": 5,
+        "clusters": 45,
+        "generated": 0,
+        "singletons": 36,
+        "namingCalls": 1,
+        "threeOrMore": 2,
+        "unidentified": 1,
+        "heuristicNames": 14
+      },
+      "embedding_usage": {
+        "inputTokens": 0,
+        "totalTokens": 0,
+        "outputTokens": 0
+      },
+      "naming_usage": {
+        "inputTokens": 2761,
+        "totalTokens": 3802,
+        "outputTokens": 1041
+      }
+    },
+    {
+      "model": "text-embedding-3-small",
+      "threshold": 0.75,
+      "diagnostics": {
+        "pairs": 16,
+        "failed": 0,
+        "reused": 60,
+        "videos": 98,
+        "average": 1.4848484848484849,
+        "largest": 8,
+        "clusters": 66,
+        "generated": 38,
+        "singletons": 46,
+        "namingCalls": 2,
+        "threeOrMore": 4,
+        "unidentified": 0,
+        "heuristicNames": 23
+      },
+      "embedding_usage": {
+        "inputTokens": 4901,
+        "totalTokens": 4901,
+        "outputTokens": 0
+      },
+      "naming_usage": {
+        "inputTokens": 4806,
+        "totalTokens": 6515,
+        "outputTokens": 1709
+      }
+    }
+  ],
+  "noProcessingOnGet": true
+}

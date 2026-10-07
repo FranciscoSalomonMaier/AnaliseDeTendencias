@@ -21,7 +21,25 @@ export interface StructuredOutputResult<T> {
   usage: LlmUsage;
 }
 
+export interface EmbeddingRequest {
+  model: string;
+  inputs: string[];
+  dimensions: number;
+}
+export interface EmbeddingResult {
+  vectors: number[][];
+  model: string;
+  usage: LlmUsage;
+}
+
 export abstract class LlmProvider {
+  generateEmbeddings(_request: EmbeddingRequest): Promise<EmbeddingResult> {
+    void _request;
+    return Promise.reject(
+      new Error('Embedding generation is not supported by this provider'),
+    );
+  }
+
   abstract generateStructuredOutput<T>(
     request: StructuredOutputRequest<T>,
   ): Promise<StructuredOutputResult<T>>;

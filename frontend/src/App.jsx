@@ -3,6 +3,7 @@ import './App.css';
 import Aside from './layouts/Aside/Aside';
 import { Header } from './layouts/Header/Header';
 import { Home } from './pages/Home/Home';
+import { TrendingTopics } from './pages/TrendingTopics/TrendingTopics';
 import { YoutubeList } from './pages/Youtube/YoutubeList';
 import { ContentCreation } from './pages/ContentCreation/ContentCreation';
 import { ContentLibrary } from './pages/ContentLibrary/ContentLibrary';
@@ -11,7 +12,7 @@ function App() {
   const [page, setPage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const route = params.get('page');
-    return route === 'content-creation' || route === 'youtube-list' || route === 'content-library' ? route : 'home';
+    return route === 'content-creation' || route === 'youtube-list' || route === 'content-library' || route === 'trending-topics' ? route : 'home';
   });
   const [creationSeed, setCreationSeed] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -49,7 +50,7 @@ function App() {
       });
       (payload?.tags ?? []).forEach((tag) => params.append('tag', tag));
       window.history.pushState({}, '', `${window.location.pathname}?${params}`);
-    } else if (nextPage === 'youtube-list' || nextPage === 'content-library') {
+    } else if (nextPage === 'youtube-list' || nextPage === 'content-library' || nextPage === 'trending-topics') {
       window.history.pushState({}, '', `${window.location.pathname}?page=${nextPage}`);
     } else {
       window.history.pushState({}, '', window.location.pathname);
@@ -66,6 +67,7 @@ function App() {
         </Aside>
         <main className="min-w-0 flex-1">
             <Header/>
+            {page === 'trending-topics' && <TrendingTopics/>}
             {page === 'youtube-list' && <YoutubeList onNavigate={navigate}/>} 
             {page === 'content-creation' && <ContentCreation onNavigate={navigate} analysis={creationSeed}/>} 
             {page === 'content-library' && <ContentLibrary onNavigate={navigate}/>}

@@ -1,3 +1,4 @@
+import { youtubeCollectionEvents } from './youtube-collection-events';
 import {
   Injectable,
   Logger,
@@ -34,6 +35,7 @@ export class YoutubeCollector
         videos.forEach((video) => captured.add(video.id));
       }
       await this.youtube.refreshKnownVideos(captured);
+      youtubeCollectionEvents.emit('updated');
     } catch (error: unknown) {
       const missingTable =
         typeof error === 'object' &&

@@ -2,6 +2,7 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { OpenAiLlmProvider } from './openai-llm.provider';
 import { z } from 'zod';
 
+const mockEmbed = jest.fn<Promise<unknown>, [unknown]>();
 const mockParse = jest.fn<Promise<unknown>, [unknown]>();
 
 jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
@@ -27,6 +28,9 @@ jest.mock('openai', () => {
   return {
     __esModule: true,
     default: class OpenAI {
+      embeddings = {
+        create: (request: unknown): Promise<unknown> => mockEmbed(request),
+      };
       responses = {
         parse: (request: unknown): Promise<unknown> => mockParse(request),
       };
@@ -107,5 +111,82 @@ describe('OpenAiLlmProvider', () => {
         userPrompt: 'user',
       }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
+  });
+  it('batches embeddings, restores input order and preserves separate usage', async () => {
+    mockEmbed.mockResolvedValue({
+      data: [
+        { index: 1, embedding: [0, 1] },
+        { index: 0, embedding: [1, 0] },
+      ],
+      usage: { prompt_tokens: 20, total_tokens: 20 },
+    });
+    const provider = new OpenAiLlmProvider({
+      get: (key: string) => (key === 'OPENAI_API_KEY' ? 'test-key' : undefined),
+    } as never);
+    const result = await provider.generateEmbeddings({
+      model: 'test-model',
+      inputs: ['Batman', 'Roblox'],
+      dimensions: 2,
+    });
+    expect(result.vectors).toEqual([
+      [1, 0],
+      [0, 1],
+    ]);
+    expect(result.usage).toEqual({
+      inputTokens: 20,
+      outputTokens: 0,
+      totalTokens: 20,
+    });
+    expect(mockEmbed).toHaveBeenCalledTimes(1);
+    expect(mockEmbed).toHaveBeenCalledWith({
+      model: 'test-model',
+      input: ['Batman', 'Roblox'],
+      dimensions: 2,
+      encoding_format: 'float',
+    });
+  });
+  it('rejects incomplete embeddings and wrong dimensions', async () => {
+    const provider = new OpenAiLlmProvider({ get: () => 'test-key' } as never);
+    for (const data of [
+      [],
+      [{ index: 0, embedding: [1] }],
+      [{ index: 0, embedding: [0, 0] }],
+    ]) {
+      mockEmbed.mockResolvedValue({
+        data,
+        usage: { prompt_tokens: 1, total_tokens: 1 },
+      });
+      await expect(
+        provider.generateEmbeddings({
+          model: 'test-model',
+          inputs: ['test'],
+          dimensions: 2,
+        }),
+      ).rejects.toThrow();
+    }
+  });
+  it('maps embedding failures and returns empty batch without a request', async () => {
+    const provider = new OpenAiLlmProvider({
+      get: (key: string) => (key === 'OPENAI_API_KEY' ? 'test-key' : undefined),
+    } as never);
+    mockEmbed.mockRejectedValue(new Error('provider unavailable'));
+    await expect(
+      provider.generateEmbeddings({
+        model: 'test-model',
+        inputs: ['test'],
+        dimensions: 2,
+      }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    mockEmbed.mockClear();
+    expect(
+      (
+        await provider.generateEmbeddings({
+          model: 'test-model',
+          inputs: [],
+          dimensions: 2,
+        })
+      ).vectors,
+    ).toEqual([]);
+    expect(mockEmbed).not.toHaveBeenCalled();
   });
 });

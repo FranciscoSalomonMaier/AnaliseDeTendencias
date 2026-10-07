@@ -17,14 +17,20 @@ import {
     ChevronDoubleRightIcon,
     ChevronDoubleLeftIcon
 } from "@heroicons/react/24/outline";
-import { useState, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 const AsideContext = createContext();
 
 export const Aside = ({children}) => {
     const [collapsed, setCollapsed] = useState(() => (
         typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
     ));
-    
+    useEffect(() => {
+        const media = window.matchMedia('(max-width: 767px)');
+        const handleChange = (event) => { if (event.matches) setCollapsed(true); };
+        media.addEventListener('change', handleChange);
+        return () => media.removeEventListener('change', handleChange);
+    }, []);
+
     return (
         <AsideContext.Provider value={{collapsed, setCollapsed}}>
             <aside className={`
@@ -73,7 +79,7 @@ export const AsideHeader = () => {
 }
 
 export const AsideBody = ({ currentPage, onNavigate }) => {
-    const isYoutubeSection = currentPage === 'youtube-list' || currentPage === 'content-library';
+    const isYoutubeSection = currentPage === 'youtube-list' || currentPage === 'content-library' || currentPage === 'trending-topics';
     const [youtubeOpen, setYoutubeOpen] = useState(isYoutubeSection);
 
     return (
@@ -85,6 +91,7 @@ export const AsideBody = ({ currentPage, onNavigate }) => {
                 <AsideOption name="YouTube" icon={PlayCircleIcon} active={isYoutubeSection} onClick={() => setYoutubeOpen(!youtubeOpen)}/>
                 {youtubeOpen && <div className="ml-8 mb-1 border-l border-border pl-2">
                     <AsideOption name="Listar" icon={ChartBarIcon} active={currentPage === 'youtube-list'} onClick={() => onNavigate('youtube-list')}/>
+                    <AsideOption name="Temas em Alta" icon={FireIcon} active={currentPage === 'trending-topics'} onClick={() => onNavigate('trending-topics')}/>
                     <AsideOption name="Conteúdos" icon={DocumentChartBarIcon} active={currentPage === 'content-library'} onClick={() => onNavigate('content-library')}/>
                 </div>}
                 <AsideOption name="TikTok" icon={MusicalNoteIcon}/>

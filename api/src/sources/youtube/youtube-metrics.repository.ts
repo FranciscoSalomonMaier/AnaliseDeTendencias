@@ -3,30 +3,9 @@ import { PostgresDatabaseService } from '../../database/postgres-database.servic
 import { YouTubeVideo } from './interfaces/youtube-video.interface';
 import { COLLECTION_INTERVAL_MS, periodStart } from './youtube-period';
 
-export const RANKING_SQL = `
-SELECT v.video, c.view_count::text AS "currentViews",
- COALESCE(b.view_count, c.view_count)::text AS "baselineViews",
- GREATEST(c.view_count - COALESCE(b.view_count, c.view_count), 0)::text AS "viewsInPeriod",
- c.captured_at AS "capturedAt", COALESCE(b.captured_at, c.captured_at) AS "baselineCapturedAt",
- EXTRACT(EPOCH FROM c.captured_at - COALESCE(b.captured_at, c.captured_at))::float8 AS "actualHistorySeconds",
- (COALESCE(b.captured_at, c.captured_at) <= $2::timestamptz + interval '1 hour'
-  AND c.captured_at >= $3::timestamptz - interval '1 hour'
-  AND c.captured_at > COALESCE(b.captured_at, c.captured_at)) AS "hasFullPeriodData"
-FROM youtube_video_regions r
-JOIN youtube_videos v ON v.id = r.video_id
-JOIN LATERAL (
- SELECT view_count, captured_at FROM youtube_video_metric_snapshots
- WHERE video_id = v.id AND captured_at <= $3
- ORDER BY captured_at DESC LIMIT 1
-) c ON true
-LEFT JOIN LATERAL (
- SELECT view_count, captured_at FROM youtube_video_metric_snapshots
- WHERE video_id = v.id AND captured_at >= $2 AND captured_at <= c.captured_at
- ORDER BY captured_at ASC LIMIT 1
-) b ON true
-WHERE r.region_code = $1
-ORDER BY GREATEST(c.view_count - COALESCE(b.view_count, c.view_count), 0) DESC, v.id ASC
-LIMIT 50`;
+import { RANKING_SQL } from './youtube-period.sql';
+import { TOPIC_AGGREGATION_SQL } from '../../../trends/trending-topics.sql';
+import { TrendingTopic } from '../../../trends/interfaces/trending-topic.interface';
 
 interface RankingRow extends Record<string, unknown> {
   video: YouTubeVideo;
@@ -87,6 +66,67 @@ export class YoutubeMetricsRepository {
       'SELECT region_code AS region FROM youtube_collection_regions ORDER BY region',
     );
     return result.rows.map((row) => row.region);
+  }
+
+  async persistedTopics(region: string) {
+    await this.database.query(
+      'INSERT INTO youtube_collection_regions(region_code) VALUES($1) ON CONFLICT DO NOTHING',
+      [region],
+    );
+    const result = await this.database.query<{
+      video_id: string;
+      topic_id: string;
+      name: string;
+      keywords: string[];
+      primary_topic?: string;
+      canonical_key?: string;
+      entities?: string[];
+      confidence?: number;
+    }>(
+      `SELECT m.video_id, m.topic_id::text, t.name, t.keywords, t.primary_topic, t.canonical_key, t.entities, t.confidence
+      FROM youtube_video_topics m JOIN youtube_semantic_topics t ON t.id=m.topic_id
+      WHERE m.region_code=$1 ORDER BY m.video_id`,
+      [region],
+    );
+    return result.rows;
+  }
+
+  async topicCandidates(region: string): Promise<YouTubeVideo[]> {
+    await this.database.query(
+      'INSERT INTO youtube_collection_regions(region_code) VALUES($1) ON CONFLICT DO NOTHING',
+      [region],
+    );
+    const result = await this.database.query<{ video: YouTubeVideo }>(
+      `
+      SELECT v.video FROM youtube_video_regions r
+      JOIN youtube_videos v ON v.id = r.video_id
+      WHERE r.region_code = $1 AND EXISTS (
+        SELECT 1 FROM youtube_video_metric_snapshots s WHERE s.video_id = v.id
+      ) ORDER BY v.id
+    `,
+      [region],
+    );
+    return result.rows.map((row) => row.video);
+  }
+
+  async aggregateTopics(
+    region: string,
+    start: Date,
+    now: Date,
+    memberships: Array<{ video_id: string; topic_id: string }>,
+    limit: number,
+  ): Promise<Array<Omit<TrendingTopic, 'name' | 'keywords' | 'period'>>> {
+    const result = await this.database.query<
+      Omit<TrendingTopic, 'name' | 'keywords' | 'period'> &
+        Record<string, unknown>
+    >(TOPIC_AGGREGATION_SQL, [
+      region,
+      start,
+      now,
+      JSON.stringify(memberships),
+      limit,
+    ]);
+    return result.rows;
   }
 
   async ranking(region: string, period: string, now = new Date()) {

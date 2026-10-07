@@ -18,7 +18,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migrate:youtube": "node scripts/migrate-youtube.cjs"
+    "migrate:youtube": "node scripts/migrate-youtube.cjs",
+    "test:topics": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=\"(semantic|trending-topics|topic-clustering|youtube|openai-llm)\"",
+    "test:topics:integration": "node test/youtube/topics.integration.cjs",
+    "process:topics": "node scripts/process-semantic-topics.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

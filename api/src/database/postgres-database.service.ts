@@ -1,6 +1,6 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Pool, QueryResult, QueryResultRow } from 'pg';
+import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 @Injectable()
 export class PostgresDatabaseService implements OnModuleInit, OnModuleDestroy {
@@ -71,6 +71,15 @@ export class PostgresDatabaseService implements OnModuleInit, OnModuleDestroy {
       CREATE INDEX IF NOT EXISTS content_generation_runs_trend_idx
       ON content_generation_runs (trend_id, region_code, created_at DESC)
     `);
+  }
+
+  async withClient<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      return await work(client);
+    } finally {
+      client.release();
+    }
   }
 
   query<T extends QueryResultRow>(
