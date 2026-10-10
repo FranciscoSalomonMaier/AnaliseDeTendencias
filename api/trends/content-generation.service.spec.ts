@@ -98,6 +98,7 @@ function setup() {
   };
   const aiAnalysisService = { getModel: jest.fn(() => 'test-model') };
   const llmProvider = {
+    generateEmbeddings: jest.fn(),
     generateStructuredOutput: jest.fn<
       Promise<MockGenerationResult>,
       [MockGenerationRequest]

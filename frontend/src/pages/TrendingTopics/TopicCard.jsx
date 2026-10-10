@@ -4,7 +4,7 @@ import { formatHistoryDuration, youtubePeriods } from "../../utils/youtubeHistor
 const compact = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
 function formatViews(value) { return compact.format(BigInt(value ?? "0")); }
 
-export function TopicCard({ topic, index, shownPeriod }) {
+export function TopicCard({ topic, index, shownPeriod, onCreate }) {
   return <article className="min-w-0 rounded-2xl border border-border bg-card p-4 md:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0"><p className="mb-1 text-sm font-semibold text-sky-300">#{index + 1}</p><h2 className="break-words text-xl font-semibold">{topic.name}</h2></div>
@@ -30,6 +30,6 @@ export function TopicCard({ topic, index, shownPeriod }) {
           </li>)}</ul>
           {topic.videoCount > topic.topVideos.length && <p className="mt-2 text-xs text-muted-foreground">A prévia mostra os cinco vídeos com maior crescimento. As métricas incluem todos os {topic.videoCount} vídeos.</p>}
         </details>
-        <button type="button" disabled title="Em breve: o Estúdio ainda precisa aceitar referências de tema." className="mt-4 inline-flex items-center gap-2 rounded-lg border border-sky-400/30 px-3 py-2 text-xs text-sky-200 opacity-50"><SparklesIcon className="size-4" /> Criar conteúdo · Em breve</button>
+        <button type="button" onClick={onCreate} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-sky-400/30 px-3 py-2 text-xs text-sky-200 hover:bg-sky-400/10"><SparklesIcon className="size-4" /> Criar conteúdo</button>
       </article>;
 }

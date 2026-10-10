@@ -18,11 +18,11 @@ test('topics page, cards and period requests', async (t) => {
     await t.test('topic ranking, partial badge and expandable videos render', () => {
       const topic = {id:'gta',name:'GTA 6',videoCount:17,totalViews:'42800000',viewsInPeriod:'8400000',keywords:['Rockstar','Gameplay'],hasFullPeriodData:false,actualHistorySeconds:7200,capturedAt:'2026-10-05T00:00:00Z',topVideos:[{id:'a',title:'GTA Trailer',channelTitle:'Rockstar',thumbnail:'https://example.test/thumb.jpg',currentViews:'1000000',viewsInPeriod:'500000',hasFullPeriodData:false,actualHistorySeconds:7200}]};
       const html = renderToStaticMarkup(createElement(TopicCard, { topic, index:0, shownPeriod:'7d' }));
-      for (const text of ['#1','GTA 6','17 vídeos relacionados','Dados parciais','2 h','GTA Trailer','Rockstar','Em breve']) assert.ok(html.includes(text), text);
+      for (const text of ['#1','GTA 6','17 vídeos relacionados','Dados parciais','2 h','GTA Trailer','Rockstar','Criar conteúdo']) assert.ok(html.includes(text), text);
       assert.match(html, /<details/);
       assert.match(html, /<summary[^>]*>Ver vídeos/);
       assert.match(html, /youtube.com\/watch\?v=a/);
-      assert.match(html, /disabled/);
+      assert.doesNotMatch(html, /disabled/);
     });
     const originalFetch = globalThis.fetch;
     try {

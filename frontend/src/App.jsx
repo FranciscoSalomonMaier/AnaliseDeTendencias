@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 import Aside from './layouts/Aside/Aside';
 import { Header } from './layouts/Header/Header';
@@ -9,6 +9,7 @@ import { ContentCreation } from './pages/ContentCreation/ContentCreation';
 import { ContentLibrary } from './pages/ContentLibrary/ContentLibrary';
 
 function App() {
+  const [creationKey, setCreationKey] = useState(0);
   const [page, setPage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const route = params.get('page');
@@ -19,6 +20,8 @@ function App() {
     if (params.get('page') !== 'content-creation') return null;
     return {
       source: params.get('source'),
+      projectId: params.get('projectId') ?? '',
+      topicId: params.get('topicId') ?? '',
       generationId: params.get('generationId') ?? '',
       trendId: params.get('trendId') ?? '',
       videoId: params.get('videoId') ?? '',
@@ -33,11 +36,17 @@ function App() {
   });
 
   function navigate(nextPage, payload = null) {
+    const event = new Event('content:before-navigate', { cancelable: true });
+    if (!window.dispatchEvent(event)) return;
+
     if (nextPage === 'content-creation') {
+      setCreationKey(value => value + 1);
       setCreationSeed(payload);
       const params = new URLSearchParams({
         page: 'content-creation',
         source: payload?.source ?? '',
+        projectId: payload?.projectId ?? '',
+        topicId: payload?.topicId ?? '',
         generationId: payload?.generationId ?? '',
         trendId: payload?.trendId ?? '',
         videoId: payload?.videoId ?? '',
@@ -58,6 +67,15 @@ function App() {
     setPage(nextPage);
   }
 
+  useEffect(() => {
+    const restore = () => {
+      const params = new URLSearchParams(window.location.search);
+      setPage(params.get('page') || 'home');
+      setCreationSeed(params.get('page') === 'content-creation' ? Object.fromEntries(params) : null);
+    };
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, []);
   return (
     <div className="p-0 m-0 flex">
         <Aside currentPage={page} onNavigate={navigate}>
@@ -67,11 +85,11 @@ function App() {
         </Aside>
         <main className="min-w-0 flex-1">
             <Header/>
-            {page === 'trending-topics' && <TrendingTopics/>}
-            {page === 'youtube-list' && <YoutubeList onNavigate={navigate}/>} 
-            {page === 'content-creation' && <ContentCreation onNavigate={navigate} analysis={creationSeed}/>} 
+            {page === 'trending-topics' && <TrendingTopics onNavigate={navigate}/>}
+            {page === 'youtube-list' && <YoutubeList onNavigate={navigate}/>}
+            {page === 'content-creation' && <ContentCreation key={`${creationKey}:${JSON.stringify(creationSeed)}`} onNavigate={navigate} analysis={creationSeed}/>}
             {page === 'content-library' && <ContentLibrary onNavigate={navigate}/>}
-            {page === 'home' && <Home onNavigate={navigate}/>}                
+            {page === 'home' && <Home onNavigate={navigate}/>}
         </main>
     </div>
   );

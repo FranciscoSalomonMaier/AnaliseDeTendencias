@@ -1,3 +1,5 @@
+import { ContentProjectModule } from './content-projects/content-project.module';
+import { ContentAssetsModule } from './content-assets/content-assets.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -14,6 +16,8 @@ import { TrendsModule } from 'trends/trends.module';
     YoutubeModule,
     RedditModule,
     TrendsModule,
+    ContentProjectModule,
+    ContentAssetsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

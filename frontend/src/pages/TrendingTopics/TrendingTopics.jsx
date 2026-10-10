@@ -4,7 +4,7 @@ import { ArrowPathIcon, FireIcon } from "@heroicons/react/24/outline";
 import { getTrendingTopics } from "../../services/trendingTopicsService";
 import { youtubePeriods } from "../../utils/youtubeHistory";
 
-export function TrendingTopics() {
+export function TrendingTopics({ onNavigate }) {
   const [period, setPeriod] = useState("today");
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +59,7 @@ export function TrendingTopics() {
       Dados parciais: o crescimento considera somente o histórico observado de cada vídeo. Períodos maiores que o histórico podem mostrar o mesmo ranking; temas com coberturas diferentes não são diretamente comparáveis.
     </p>}
     <div aria-busy={loading} className="grid min-w-0 gap-4 xl:grid-cols-2">
-      {topics.map((topic, index) => <TopicCard key={topic.id} topic={topic} index={index} shownPeriod={shownPeriod} />)}
+      {topics.map((topic, index) => <TopicCard key={topic.id} topic={topic} index={index} shownPeriod={shownPeriod} onCreate={() => onNavigate("content-creation", { source: "topic", topicId: topic.id, title: topic.name })} />)}
     </div>
   </div>;
 }

@@ -79,7 +79,7 @@ export const AsideHeader = () => {
 }
 
 export const AsideBody = ({ currentPage, onNavigate }) => {
-    const isYoutubeSection = currentPage === 'youtube-list' || currentPage === 'content-library' || currentPage === 'trending-topics';
+    const isYoutubeSection = currentPage === 'youtube-list' || currentPage === 'content-library' || currentPage === 'trending-topics' || currentPage === 'content-creation';
     const [youtubeOpen, setYoutubeOpen] = useState(isYoutubeSection);
 
     return (
@@ -93,6 +93,7 @@ export const AsideBody = ({ currentPage, onNavigate }) => {
                     <AsideOption name="Listar" icon={ChartBarIcon} active={currentPage === 'youtube-list'} onClick={() => onNavigate('youtube-list')}/>
                     <AsideOption name="Temas em Alta" icon={FireIcon} active={currentPage === 'trending-topics'} onClick={() => onNavigate('trending-topics')}/>
                     <AsideOption name="Conteúdos" icon={DocumentChartBarIcon} active={currentPage === 'content-library'} onClick={() => onNavigate('content-library')}/>
+                    <AsideOption name="Criação" icon={SparklesIcon} active={currentPage === 'content-creation'} onClick={() => onNavigate('content-creation')}/>
                 </div>}
                 <AsideOption name="TikTok" icon={MusicalNoteIcon}/>
                 <AsideOption name="Instagram" icon={CameraIcon}/>

@@ -1,3 +1,4 @@
+jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
 import { Test, TestingModule } from '@nestjs/testing';
 import { RedditService } from './reddit.service';
 
@@ -7,7 +8,9 @@ describe('RedditService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [RedditService],
-    }).compile();
+    })
+      .useMocker(() => ({ get: jest.fn(() => 'test-token') }))
+      .compile();
 
     service = module.get<RedditService>(RedditService);
   });

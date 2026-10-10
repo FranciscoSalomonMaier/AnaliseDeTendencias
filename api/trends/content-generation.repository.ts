@@ -66,7 +66,7 @@ export class ContentGenerationRepository {
       `SELECT generation_id, trend_id, region_code, language,
               trend_snapshot, ideas, selected_idea, script, video_plan,
               production_approved
-       FROM content_generation_runs WHERE generation_id = $1`,
+       FROM content_generation_runs WHERE project_config IS NULL AND generation_id = $1`,
       [generationId],
     );
     const row = result.rows[0];
@@ -95,7 +95,7 @@ export class ContentGenerationRepository {
     const countResult = await this.database.query<{ total: string }>(
       `SELECT COUNT(*)::text AS total
        FROM content_generation_runs
-       WHERE ($1::text IS NULL OR region_code = $1)`,
+       WHERE project_config IS NULL AND ($1::text IS NULL OR region_code = $1)`,
       [options.regionCode ?? null],
     );
     const result = await this.database.query<ContentGenerationRow>(
@@ -103,7 +103,7 @@ export class ContentGenerationRepository {
               trend_snapshot, ideas, selected_idea, script, video_plan,
               production_approved, created_at, updated_at
        FROM content_generation_runs
-       WHERE ($1::text IS NULL OR region_code = $1)
+       WHERE project_config IS NULL AND ($1::text IS NULL OR region_code = $1)
        ORDER BY updated_at DESC, created_at DESC
        LIMIT $2 OFFSET $3`,
       [options.regionCode ?? null, options.limit, options.offset],
@@ -160,7 +160,7 @@ export class ContentGenerationRepository {
          video_plan = NULL,
          production_approved = FALSE,
          updated_at = NOW()
-       WHERE generation_id = $1 AND ideas @> jsonb_build_array($2::jsonb)`,
+       WHERE project_config IS NULL AND generation_id = $1 AND ideas @> jsonb_build_array($2::jsonb)`,
       [generationId, JSON.stringify(idea)],
     );
     if (result.rowCount === 0) {
@@ -184,7 +184,7 @@ export class ContentGenerationRepository {
          output_tokens = output_tokens + $5,
          total_tokens = total_tokens + $6,
          updated_at = NOW()
-        WHERE generation_id = $1 AND ideas @> jsonb_build_array($2::jsonb)`,
+        WHERE project_config IS NULL AND generation_id = $1 AND ideas @> jsonb_build_array($2::jsonb)`,
       [
         generationId,
         JSON.stringify(idea),
@@ -210,7 +210,7 @@ export class ContentGenerationRepository {
          video_plan = NULL,
          production_approved = FALSE,
          updated_at = NOW()
-       WHERE generation_id = $1 AND selected_idea->>'ideaId' = $2`,
+       WHERE project_config IS NULL AND generation_id = $1 AND selected_idea->>'ideaId' = $2`,
       [generationId, ideaId, JSON.stringify(script)],
     );
     if (result.rowCount === 0) {
@@ -233,7 +233,7 @@ export class ContentGenerationRepository {
          output_tokens = output_tokens + $5,
          total_tokens = total_tokens + $6,
          updated_at = NOW()
-       WHERE generation_id = $1`,
+       WHERE project_config IS NULL AND generation_id = $1`,
       [
         generationId,
         JSON.stringify(plan),
@@ -260,7 +260,7 @@ export class ContentGenerationRepository {
          video_plan = $3::jsonb,
          production_approved = $4,
          updated_at = NOW()
-       WHERE generation_id = $1 AND selected_idea IS NOT NULL`,
+       WHERE project_config IS NULL AND generation_id = $1 AND selected_idea IS NOT NULL`,
       [generationId, JSON.stringify(script), JSON.stringify(plan), approved],
     );
     if (result.rowCount === 0) {

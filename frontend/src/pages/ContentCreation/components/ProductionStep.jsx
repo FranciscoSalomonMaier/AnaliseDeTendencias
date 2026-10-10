@@ -34,7 +34,7 @@ export function ProductionStep({ videoPlan, onBack }) {
           </article>)}
         </div>
       </div>
-      <p className="rounded-xl border border-border px-4 py-3 text-sm text-muted-foreground">Pipeline de produção em desenvolvimento.</p>
+      <p className="rounded-xl border border-border px-4 py-3 text-sm text-muted-foreground">Produção automática estará disponível em uma próxima etapa.</p>
       <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground hover:text-white"><ArrowLeftIcon className="size-4" /> Voltar às cenas</button>
     </section>
   );

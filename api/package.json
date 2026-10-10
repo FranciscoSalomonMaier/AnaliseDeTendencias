@@ -21,7 +21,13 @@
     "migrate:youtube": "node scripts/migrate-youtube.cjs",
     "test:topics": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=\"(semantic|trending-topics|topic-clustering|youtube|openai-llm)\"",
     "test:topics:integration": "node test/youtube/topics.integration.cjs",
-    "process:topics": "node scripts/process-semantic-topics.cjs"
+    "process:topics": "node scripts/process-semantic-topics.cjs",
+    "migrate:content": "node scripts/migrate-content.cjs",
+    "test:content": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=\"(content-project|content-generation)\"",
+    "test:content:integration": "node test/content/projects.integration.cjs",
+    "migrate:assets": "node scripts/migrate-assets.cjs",
+    "test:assets": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=content-assets",
+    "test:assets:integration": "node test/content/assets.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -33,6 +39,7 @@
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.35.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {

@@ -1,3 +1,4 @@
+import { ContentProjectCreation } from './ContentProjectCreation';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeftIcon, FolderOpenIcon } from "@heroicons/react/24/outline";
 import {
@@ -33,7 +34,7 @@ function addGenerationIdToUrl(generationId) {
   window.history.replaceState({}, "", url);
 }
 
-export function ContentCreation({ onNavigate, analysis }) {
+function LegacyContentCreation({ onNavigate, analysis }) {
   const [initialGenerationId] = useState(() => analysis?.generationId || new URLSearchParams(window.location.search).get("generationId") || "");
   const [generationId, setGenerationId] = useState(initialGenerationId);
   const [step, setStep] = useState("idea");
@@ -446,4 +447,8 @@ export function ContentCreation({ onNavigate, analysis }) {
       </details>}
     </div>
   );
+}
+
+export function ContentCreation(props) {
+ return props.analysis?.generationId || props.analysis?.trendId ? <LegacyContentCreation {...props}/> : <ContentProjectCreation {...props}/>;
 }

@@ -1,14 +1,14 @@
 import { ArrowLeftIcon, PlusIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { calculateSceneTimestamps, formatStudioDuration } from "../../../utils/contentStudioTime";
 
-export function ScenesStep({ videoPlan, onSceneChange, onBack, onApprove, busy, saveStatus, error }) {
+export function ScenesStep({ videoPlan, onSceneChange, onBack, onApprove, busy, saveStatus, error, onSave, onRegenerate }) {
   const timestamps = calculateSceneTimestamps(videoPlan.scenes);
   const totalDuration = videoPlan.scenes.reduce((sum, scene) => sum + scene.estimatedDurationSeconds, 0);
 
   return (
     <section className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-300">Etapa 3</p><h2 className="mt-1 text-xl font-semibold text-white">Cenas</h2></div>
+        <div><p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-300">Etapa {onSave ? 4 : 3}</p><h2 className="mt-1 text-xl font-semibold text-white">Cenas</h2></div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground"><span>{videoPlan.scenes.length} cenas · {formatStudioDuration(totalDuration)}</span>{saveStatus === "saving" && <span role="status">Salvando alterações…</span>}{saveStatus === "saved" && <span role="status" className="text-emerald-300">Alterações salvas</span>}{saveStatus === "error" && <span role="alert" className="text-red-300">Falha ao salvar</span>}</div>
       </div>
 
@@ -38,6 +38,8 @@ export function ScenesStep({ videoPlan, onSceneChange, onBack, onApprove, busy, 
         </article>)}
       </div>
 
+      {onSave && <button type="button" disabled={busy} onClick={onSave} className="rounded-xl border border-border px-4 py-2 text-sm">Salvar alterações</button>}
+      {onRegenerate && <button type="button" disabled={busy} onClick={onRegenerate} className="ml-2 rounded-xl border border-border px-4 py-2 text-sm">Regenerar cenas</button>}
       <button type="button" disabled title="Adicionar cenas estará disponível em breve." className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground opacity-50"><PlusIcon className="size-4" /> Adicionar cena</button>
       {error && <p role="alert" className="rounded-xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">{error}</p>}
       <div className="flex flex-wrap justify-between gap-3 border-t border-border pt-4">

@@ -82,6 +82,10 @@ export class PostgresDatabaseService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  acquireClient(): Promise<PoolClient> {
+    return this.pool.connect();
+  }
+
   query<T extends QueryResultRow>(
     sql: string,
     values: unknown[] = [],

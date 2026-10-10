@@ -1,11 +1,11 @@
 import { ArrowLeftIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { countScriptWords, formatStudioDuration } from "../../../utils/contentStudioTime";
 
-export function ScriptStep({ script, selectedIdea, onChange, onChangeSection, onBack, onRegenerate, onGenerateScenes, busy, saveStatus, error }) {
+export function ScriptStep({ script, selectedIdea, onChange, onChangeSection, onBack, onRegenerate, onGenerateScenes, busy, saveStatus, error, onSave, onApprove, scenesAllowed = false }) {
   return (
     <section className="space-y-5">
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-300">Etapa 2</p>
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-300">Etapa {onApprove ? 3 : 2}</p>
         <h2 className="mt-1 text-xl font-semibold text-white">Revisar roteiro</h2>
       </div>
 
@@ -43,7 +43,7 @@ export function ScriptStep({ script, selectedIdea, onChange, onChangeSection, on
 
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-white">Seções</h4>
-            {script.sections.map((section, index) => <section key={`${index}-${section.title}`} className="rounded-xl border border-border p-4">
+            {script.sections.map((section, index) => <section key={index} className="rounded-xl border border-border p-4">
               <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Seção {String(index + 1).padStart(2, "0")}</p>
               <label className="block text-sm font-medium text-white">Título
                 <input value={section.title} onChange={(event) => onChangeSection(index, "title", event.target.value)}
@@ -67,7 +67,9 @@ export function ScriptStep({ script, selectedIdea, onChange, onChangeSection, on
           <button type="button" onClick={onBack} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-muted-foreground hover:text-white disabled:opacity-50"><ArrowLeftIcon className="size-4" /> Voltar para ideias</button>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={onRegenerate} disabled={busy} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-white disabled:opacity-50"><SparklesIcon className="size-4" />{busy ? "Gerando…" : "Gerar roteiro novamente"}</button>
-            <button type="button" onClick={onGenerateScenes} disabled={busy} className="rounded-xl gradient-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Aprovar roteiro e gerar cenas →</button>
+            {onSave && <button type="button" disabled={busy} onClick={onSave} className="rounded-xl border border-border px-4 py-2 text-sm">Salvar alterações</button>}
+            {onApprove && <button type="button" disabled={busy || scenesAllowed} onClick={onApprove} className="rounded-xl border border-sky-400/40 px-4 py-2 text-sm">{scenesAllowed ? 'Roteiro aprovado' : 'Aprovar roteiro'}</button>}
+            <button type="button" onClick={onGenerateScenes} disabled={busy || (Boolean(onApprove) && !scenesAllowed)} className="rounded-xl gradient-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{onApprove ? 'Gerar cenas →' : 'Aprovar roteiro e gerar cenas →'}</button>
           </div>
         </div>
       </div>

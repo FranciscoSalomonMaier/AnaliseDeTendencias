@@ -1,3 +1,4 @@
+jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
 import { Test, TestingModule } from '@nestjs/testing';
 import { TrendsService } from './trends.service';
 
@@ -7,7 +8,9 @@ describe('TrendsService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [TrendsService],
-    }).compile();
+    })
+      .useMocker(() => ({ get: jest.fn(() => 'test-token') }))
+      .compile();
 
     service = module.get<TrendsService>(TrendsService);
   });
