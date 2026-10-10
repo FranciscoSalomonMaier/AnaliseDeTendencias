@@ -112,7 +112,11 @@ export class ContentNarrationService
       this.assets.list(p.id, client),
       this.repository.selections(p.id, client),
     ]);
-    const assets = all.filter((a) => a.type === 'AUDIO');
+    const assets = all.filter(
+      (a) =>
+        a.type === 'AUDIO' &&
+        (!a.metadata.audioRole || a.metadata.audioRole === 'NARRATION'),
+    );
     const settings = this.settings.forProject(p);
     const scenes = p.scenes.map((scene) => {
       const selection = selections.find((x) => x.sceneId === scene.id),
@@ -473,6 +477,8 @@ export class ContentNarrationService
         asset = await this.assets.get(id, assetId, client);
       if (
         asset.type !== 'AUDIO' ||
+        (asset.metadata.audioRole &&
+          asset.metadata.audioRole !== 'NARRATION') ||
         asset.sceneId !== sceneId ||
         asset.status !== 'READY' ||
         !asset.durationSeconds

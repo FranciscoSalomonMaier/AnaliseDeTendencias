@@ -1,3 +1,4 @@
+import type { AudioMixSnapshot } from '../content-audio/audio-timeline.builder';
 import type { RenderConfig } from './render-settings';
 export type MotionPreset =
   'SLOW_ZOOM_IN' | 'PAN_RIGHT' | 'SLOW_ZOOM_OUT' | 'PAN_LEFT' | 'STATIC';
@@ -18,6 +19,7 @@ export interface TimelineScene {
   motion: MotionPreset;
 }
 export interface RenderSnapshot {
+  audioMix?: AudioMixSnapshot;
   projectRevision: number;
   title: string;
   config: RenderConfig;

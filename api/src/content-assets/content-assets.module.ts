@@ -1,3 +1,8 @@
+import { ProjectAudioController } from '../content-audio/project-audio.controller';
+import { ProjectAudioService } from '../content-audio/project-audio.service';
+import { ProjectAudioRepository } from '../content-audio/project-audio.repository';
+import { AudioTimelineBuilder } from '../content-audio/audio-timeline.builder';
+import { AudioMixService } from '../content-audio/audio-mix.service';
 import { VideoRenderController } from '../video-render/video-render.controller';
 import { VideoRenderService } from '../video-render/video-render.service';
 import { RenderRepository } from '../video-render/render.repository';
@@ -32,9 +37,14 @@ import { ImageFileValidator } from './image-file.validator';
     ContentAssetsController,
     ContentNarrationController,
     VideoRenderController,
+    ProjectAudioController,
   ],
   providers: [
     VideoRenderService,
+    ProjectAudioService,
+    ProjectAudioRepository,
+    AudioTimelineBuilder,
+    AudioMixService,
     RenderRepository,
     TimelineBuilder,
     RenderSettings,

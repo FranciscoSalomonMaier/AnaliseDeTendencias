@@ -82,6 +82,8 @@ export class TimelineBuilder {
         );
       const audioValid =
         voice?.type === 'AUDIO' &&
+        (!voice.metadata.audioRole ||
+          voice.metadata.audioRole === 'NARRATION') &&
         voice.sceneId === scene.id &&
         voice.status === 'READY' &&
         voice.storageKey &&

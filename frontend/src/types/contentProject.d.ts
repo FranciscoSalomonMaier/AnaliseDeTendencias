@@ -79,6 +79,7 @@ export interface VideoTimelineScene {
  durationSeconds: number; frames: number; motion: 'SLOW_ZOOM_IN' | 'SLOW_ZOOM_OUT' | 'PAN_RIGHT' | 'PAN_LEFT' | 'STATIC';
 }
 export interface VideoRenderSnapshot {
+ audioMix?: AudioMixSnapshot;
  projectRevision: number; title: string; config: VideoRenderConfig; scenes: VideoTimelineScene[]; totalDurationSeconds: number;
 }
 export interface VideoRenderJob {
@@ -90,3 +91,19 @@ export interface VideoRenderJob {
 export interface VideoTimelinePreview {
  timeline: VideoRenderSnapshot; ready: boolean; issues: Array<{ sceneId: string | null; order: number | null; message: string }>;
 }
+
+export interface SceneSoundEffect {
+ id: string; sceneId: string; assetId: string; startOffsetSeconds: number; volume: number; enabled: boolean; scope: 'SCENE';
+}
+export interface ProjectAudioSettings {
+ backgroundMusicAssetId: string | null; musicVolume: number; musicFadeInSeconds: number; musicFadeOutSeconds: number;
+ loopMusic: boolean; duckingEnabled: boolean; effects: SceneSoundEffect[];
+}
+export interface AudioMixAsset {
+ assetId: string; storageKey: string; mimeType: string; durationSeconds: number; originalName: string; license: string; origin: string; notes: string;
+}
+export interface TimedSoundEffect extends AudioMixAsset {
+ id: string; sceneId: string; order: number; startOffsetSeconds: number; startSeconds: number; endSeconds: number;
+ sourceDurationSeconds: number; volume: number; scope: 'SCENE';
+}
+export interface AudioMixSnapshot { settings: ProjectAudioSettings; music: AudioMixAsset | null; effects: TimedSoundEffect[]; }

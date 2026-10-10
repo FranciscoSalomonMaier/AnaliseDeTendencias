@@ -172,3 +172,7 @@ Implementada geração real de áudio por cena com OpenAI, configurações de vo
 ## Etapa 4 — Timeline e renderização MP4
 
 Implementada montagem real com FFmpeg, timeline baseada na duração das narrações, movimento suave, jobs persistentes, progresso, cancelamento, histórico, player e download. Migration aplicada e teste real em 1080p aprovado. Diagnóstico, configuração, endpoints, testes, limitações e os 25 pontos de entrega: [IMPLEMENTACAO_TIMELINE_RENDERIZACAO.md](IMPLEMENTACAO_TIMELINE_RENDERIZACAO.md).
+
+## Etapa 5 — Música, efeitos e mixagem
+
+Integrada mixagem real ao renderizador existente: upload de MP3/WAV, música por projeto com volume/fades/loop/ducking, efeitos por cena com offset/ganho e snapshot das configurações. Detalhes dos 22 pontos de entrega, rotas, migration, testes e limites: [IMPLEMENTACAO_MUSICA_E_EFEITOS.md](IMPLEMENTACAO_MUSICA_E_EFEITOS.md).

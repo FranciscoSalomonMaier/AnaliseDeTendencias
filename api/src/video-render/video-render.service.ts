@@ -1,5 +1,8 @@
+import { ProjectAudioRepository } from '../content-audio/project-audio.repository';
+import { AudioTimelineBuilder } from '../content-audio/audio-timeline.builder';
 import {
   Injectable,
+  Optional,
   BadRequestException,
   ConflictException,
   NotFoundException,
@@ -40,6 +43,7 @@ export class VideoRenderService
     private readonly renderer: FfmpegRenderer,
     private readonly storage: StorageProvider,
     private readonly settings: RenderSettings,
+    @Optional() private readonly projectAudio?: ProjectAudioRepository,
   ) {}
   async onApplicationBootstrap() {
     this.stopped = false;
@@ -63,6 +67,17 @@ export class VideoRenderService
     const visuals = await this.assets.selections(id, client);
     const audio = await this.narration.selections(id, client);
     const result = this.timeline.build(project, assets, visuals, audio);
+    if (this.projectAudio) {
+      const settings = await this.projectAudio.get(id, client);
+      const mix = new AudioTimelineBuilder().build(
+        result.snapshot,
+        settings,
+        assets,
+        id,
+      );
+      result.snapshot.audioMix = mix.mix;
+      result.issues.push(...mix.issues);
+    }
     return { ...result, project };
   }
   async preview(id: string) {

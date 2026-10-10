@@ -63,7 +63,11 @@ export class ContentAssetRepository {
         r.status === 'READY'
           ? r.type === 'VIDEO' && typeof r.metadata.renderJobId === 'string'
             ? `/content-projects/${r.project_id}/renders/${r.metadata.renderJobId}/video`
-            : this.storage.getUrl(r.project_id, r.id)
+            : r.type === 'AUDIO' &&
+                (r.metadata.audioRole === 'BACKGROUND_MUSIC' ||
+                  r.metadata.audioRole === 'SOUND_EFFECT')
+              ? `/content-projects/${r.project_id}/audio-library/${r.id}/file`
+              : this.storage.getUrl(r.project_id, r.id)
           : null,
       mimeType: r.mime_type,
       width: r.width,
