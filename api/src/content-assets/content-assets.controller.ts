@@ -1,5 +1,6 @@
 import {
   Body,
+  Headers,
   Controller,
   Get,
   HttpCode,
@@ -87,12 +88,41 @@ export class ContentAssetsController {
     @Param('projectId', ParseUUIDPipe) id: string,
     @Param('assetId', ParseUUIDPipe) assetId: string,
     @Res() res: Response,
+    @Headers('range') range?: string,
   ) {
     const file = await this.service.file(id, assetId);
     res.setHeader('Content-Type', file.mimeType);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'private, max-age=86400');
     res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Accept-Ranges', 'bytes');
+    if (range) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+      const size = file.image.length;
+      let start = match?.[1] ? Number(match[1]) : 0;
+      let end = match?.[2] ? Number(match[2]) : size - 1;
+      if (match && !match[1] && match[2]) {
+        start = Math.max(0, size - Number(match[2]));
+        end = size - 1;
+      }
+      if (
+        !match ||
+        (!match[1] && !match[2]) ||
+        !Number.isSafeInteger(start) ||
+        !Number.isSafeInteger(end) ||
+        start >= size ||
+        end < start ||
+        start < 0
+      ) {
+        res.setHeader('Content-Range', `bytes */${size}`);
+        res.status(416).end();
+        return;
+      }
+      end = Math.min(end, size - 1);
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+      res.status(206).send(file.image.subarray(start, end + 1));
+      return;
+    }
     res.send(file.image);
   }
 }

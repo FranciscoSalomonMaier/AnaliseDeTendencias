@@ -96,10 +96,11 @@ export class ContentAssetsService
     p: ContentProject,
     client?: PoolClient,
   ): Promise<VisualState> {
-    const [assets, selections] = await Promise.all([
+    const [allAssets, selections] = await Promise.all([
       this.assets.list(p.id, client),
       this.assets.selections(p.id, client),
     ]);
+    const assets = allAssets.filter((a) => a.type === 'IMAGE');
     const scenes = p.scenes.map((scene) => {
       const selected = selections.find((s) => s.sceneId === scene.id);
       const asset = assets.find((a) => a.id === selected?.assetId);
@@ -363,7 +364,7 @@ export class ContentAssetsService
       this.approved(p);
       const scene = this.scene(p, sceneId);
       const asset = await this.assets.get(id, assetId, client);
-      if (asset.status !== 'READY')
+      if (asset.type !== 'IMAGE' || asset.status !== 'READY')
         throw new ConflictException('A imagem ainda não está pronta.');
       // Same-project references and preserved images from former scenes can be explicitly reused.
       await this.assets.select(

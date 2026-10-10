@@ -16,6 +16,7 @@ const { Client } = require('pg');
     for (const file of [
       '004_content_projects.sql',
       '005_content_visual_assets.sql',
+      '006_content_narration.sql',
     ])
       await client.query(
         readFileSync(resolve(root, 'migrations', file), 'utf8'),

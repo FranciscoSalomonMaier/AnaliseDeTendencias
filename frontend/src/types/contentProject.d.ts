@@ -9,7 +9,11 @@ export interface ContentProjectConfig {
  targetDurationSeconds: number;
  reference?: { type: 'TOPIC' | 'VIDEO' | 'MANUAL'; id?: string };
 }
+export interface NarrationSettings {
+ provider: 'openai'; model: string; voice: string; language: string; style: 'DARK' | 'NARRATIVE'; speed: number; format: 'mp3' | 'wav';
+}
 export interface ContentProject {
+ narrationSettings?: NarrationSettings | null;
  id: string;
  config: ContentProjectConfig;
  status: ProjectStatus;
@@ -30,7 +34,9 @@ export interface ContentAsset {
  id: string;
  projectId: string;
  sceneId: string | null;
- type: 'IMAGE';
+ type: 'IMAGE' | 'AUDIO';
+ durationSeconds?: number | null;
+ voice?: string | null;
  source: 'AI_GENERATED' | 'USER_UPLOAD';
  status: 'PENDING' | 'GENERATING' | 'READY' | 'FAILED';
  usage: ContentAssetUsage;

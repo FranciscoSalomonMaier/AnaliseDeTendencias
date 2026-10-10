@@ -20,6 +20,8 @@ interface AssetRow {
   mime_type: string | null;
   width: number | null;
   height: number | null;
+  duration_seconds?: number | null;
+  voice?: string | null;
   provider: string | null;
   model: string | null;
   original_prompt: string | null;
@@ -62,6 +64,8 @@ export class ContentAssetRepository {
       mimeType: r.mime_type,
       width: r.width,
       height: r.height,
+      durationSeconds: r.duration_seconds ?? null,
+      voice: r.voice ?? null,
       provider: r.provider,
       model: r.model,
       originalPrompt: r.original_prompt,
@@ -201,7 +205,7 @@ export class ContentAssetRepository {
     }
     // Local single-process queue: never repeat a potentially billed call after restart.
     await this.db.query(
-      "UPDATE content_assets SET status='FAILED',error='Geração interrompida pelo reinício da API. Tente novamente.',updated_at=NOW() WHERE status IN ('PENDING','GENERATING')",
+      "UPDATE content_assets SET status='FAILED',error='Geração interrompida pelo reinício da API. Tente novamente.',updated_at=NOW() WHERE type='IMAGE' AND status IN ('PENDING','GENERATING')",
     );
   }
   async releaseWorker() {

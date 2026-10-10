@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { PostgresDatabaseService } from '../database/postgres-database.service';
 import { ContentProject, ProjectConfig } from './content-project.schema';
 interface Row {
+  narration_settings?: ContentProject['narrationSettings'];
   generation_id: string;
   project_config: ContentProject['config'];
   project_status: ContentProject['status'];
@@ -26,6 +27,7 @@ function mapRow(r: Row): ContentProject {
   return {
     id: r.generation_id,
     config: r.project_config,
+    narrationSettings: r.narration_settings ?? null,
     status: r.project_status,
     revision: r.project_revision,
     ideas: r.ideas,
@@ -99,7 +101,7 @@ export class ContentProjectRepository {
     const result = await client.query<Row>(
       `UPDATE content_generation_runs SET project_config=$2::jsonb,project_status=$3,project_revision=project_revision+1,
    ideas=$4::jsonb,selected_idea=$5::jsonb,script=$6::jsonb,video_plan=$7::jsonb,script_stale=$8,scenes_stale=$9,project_usage=$10::jsonb,
-   language=$11,production_approved=$12,updated_at=NOW()
+   language=$11,production_approved=$12,narration_settings=$14::jsonb,updated_at=NOW()
    WHERE generation_id=$1 AND project_config IS NOT NULL AND project_revision=$13 RETURNING *`,
       [
         p.id,
@@ -124,6 +126,7 @@ export class ContentProjectRepository {
         p.config.language,
         p.status === 'SCENES_APPROVED',
         p.revision,
+        JSON.stringify(p.narrationSettings ?? null),
       ],
     );
     if (!result.rows[0])

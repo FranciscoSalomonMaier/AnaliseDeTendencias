@@ -1,3 +1,4 @@
+import { NarrationProduction } from "./NarrationProduction";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { contentAssets, assetImageUrl } from "../../../services/contentAssetService";
 import { emptyVisualState, missingVisualCount, requiredReferencesMissing, sceneVisual } from "../../../utils/contentVisualState";
@@ -14,7 +15,7 @@ export function VisualProductionView({ project, state, busy, error, loading, onG
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="flex flex-wrap justify-between gap-3"><p role="status" className="font-medium">{state.readyCount} / {project.scenes.length} prontas{state.busyCount > 0 ? ` · ${state.busyCount} em processamento` : ""}</p><button className={button} disabled={!approved || Boolean(busy) || loading || !missing} onClick={onMissing}>Gerar imagens faltantes ({missing})</button></div>
       <progress aria-label="Progresso das imagens" max={project.scenes.length || 1} value={state.readyCount} className="mt-4 h-3 w-full accent-sky-400" />
-      <p className="mt-2 text-xs text-muted-foreground">Geração somente por ação explícita. Formato 16:9. Narração, música e renderização: Em breve.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Geração somente por ação explícita. Formato 16:9. Música, montagem e renderização: Em breve.</p>
     </div>
     {!approved && <p className="rounded-xl border border-amber-400/30 p-3 text-amber-200">Aprove as cenas atuais para gerar ou selecionar imagens. Os assets anteriores continuam disponíveis.</p>}
     {required.length > 0 && <p className="rounded-xl border border-amber-400/30 p-3 text-sm text-amber-200">{required.length} imagem(ns) obrigatória(s) ainda sem uso em uma cena. Selecione-as nas variações.</p>}
@@ -47,7 +48,7 @@ export function VisualProductionView({ project, state, busy, error, loading, onG
     <button className={button} onClick={onBack} disabled={Boolean(busy)}>Voltar às cenas</button>
   </section>;
 }
-export function VisualProduction({ project, onBack }) {
+export function VisualProduction({ project, onBack, onProjectChange }) {
   const [state,setState] = useState(emptyVisualState), [busy,setBusy] = useState(""), [error,setError] = useState(""), [loading,setLoading] = useState(true);
   const inFlight = useRef(false);
   const currentId = useRef(project.id);
@@ -79,10 +80,10 @@ export function VisualProduction({ project, onBack }) {
     catch (e) { setError(e.message); }
     finally { inFlight.current = false; setBusy(""); }
   }
-  return <VisualProductionView project={project} state={state} busy={busy} error={error} loading={loading} onBack={onBack}
+  return <div className="space-y-6"><NarrationProduction project={project} onProjectChange={onProjectChange} /><VisualProductionView project={project} state={state} busy={busy} error={error} loading={loading} onBack={onBack}
     onGenerate={id => void run(id,() => contentAssets.generate(project,id))}
     onUpload={(id,file) => void run(id,() => contentAssets.upload(project,id,file))}
     onSelect={(id,assetId) => void run(id,() => contentAssets.select(project,id,assetId))}
     onRefresh={() => void run("refresh",refresh)}
-    onMissing={() => { const count = missingVisualCount(state,project.scenes); if (count && window.confirm(`Gerar imagens para ${count} cenas? Esta ação utiliza o provider de imagens e pode consumir créditos.`)) void run("batch",() => contentAssets.missing(project)); }} />;
+    onMissing={() => { const count = missingVisualCount(state,project.scenes); if (count && window.confirm(`Gerar imagens para ${count} cenas? Esta ação utiliza o provider de imagens e pode consumir créditos.`)) void run("batch",() => contentAssets.missing(project)); }} /></div>;
 }

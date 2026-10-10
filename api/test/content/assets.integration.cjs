@@ -70,6 +70,7 @@ async function until(fn) {
     for (const file of [
       '004_content_projects.sql',
       '005_content_visual_assets.sql',
+      '006_content_narration.sql',
     ]) {
       const sql = readFileSync(resolve('migrations', file), 'utf8');
       await client.query(sql);

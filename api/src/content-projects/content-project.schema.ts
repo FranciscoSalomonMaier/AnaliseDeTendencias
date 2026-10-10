@@ -46,7 +46,17 @@ export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 export type ProjectIdea = z.infer<typeof ProjectIdeaSchema>;
 export type ProjectScene = z.infer<typeof ProjectSceneSchema>;
 export type ProjectScript = z.infer<typeof GeneratedScriptSchema>;
+export interface NarrationSettings {
+  provider: 'openai';
+  model: string;
+  voice: string;
+  language: string;
+  style: string;
+  speed: number;
+  format: 'mp3' | 'wav';
+}
 export interface ContentProject {
+  narrationSettings?: NarrationSettings | null;
   id: string;
   config: ProjectConfig;
   status: (typeof ProjectStatuses)[number];

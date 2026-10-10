@@ -163,3 +163,8 @@ Reinicie o backend e abra YouTube → Criação. Informe o tema e gere ideias; s
 A duração é estimada e o orçamento de palavras é uma orientação ao modelo, sem garantia de tempo exato. O conteúdo pode exigir pesquisa editorial; não há busca de fontes neste fluxo. Salvamento é explícito, sem autosave. O código foi testado com provider simulado; disponibilidade, permissões, saldo e qualidade da geração real dependem da configuração existente do provider.
 
 Nesta etapa somente vídeo, estilo Dark e pt-BR estão disponíveis. Não há produção de mídia, upload, imagens reais, TTS, música, legendas, timeline, FFmpeg, MP4, publicação ou cortes. O próximo passo é definir storage e assets, incorporar providers de mídia e conectar as cenas a narração/imagens e à produção, preservando a identidade do projeto e a revisão dos artefatos.
+
+
+## Etapa de narração TTS
+
+Implementada geração real de áudio por cena com OpenAI, configurações de voz do projeto, versões, seleção persistida, upload MP3/WAV, duração medida no backend e fila persistente no PostgreSQL. Detalhes, endpoints, migration, testes e limitações: [IMPLEMENTACAO_NARRACAO_TTS.md](IMPLEMENTACAO_NARRACAO_TTS.md).

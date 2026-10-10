@@ -67,6 +67,9 @@ async function until(fn) {
     );
     await client.query(migration);
     await client.query(migration);
+    for (const file of ['005_content_visual_assets.sql', '006_content_narration.sql']) {
+      await client.query(readFileSync('migrations/' + file, 'utf8'));
+    }
     await client.query(
       `INSERT INTO content_generation_runs(generation_id,trend_id,region_code,language,trend_snapshot,ideas,provider,model) VALUES($1,'legacy','BR','pt-BR','{}','[]','mock','mock')`,
       [randomUUID()],

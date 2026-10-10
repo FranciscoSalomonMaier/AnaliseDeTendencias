@@ -468,6 +468,7 @@ export function ContentProjectCreation({ analysis, onNavigate }) {
         {step === "production" && project && (
           <VisualProduction
             project={project}
+            onProjectChange={accept}
             onBack={() => setStep("scenes")}
           />
         )}

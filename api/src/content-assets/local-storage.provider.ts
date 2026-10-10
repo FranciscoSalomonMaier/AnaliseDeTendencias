@@ -14,7 +14,7 @@ export class LocalStorageProvider extends StorageProvider {
     );
   }
   private path(key: string) {
-    if (!/^[a-zA-Z0-9/-]+\.(png|jpg|webp)$/.test(key))
+    if (!/^[a-zA-Z0-9/-]+\.(png|jpg|webp|mp3|wav)$/.test(key))
       throw new Error('Storage key inválida');
     const path = resolve(this.root, key);
     if (!path.startsWith(this.root + sep))
@@ -44,7 +44,7 @@ export class LocalStorageProvider extends StorageProvider {
     try {
       return await readFile(this.path(key));
     } catch {
-      throw new NotFoundException('Arquivo de imagem indisponível');
+      throw new NotFoundException('Arquivo indisponível');
     }
   }
   getUrl(projectId: string, assetId: string) {

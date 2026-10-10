@@ -3,7 +3,9 @@ export interface ContentAsset {
   id: string;
   projectId: string;
   sceneId: string | null;
-  type: 'IMAGE';
+  type: 'IMAGE' | 'AUDIO';
+  durationSeconds?: number | null;
+  voice?: string | null;
   source: 'AI_GENERATED' | 'USER_UPLOAD';
   status: 'PENDING' | 'GENERATING' | 'READY' | 'FAILED';
   usage: AssetUsage;
