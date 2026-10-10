@@ -168,3 +168,7 @@ Nesta etapa somente vídeo, estilo Dark e pt-BR estão disponíveis. Não há pr
 ## Etapa de narração TTS
 
 Implementada geração real de áudio por cena com OpenAI, configurações de voz do projeto, versões, seleção persistida, upload MP3/WAV, duração medida no backend e fila persistente no PostgreSQL. Detalhes, endpoints, migration, testes e limitações: [IMPLEMENTACAO_NARRACAO_TTS.md](IMPLEMENTACAO_NARRACAO_TTS.md).
+
+## Etapa 4 — Timeline e renderização MP4
+
+Implementada montagem real com FFmpeg, timeline baseada na duração das narrações, movimento suave, jobs persistentes, progresso, cancelamento, histórico, player e download. Migration aplicada e teste real em 1080p aprovado. Diagnóstico, configuração, endpoints, testes, limitações e os 25 pontos de entrega: [IMPLEMENTACAO_TIMELINE_RENDERIZACAO.md](IMPLEMENTACAO_TIMELINE_RENDERIZACAO.md).

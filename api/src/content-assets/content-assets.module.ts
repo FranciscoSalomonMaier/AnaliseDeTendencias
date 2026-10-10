@@ -1,3 +1,10 @@
+import { VideoRenderController } from '../video-render/video-render.controller';
+import { VideoRenderService } from '../video-render/video-render.service';
+import { RenderRepository } from '../video-render/render.repository';
+import { TimelineBuilder } from '../video-render/timeline.builder';
+import { RenderSettings } from '../video-render/render-settings';
+import { MediaProcess } from '../video-render/media-process';
+import { FfmpegRenderer } from '../video-render/ffmpeg.renderer';
 import { ContentNarrationController } from '../content-narration/content-narration.controller';
 import { ContentNarrationService } from '../content-narration/content-narration.service';
 import { NarrationRepository } from '../content-narration/narration.repository';
@@ -21,8 +28,18 @@ import { SceneImagePromptBuilder } from './scene-image-prompt.builder';
 import { ImageFileValidator } from './image-file.validator';
 @Module({
   imports: [AiModule, ContentProjectModule],
-  controllers: [ContentAssetsController, ContentNarrationController],
+  controllers: [
+    ContentAssetsController,
+    ContentNarrationController,
+    VideoRenderController,
+  ],
   providers: [
+    VideoRenderService,
+    RenderRepository,
+    TimelineBuilder,
+    RenderSettings,
+    MediaProcess,
+    FfmpegRenderer,
     ContentAssetsService,
     ContentNarrationService,
     NarrationRepository,

@@ -29,15 +29,15 @@ export interface ContentProject {
  updatedAt: string;
 }
 export type ContentAssetUsage = 'REQUIRED' | 'REFERENCE' | 'OPTIONAL';
-export type ContentAssetType = 'IMAGE' | 'AUDIO' | 'MUSIC';
+export type ContentAssetType = 'IMAGE' | 'AUDIO' | 'VIDEO' | 'MUSIC';
 export interface ContentAsset {
  id: string;
  projectId: string;
  sceneId: string | null;
- type: 'IMAGE' | 'AUDIO';
+ type: 'IMAGE' | 'AUDIO' | 'VIDEO';
  durationSeconds?: number | null;
  voice?: string | null;
- source: 'AI_GENERATED' | 'USER_UPLOAD';
+ source: 'AI_GENERATED' | 'USER_UPLOAD' | 'RENDERED';
  status: 'PENDING' | 'GENERATING' | 'READY' | 'FAILED';
  usage: ContentAssetUsage;
  url: string | null;
@@ -65,4 +65,28 @@ export interface ContentVisualState {
  busyCount: number;
  referencesSupported: false;
  uploadMaxBytes: number;
+}
+
+export type VideoRenderStatus = 'QUEUED' | 'PREPARING' | 'RENDERING' | 'FINALIZING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+export interface VideoRenderConfig {
+ width: number; height: number; fps: number; codec: 'libx264'; audioCodec: 'aac'; pixelFormat: 'yuv420p';
+ crf: number; preset: 'veryfast'; audioRate: number; audioBitrate: string; paddingSeconds: number;
+ transition: 'CUT'; motion: boolean; normalizeAudio: boolean; threads: number;
+}
+export interface VideoTimelineScene {
+ sceneId: string; order: number; imageAssetId: string; audioAssetId: string; imageKey: string; audioKey: string;
+ imageMime: string; audioMime: string; audioDurationSeconds: number; startSeconds: number; endSeconds: number;
+ durationSeconds: number; frames: number; motion: 'SLOW_ZOOM_IN' | 'SLOW_ZOOM_OUT' | 'PAN_RIGHT' | 'PAN_LEFT' | 'STATIC';
+}
+export interface VideoRenderSnapshot {
+ projectRevision: number; title: string; config: VideoRenderConfig; scenes: VideoTimelineScene[]; totalDurationSeconds: number;
+}
+export interface VideoRenderJob {
+ id: string; projectId: string; status: VideoRenderStatus; progress: number; snapshot: VideoRenderSnapshot;
+ outputAssetId: string | null; error: string | null; cancelRequested: boolean; createdAt: string;
+ startedAt: string | null; completedAt: string | null; renderDurationSeconds: number | null;
+ videoUrl: string | null; downloadUrl: string | null;
+}
+export interface VideoTimelinePreview {
+ timeline: VideoRenderSnapshot; ready: boolean; issues: Array<{ sceneId: string | null; order: number | null; message: string }>;
 }

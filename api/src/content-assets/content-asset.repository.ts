@@ -60,7 +60,11 @@ export class ContentAssetRepository {
       usage: r.usage,
       storageKey: r.storage_key,
       url:
-        r.status === 'READY' ? this.storage.getUrl(r.project_id, r.id) : null,
+        r.status === 'READY'
+          ? r.type === 'VIDEO' && typeof r.metadata.renderJobId === 'string'
+            ? `/content-projects/${r.project_id}/renders/${r.metadata.renderJobId}/video`
+            : this.storage.getUrl(r.project_id, r.id)
+          : null,
       mimeType: r.mime_type,
       width: r.width,
       height: r.height,

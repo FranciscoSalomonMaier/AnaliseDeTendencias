@@ -27,7 +27,7 @@ export function NarrationProductionView({ project, state, draft, busy, loading, 
       <div className="flex flex-wrap items-center justify-between gap-3"><p role="status">{state.readyCount} / {project.scenes.length} narrações prontas{state.busyCount ? ` · ${state.busyCount} em processamento` : ""}</p><button className={button} disabled={!approved || Boolean(busy) || loading || dirty || !missing} onClick={onMissing}>Gerar narrações faltantes ({missing})</button></div>
       <progress aria-label="Progresso das narrações" value={state.readyCount} max={project.scenes.length || 1} className="h-3 w-full accent-sky-400" />
       {!approved && <p className="text-sm text-amber-200">Aprove as cenas atuais antes de gerar ou selecionar narrações.</p>}
-      <p className="text-xs text-muted-foreground">Música, montagem e renderização: Em breve.</p>
+      <p className="text-xs text-muted-foreground">Música e legendas: Em breve.</p>
     </div>
     {project.scenes.map(scene => {
       const audio = sceneNarration(state, scene);

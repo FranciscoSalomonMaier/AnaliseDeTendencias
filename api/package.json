@@ -30,7 +30,10 @@
     "test:assets:integration": "node test/content/assets.integration.cjs",
     "migrate:narration": "node scripts/migrate-assets.cjs",
     "test:narration": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=content-narration",
-    "test:narration:integration": "node test/content/narration.integration.cjs"
+    "test:narration:integration": "node test/content/narration.integration.cjs",
+    "migrate:renders": "node scripts/migrate-assets.cjs",
+    "test:renders": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=video-render",
+    "test:renders:integration": "node test/content/renders.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -38,6 +41,8 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^11.0.1",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
     "music-metadata": "^12.1.0",
     "openai": "^7.15.0",
     "pg": "^8.23.0",

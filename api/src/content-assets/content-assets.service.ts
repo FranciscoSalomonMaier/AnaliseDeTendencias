@@ -380,6 +380,8 @@ export class ContentAssetsService
   async file(id: string, assetId: string) {
     await this.projects.get(id);
     const asset = await this.assets.get(id, assetId);
+    if (asset.type === 'VIDEO')
+      throw new NotFoundException('Use o endpoint de vídeo da renderização.');
     if (asset.status !== 'READY' || !asset.storageKey)
       throw new NotFoundException('Imagem indisponível');
     return {
