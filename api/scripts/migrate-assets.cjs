@@ -26,6 +26,7 @@ const { Client } = require('pg');
       '006_content_narration.sql',
       '007_video_renders.sql',
       '008_project_audio_mix.sql',
+      '009_content_subtitles.sql',
     ]) {
       const applied = await client.query(
         'SELECT 1 FROM content_schema_migrations WHERE name=$1',

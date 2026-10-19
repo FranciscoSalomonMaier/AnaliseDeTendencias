@@ -9,8 +9,21 @@ import {
   statfs,
   stat,
   readdir,
+  copyFile,
 } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { exportAss } from '../content-subtitles/subtitle.formats';
+const sourceFonts = resolve(__dirname, '../../assets/fonts');
+const FONT_DIR = existsSync(sourceFonts)
+  ? sourceFonts
+  : resolve(__dirname, '../../../assets/fonts');
+export function filterPath(path: string) {
+  return path
+    .replace(/\\/g, '\\\\')
+    .replace(/:/g, '\\:')
+    .replace(/'/g, "'\\''");
+}
 import sharp from 'sharp';
 import { StorageProvider } from '../content-assets/storage.provider';
 import { RenderSettings, RenderConfig } from './render-settings';
@@ -98,6 +111,26 @@ export class FfmpegRenderer {
       order: number | null;
       message: string;
     }> = [];
+    if (snapshot.subtitles?.settings.enabled) {
+      try {
+        await stat(join(FONT_DIR, 'LiberationSans-Regular.ttf'));
+        await stat(join(FONT_DIR, 'LiberationSans-Bold.ttf'));
+        exportAss(
+          snapshot.subtitles,
+          snapshot.config.width,
+          snapshot.config.height,
+        );
+      } catch (e) {
+        issues.push({
+          sceneId: null,
+          order: null,
+          message:
+            e instanceof Error && e.message.includes('Legenda excede')
+              ? e.message
+              : 'Fontes de legendas indisponíveis. Inclua api/assets/fonts no ambiente de execução.',
+        });
+      }
+    }
     for (const scene of snapshot.scenes)
       for (const [key, type, max] of [
         [scene.imageKey, 'Imagem', 10 * 1024 * 1024],
@@ -183,6 +216,25 @@ export class FfmpegRenderer {
         return ms;
       };
     try {
+      const subtitles = job.snapshot.subtitles;
+      if (subtitles?.settings.enabled) {
+        const filters = await this.process.run(
+          this.settings.ffmpegPath,
+          ['-filters'],
+          10000,
+          signal,
+        );
+        if (!/\bass\s+V->V/.test(filters))
+          throw new RenderFailure(
+            'FFmpeg configurado não oferece libass. Desative legendas ou configure um executável compatível.',
+          );
+        await mkdir(join(dir, 'fonts'));
+        for (const name of [
+          'LiberationSans-Regular.ttf',
+          'LiberationSans-Bold.ttf',
+        ])
+          await copyFile(join(FONT_DIR, name), join(dir, 'fonts', name));
+      }
       const mixInputs: Array<{ assetId: string; path: string }> = [];
       for (const [index, asset] of this.mixAssets(job.snapshot).entries()) {
         remaining();
@@ -264,6 +316,27 @@ export class FfmpegRenderer {
       for (const [index, scene] of job.snapshot.scenes.entries()) {
         const segment = join(dir, `segment-${index}.mkv`),
           audioFilter = `aresample=${c.audioRate},aformat=sample_fmts=fltp:channel_layouts=stereo${c.normalizeAudio ? ',loudnorm=I=-16:TP=-1.5:LRA=11' : ''},apad,atrim=duration=${scene.durationSeconds},asetpts=PTS-STARTPTS`;
+        let videoFilter = imageMotionFilter(scene, c);
+        if (subtitles?.settings.enabled) {
+          const assPath = join(dir, `subtitles-${index}.ass`);
+          const local = {
+            ...subtitles,
+            segments: subtitles.segments
+              .filter((s) => s.sceneId === scene.sceneId)
+              .map((s) => ({
+                ...s,
+                startSeconds: s.startSeconds - scene.startSeconds,
+                endSeconds: s.endSeconds - scene.startSeconds,
+                words: s.words?.map((w) => ({
+                  ...w,
+                  startSeconds: w.startSeconds - scene.startSeconds,
+                  endSeconds: w.endSeconds - scene.startSeconds,
+                })),
+              })),
+          };
+          await writeFile(assPath, exportAss(local, c.width, c.height), 'utf8');
+          videoFilter += `,ass=filename='${filterPath(assPath)}':fontsdir='${filterPath(join(dir, 'fonts'))}'`;
+        }
         const args = [
           '-hide_banner',
           '-loglevel',
@@ -287,7 +360,7 @@ export class FfmpegRenderer {
           '-map',
           '1:a:0',
           '-vf',
-          imageMotionFilter(scene, c),
+          videoFilter,
           '-af',
           audioFilter,
           '-t',
@@ -431,6 +504,7 @@ export class FfmpegRenderer {
         )
           throw new RenderFailure(
             'A mixagem não atingiu a duração completa do vídeo. Verifique os arquivos e os limites de tamanho.',
+            `Mixagem com duração ${mixedProbe.format?.duration ?? 'indisponível'} s; esperado ${job.snapshot.totalDurationSeconds} s; limite de arquivo ${this.settings.maxFileBytes} bytes.`,
           );
         audioInputs = ['-protocol_whitelist', 'file,pipe', '-i', mixedAudio];
         audioMap = '1:a:0';

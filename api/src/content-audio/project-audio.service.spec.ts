@@ -41,7 +41,7 @@ describe('Project audio coordination', () => {
       revision: 0,
       scenes: [],
       config: { topic: 'Mix' },
-    } as ContentProject;
+    } as unknown as ContentProject;
     client = { query: jest.fn().mockResolvedValue({ rows: [] }) };
     projects = {
       get: jest.fn().mockResolvedValue(p),

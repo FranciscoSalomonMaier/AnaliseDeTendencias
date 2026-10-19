@@ -1,4 +1,6 @@
 import { AudioMixProduction } from "./AudioMixProduction";
+import { ProductionPanel } from "./ProductionPanel";
+import { SubtitleProduction } from "./SubtitleProduction";
 import { VideoProduction } from "./VideoProduction";
 import { NarrationProduction } from "./NarrationProduction";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,7 +19,7 @@ export function VisualProductionView({ project, state, busy, error, loading, onG
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="flex flex-wrap justify-between gap-3"><p role="status" className="font-medium">{state.readyCount} / {project.scenes.length} prontas{state.busyCount > 0 ? ` · ${state.busyCount} em processamento` : ""}</p><button className={button} disabled={!approved || Boolean(busy) || loading || !missing} onClick={onMissing}>Gerar imagens faltantes ({missing})</button></div>
       <progress aria-label="Progresso das imagens" max={project.scenes.length || 1} value={state.readyCount} className="mt-4 h-3 w-full accent-sky-400" />
-      <p className="mt-2 text-xs text-muted-foreground">Geração somente por ação explícita. Formato 16:9. Legendas: Em breve.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Geração somente por ação explícita. Formato 16:9. Legendas disponíveis na seção de produção.</p>
     </div>
     {!approved && <p className="rounded-xl border border-amber-400/30 p-3 text-amber-200">Aprove as cenas atuais para gerar ou selecionar imagens. Os assets anteriores continuam disponíveis.</p>}
     {required.length > 0 && <p className="rounded-xl border border-amber-400/30 p-3 text-sm text-amber-200">{required.length} imagem(ns) obrigatória(s) ainda sem uso em uma cena. Selecione-as nas variações.</p>}
@@ -52,6 +54,7 @@ export function VisualProductionView({ project, state, busy, error, loading, onG
 }
 export function VisualProduction({ project, onBack, onProjectChange }) {
   const [mixDirty, setMixDirty] = useState(false);
+  const [subtitleDirty, setSubtitleDirty] = useState(false);
   const [state,setState] = useState(emptyVisualState), [busy,setBusy] = useState(""), [error,setError] = useState(""), [loading,setLoading] = useState(true);
   const inFlight = useRef(false);
   const currentId = useRef(project.id);
@@ -83,10 +86,26 @@ export function VisualProduction({ project, onBack, onProjectChange }) {
     catch (e) { setError(e.message); }
     finally { inFlight.current = false; setBusy(""); }
   }
-  return <div className="space-y-6"><AudioMixProduction key={`audio-${project.id}`} project={project} onProjectChange={onProjectChange} onDirtyChange={setMixDirty} /><VideoProduction key={project.id} project={project} audioDraftDirty={mixDirty} /><NarrationProduction project={project} onProjectChange={onProjectChange} /><VisualProductionView project={project} state={state} busy={busy} error={error} loading={loading} onBack={onBack}
+  return <div className="space-y-4">
+    <ProductionPanel title="Música de fundo e efeitos sonoros" description="Música, volumes e efeitos por cena" pending={mixDirty}>
+      <AudioMixProduction key={`audio-${project.id}`} project={project} onProjectChange={onProjectChange} onDirtyChange={setMixDirty} />
+    </ProductionPanel>
+    <ProductionPanel title="Legendas automáticas" description="Gerar, revisar e escolher o estilo das legendas" pending={subtitleDirty}>
+      <SubtitleProduction key={`subtitles-${project.id}`} project={project} onProjectChange={onProjectChange} onDirtyChange={setSubtitleDirty} />
+    </ProductionPanel>
+    <ProductionPanel title="Narrações" description="Gerar, enviar e selecionar os áudios das cenas">
+      <NarrationProduction project={project} onProjectChange={onProjectChange} />
+    </ProductionPanel>
+    <ProductionPanel title="Imagens das cenas" description={`${state.readyCount} / ${project.scenes.length} prontas${state.busyCount ? ` · ${state.busyCount} em processamento` : ""}`}>
+      <VisualProductionView project={project} state={state} busy={busy} error={error} loading={loading} onBack={onBack}
     onGenerate={id => void run(id,() => contentAssets.generate(project,id))}
     onUpload={(id,file) => void run(id,() => contentAssets.upload(project,id,file))}
     onSelect={(id,assetId) => void run(id,() => contentAssets.select(project,id,assetId))}
     onRefresh={() => void run("refresh",refresh)}
-    onMissing={() => { const count = missingVisualCount(state,project.scenes); if (count && window.confirm(`Gerar imagens para ${count} cenas? Esta ação utiliza o provider de imagens e pode consumir créditos.`)) void run("batch",() => contentAssets.missing(project)); }} /></div>;
+    onMissing={() => { const count = missingVisualCount(state,project.scenes); if (count && window.confirm(`Gerar imagens para ${count} cenas? Esta ação utiliza o provider de imagens e pode consumir créditos.`)) void run("batch",() => contentAssets.missing(project)); }} />
+    </ProductionPanel>
+    <ProductionPanel title="Montagem do vídeo" description="Conferir a timeline, gerar e baixar o MP4">
+      <VideoProduction key={project.id} project={project} audioDraftDirty={mixDirty} subtitleDraftDirty={subtitleDirty} />
+    </ProductionPanel>
+  </div>;
 }

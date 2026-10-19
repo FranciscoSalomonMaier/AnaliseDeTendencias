@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { hasVisualDirections } from '../ai/content-generation/spoken-text';
 import type { ContentProject } from '../content-projects/content-project.schema';
 import type {
   ContentAsset,
@@ -100,6 +101,13 @@ export class TimelineBuilder {
       if (!audioValid)
         fail('Narração não selecionada, indisponível ou sem duração válida.');
       else {
+        if (
+          voice.source === 'AI_GENERATED' &&
+          hasVisualDirections(voice.originalPrompt ?? '')
+        )
+          fail(
+            'A narração foi gerada com instruções visuais. Regere a narração desta cena.',
+          );
         const current = narrationFingerprint(
           scene.narration,
           this.tts.forProject(p),

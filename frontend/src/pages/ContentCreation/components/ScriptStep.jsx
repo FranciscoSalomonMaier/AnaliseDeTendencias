@@ -1,7 +1,9 @@
 import { ArrowLeftIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { countScriptWords, formatStudioDuration } from "../../../utils/contentStudioTime";
+import { CopyTextButton } from "./CopyTextButton";
 
 export function ScriptStep({ script, selectedIdea, onChange, onChangeSection, onBack, onRegenerate, onGenerateScenes, busy, saveStatus, error, onSave, onApprove, scenesAllowed = false }) {
+  const fullScript = [script.title, script.hook, script.introduction, ...script.sections.flatMap(section => [section.title, section.narration]), script.conclusion].map(text => text?.trim()).filter(Boolean).join("\n\n");
   return (
     <section className="space-y-5">
       <div>
@@ -21,6 +23,8 @@ export function ScriptStep({ script, selectedIdea, onChange, onChangeSection, on
           <div><p className="text-[11px] font-semibold uppercase tracking-wider text-sky-300">Roteiro narrado</p><h3 className="mt-1 text-lg font-semibold text-white">Edite antes de gerar as cenas</h3></div>
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground"><span>Duração: {formatStudioDuration(script.estimatedDurationSeconds)}</span><span>~{countScriptWords(script)} palavras</span>{saveStatus === "saving" && <span role="status">Salvando alterações…</span>}{saveStatus === "saved" && <span role="status" className="text-emerald-300">Alterações salvas</span>}{saveStatus === "error" && <span role="alert" className="text-red-300">Falha ao salvar</span>}</div>
         </div>
+
+        <div className="mb-5"><CopyTextButton text={fullScript} disabled={busy} /></div>
 
         {script.researchRequired && <div className="mb-5 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">
           <p className="font-medium">Pesquisa adicional necessária</p>

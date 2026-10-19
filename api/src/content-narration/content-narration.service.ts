@@ -22,6 +22,10 @@ import { ContentAssetRepository } from '../content-assets/content-asset.reposito
 import { StorageProvider } from '../content-assets/storage.provider';
 import { NarrationRepository } from './narration.repository';
 import {
+  hasVisualDirections,
+  spokenText,
+} from '../ai/content-generation/spoken-text';
+import {
   TtsSettings,
   TTS_VOICES,
   TTS_STYLES,
@@ -121,8 +125,13 @@ export class ContentNarrationService
     const scenes = p.scenes.map((scene) => {
       const selection = selections.find((x) => x.sceneId === scene.id),
         asset = assets.find((a) => a.id === selection?.assetId);
+      const visualDirectionsIncluded =
+        asset?.source === 'AI_GENERATED' &&
+        hasVisualDirections(asset.originalPrompt ?? '');
       const textOutdated = Boolean(
-        asset && asset.metadata.textHash !== narrationTextHash(scene.narration),
+        asset &&
+        (asset.metadata.textHash !== narrationTextHash(scene.narration) ||
+          visualDirectionsIncluded),
       );
       const settingsOutdated = Boolean(
         asset?.source === 'AI_GENERATED' &&
@@ -139,6 +148,8 @@ export class ContentNarrationService
         sceneId: scene.id,
         selectedAssetId: asset?.id ?? null,
         textOutdated,
+        visualDirectionsIncluded,
+        spokenText: spokenText(scene.narration),
         settingsOutdated,
         outdated,
         accepted,
@@ -147,6 +158,7 @@ export class ContentNarrationService
           asset.storageKey &&
           asset.durationSeconds &&
           (!outdated || accepted) &&
+          !visualDirectionsIncluded &&
           !p.scriptStale &&
           !p.scenesStale,
         ),
@@ -214,9 +226,11 @@ export class ContentNarrationService
     settings: NarrationSettings,
   ): ContentAsset {
     const now = new Date().toISOString(),
-      text =
+      referenceText =
         scene?.narration.trim() ??
         'Esta é uma amostra de narração em português do Brasil. Uma história começa com uma voz.';
+    const text =
+      source === 'AI_GENERATED' ? spokenText(referenceText) : referenceText;
     return {
       id: randomUUID(),
       projectId: p.id,
@@ -239,8 +253,12 @@ export class ContentNarrationService
         source === 'AI_GENERATED'
           ? TTS_STYLES[settings.style as keyof typeof TTS_STYLES]
           : null,
-      sceneFingerprint: narrationFingerprint(text, settings),
-      metadata: { textHash: narrationTextHash(text), settings, sample: !scene },
+      sceneFingerprint: narrationFingerprint(referenceText, settings),
+      metadata: {
+        textHash: narrationTextHash(referenceText),
+        settings,
+        sample: !scene,
+      },
       tokenUsage: null,
       error: null,
       createdAt: now,
@@ -281,7 +299,7 @@ export class ContentNarrationService
         );
       const available = targets.filter((s) => !pending(s?.id ?? null));
       for (const s of available)
-        if (s) this.settings.validateText(s.narration.trim());
+        if (s) this.settings.validateText(spokenText(s.narration));
       return this.transaction(client, async () => {
         // Serialize the global capacity check across different projects as well.
         await client.query(
@@ -405,8 +423,11 @@ export class ContentNarrationService
   private async generateAsset(asset: ContentAsset) {
     let key: string | undefined;
     try {
+      // Also protect persisted jobs queued before the spoken-text validation.
+      asset.originalPrompt = spokenText(asset.originalPrompt ?? '');
+      this.settings.validateText(asset.originalPrompt);
       const result = await this.provider.generateSpeech({
-        text: asset.originalPrompt!,
+        text: asset.originalPrompt,
         settings: asset.metadata.settings as NarrationSettings,
         instructions: asset.finalGenerationPrompt!,
       });

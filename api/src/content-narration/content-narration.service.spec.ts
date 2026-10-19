@@ -207,6 +207,42 @@ describe('Content narration', () => {
       expect.objectContaining({ text: 'Texto 1' }),
     );
   });
+  test('visual directions are excluded from TTS and newly generated audio remains current', async () => {
+    p.scenes[0].narration =
+      '[Imagem simulada: corredor escuro.] Uma figura surgiu.';
+    await service.generate(p.id, p.scenes[0].id, { revision: 0 });
+    await settled();
+    expect(provider.generateSpeech).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Uma figura surgiu.' }),
+    );
+    expect(rows[0].originalPrompt).toBe('Uma figura surgiu.');
+    expect(rows[0].metadata.textHash).toBe(
+      narrationTextHash(p.scenes[0].narration),
+    );
+    expect((await service.list(p.id)).scenes[0]).toMatchObject({
+      ready: true,
+      visualDirectionsIncluded: false,
+    });
+  });
+  test('historical audio with visual directions is flagged and not silently reused', async () => {
+    await service.generate(p.id, p.scenes[0].id, { revision: 0 });
+    await settled();
+    rows[0].originalPrompt = '[Corte: câmera 01.] ' + p.scenes[0].narration;
+    expect((await service.list(p.id)).scenes[0]).toMatchObject({
+      ready: false,
+      textOutdated: true,
+      visualDirectionsIncluded: true,
+    });
+    expect(rows[0].status).toBe('READY');
+  });
+  test('visual directions without spoken words are rejected before paid TTS', async () => {
+    p.scenes[0].narration = '[Imagem: sala escura.]';
+    await expect(
+      service.generate(p.id, p.scenes[0].id, { revision: 0 }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(provider.generateSpeech).not.toHaveBeenCalled();
+    expect(rows).toHaveLength(0);
+  });
   test('regeneration preserves history and switches selection after success', async () => {
     const first = (await generate()).assets[0];
     const s = await generate();

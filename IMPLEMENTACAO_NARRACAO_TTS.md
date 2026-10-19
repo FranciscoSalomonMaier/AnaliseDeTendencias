@@ -156,3 +156,11 @@ Uma chamada Speech por asset gerado, inclusive amostras e novas versões. Upload
 ## 24. Próximos passos
 
 Preparar autenticação/ownership antes de uso multiusuário, garantir backup do storage/banco e planejar a migração do provider TTS anunciada pela OpenAI. A futura timeline já pode consultar imagens selecionadas, áudio selecionado e duração real; montagem e renderização ficam para outra etapa.
+
+## Proteção contra instruções visuais na narração
+
+O fluxo de projetos agora exige texto falado nos campos hook, introdução, narração e conclusão; descrições de câmera/imagem ficam em visualDescription/imagePrompt. A resposta gerada para novos roteiros/cenas também passa por validação de texto falado.
+
+Antes de solicitar TTS, são removidas somente instruções visuais explicitamente delimitadas por colchetes, como `[Imagem simulada: ...]`, `[Imagem: ...]`, `[Corte para ...]` e `[Corte: ...]`. Descrições que pertencem à história e outros trechos entre colchetes são preservados. Texto vazio após a limpeza é rejeitado antes de chamadas pagas. Jobs pendentes também são protegidos, e original_prompt registra o texto efetivamente enviado ao TTS. O fingerprint/hash de referência continua vinculado à cena original para evitar sinalizar o áudio recém-gerado como desatualizado.
+
+Áudios antigos cujo texto de geração contém instruções visuais são sinalizados na interface e exigem regeneração para nova renderização. Arquivos, versões e vídeos históricos permanecem disponíveis. A interface de narração apresenta o texto falado limpo. Não há regeneração automática paga nem alteração dos projetos já armazenados; gere apenas as narrações sinalizadas e depois outra versão do vídeo.

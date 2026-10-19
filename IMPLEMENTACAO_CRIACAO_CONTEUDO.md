@@ -176,3 +176,17 @@ Implementada montagem real com FFmpeg, timeline baseada na duração das narraç
 ## Etapa 5 — Música, efeitos e mixagem
 
 Integrada mixagem real ao renderizador existente: upload de MP3/WAV, música por projeto com volume/fades/loop/ducking, efeitos por cena com offset/ganho e snapshot das configurações. Detalhes dos 22 pontos de entrega, rotas, migration, testes e limites: [IMPLEMENTACAO_MUSICA_E_EFEITOS.md](IMPLEMENTACAO_MUSICA_E_EFEITOS.md).
+
+## Etapa 6 — Legendas automáticas
+
+Integradas legendas persistidas por versão exata de narração, com transcrição OpenAI whisper-1 e timestamps reais por palavra/segmento, revisão de divergências, editor, três presets, preview sincronizado ao player, exportação SRT e incorporação ASS/libass ao FFmpeg existente. Configurações e legendas são capturadas no snapshot do render. Diagnóstico, migrations, arquivos, custos, validações e os 24 pontos de entrega: [IMPLEMENTACAO_LEGENDAS.md](IMPLEMENTACAO_LEGENDAS.md).
+
+## Continuidade narrativa entre roteiro e cenas
+
+Os prompts dos fluxos de projetos e de tendências agora exigem uma história contínua: gancho estabelece a promessa, introdução contextualiza, seções progridem por causa/consequência e conclusão retoma o mesmo conflito. Solicitam consistência de personagens, motivações, cronologia, locais, ponto de vista e tempo verbal, além de revisão interna de contradições, saltos e repetições na mesma resposta. Não há chamada adicional de revisão nem troca de modelo.
+
+A geração de cenas recebe também `approvedNarration`, uma fonte textual montada explicitamente na ordem **hook → introduction → sections[].narration → conclusion**, independentemente da ordem das propriedades do JSON. Títulos, notas de pesquisa e instruções visuais entre colchetes não entram no texto falado.
+
+Após validar o schema e a numeração das cenas, o backend compara a sequência das palavras geradas com a fonte aprovada. Tolera maiúsculas, pontuação e espaços, mas rejeita omissões, duplicações, novas palavras e trocas de ordem. O resultado inválido não substitui o trabalho armazenado e não dispara retries pagos automaticamente. Essa conferência protege a fidelidade do roteiro durante a divisão; não é uma avaliação semântica automática da qualidade ou lógica da história. A revisão humana continua necessária.
+
+Os roteiros, cenas, imagens, áudios e vídeos já persistidos não são reescritos. Os novos prompts e verificações se aplicam às próximas gerações. Testes usam respostas simuladas, sem geração real ou consumo de créditos de IA.

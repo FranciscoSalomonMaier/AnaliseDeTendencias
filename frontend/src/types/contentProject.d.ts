@@ -79,6 +79,7 @@ export interface VideoTimelineScene {
  durationSeconds: number; frames: number; motion: 'SLOW_ZOOM_IN' | 'SLOW_ZOOM_OUT' | 'PAN_RIGHT' | 'PAN_LEFT' | 'STATIC';
 }
 export interface VideoRenderSnapshot {
+ subtitles?: SubtitleSnapshot;
  audioMix?: AudioMixSnapshot;
  projectRevision: number; title: string; config: VideoRenderConfig; scenes: VideoTimelineScene[]; totalDurationSeconds: number;
 }
@@ -107,3 +108,15 @@ export interface TimedSoundEffect extends AudioMixAsset {
  sourceDurationSeconds: number; volume: number; scope: 'SCENE';
 }
 export interface AudioMixSnapshot { settings: ProjectAudioSettings; music: AudioMixAsset | null; effects: TimedSoundEffect[]; }
+
+export interface SubtitleSettings {
+ enabled: boolean;
+ preset: 'CLASSIC' | 'DARK_CINEMATIC' | 'DYNAMIC';
+ fontSize: number; textColor: string; highlightColor: string;
+ outlineWidth: number; shadow: number; verticalPosition: number; bottomMargin: number;
+ maxLines: number; maxWords: number; maxCharacters: number; maxDurationSeconds: number; pauseSeconds: number;
+}
+export interface SubtitleWord { text: string; startSeconds: number; endSeconds: number }
+export interface SubtitleSegment extends SubtitleWord { id: string; order: number; words?: SubtitleWord[] }
+export interface SubtitleSnapshot { settings: SubtitleSettings; versions: Array<{ id: string; sceneId: string; audioAssetId: string; granularity: 'WORD' | 'SEGMENT' }>; segments: Array<SubtitleSegment & { sceneId: string }> }
+export interface SubtitleVersion { id: string; projectId: string; sceneId: string; audioAssetId: string; status: 'QUEUED' | 'PROCESSING' | 'READY' | 'FAILED'; error: string | null; createdAt: string; data: { referenceText: string; referenceHash: string; language: string; audioDurationSeconds: number; settings: SubtitleSettings; segments: SubtitleSegment[]; words?: SubtitleWord[]; granularity: 'WORD' | 'SEGMENT'; provider: string; model: string; transcript: string; matchScore: number | null; reviewRequired: boolean; edited: boolean; alignmentNote?: string } }

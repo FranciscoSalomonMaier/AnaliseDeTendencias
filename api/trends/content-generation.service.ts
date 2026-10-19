@@ -21,6 +21,11 @@ import {
 } from 'src/ai/content-generation/content-generation.schema';
 import { contentIdeaPrompt } from 'src/ai/content-generation/prompts/content-idea.prompt';
 import { sceneGenerationPrompt } from 'src/ai/content-generation/prompts/scene-generation.prompt';
+import {
+  orderedScriptNarration,
+  scenesPreserveNarration,
+} from 'src/ai/content-generation/narrative-continuity';
+import { spokenText } from 'src/ai/content-generation/spoken-text';
 import { scriptGenerationPrompt } from 'src/ai/content-generation/prompts/script-generation.prompt';
 import { LlmProvider } from 'src/ai/llm.provider';
 import { TrendsService } from './trends.service';
@@ -259,6 +264,7 @@ export class ContentGenerationService {
       userPrompt: JSON.stringify({
         language: context.selectedIdea.language,
         script: editedScript,
+        approvedNarration: orderedScriptNarration(editedScript),
       }),
     });
     const output = GeneratedScenesResponseSchema.safeParse(generation.data);
@@ -271,13 +277,21 @@ export class ContentGenerationService {
       );
     }
 
+    const scenes = output.data.scenes.map((scene) => ({
+      ...scene,
+      narration: spokenText(scene.narration),
+    }));
+    if (!scenesPreserveNarration(editedScript, scenes))
+      throw new BadGatewayException(
+        'As cenas geradas não preservaram a narração aprovada na ordem correta. O roteiro foi mantido; tente gerar as cenas novamente.',
+      );
     const plan = {
       title: editedScript.title,
       totalEstimatedDurationSeconds: output.data.scenes.reduce(
         (total, scene) => total + scene.estimatedDurationSeconds,
         0,
       ),
-      scenes: output.data.scenes,
+      scenes,
       generationId: requestedScript.generationId,
     };
     await this.repository.saveVideoPlan(

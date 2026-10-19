@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto';
 import type { ContentProject } from '../content-projects/content-project.schema';
 import { ContentProjectRepository } from '../content-projects/content-project.repository';
 import { ContentAssetRepository } from '../content-assets/content-asset.repository';
+import type { StorageProvider } from '../content-assets/storage.provider';
 import { NarrationRepository } from '../content-narration/narration.repository';
 import { VideoRenderService } from './video-render.service';
 import { RenderRepository } from './render.repository';
@@ -206,7 +207,7 @@ describe('Video render coordinator', () => {
       repository as unknown as RenderRepository,
       { build: () => ({ snapshot, issues: [] }) } as unknown as TimelineBuilder,
       renderer as unknown as FfmpegRenderer,
-      storage,
+      storage as unknown as StorageProvider,
       settings,
     );
   });

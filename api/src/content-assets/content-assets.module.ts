@@ -1,3 +1,8 @@
+import { SubtitleController } from '../content-subtitles/subtitle.controller';
+import { SubtitleService } from '../content-subtitles/subtitle.service';
+import { SubtitleRepository } from '../content-subtitles/subtitle.repository';
+import { SpeechAlignmentProvider } from '../content-subtitles/speech-alignment.provider';
+import { OpenAiSpeechAlignmentProvider } from '../content-subtitles/openai-speech-alignment.provider';
 import { ProjectAudioController } from '../content-audio/project-audio.controller';
 import { ProjectAudioService } from '../content-audio/project-audio.service';
 import { ProjectAudioRepository } from '../content-audio/project-audio.repository';
@@ -34,12 +39,19 @@ import { ImageFileValidator } from './image-file.validator';
 @Module({
   imports: [AiModule, ContentProjectModule],
   controllers: [
+    SubtitleController,
     ContentAssetsController,
     ContentNarrationController,
     VideoRenderController,
     ProjectAudioController,
   ],
   providers: [
+    SubtitleService,
+    SubtitleRepository,
+    {
+      provide: SpeechAlignmentProvider,
+      useClass: OpenAiSpeechAlignmentProvider,
+    },
     VideoRenderService,
     ProjectAudioService,
     ProjectAudioRepository,

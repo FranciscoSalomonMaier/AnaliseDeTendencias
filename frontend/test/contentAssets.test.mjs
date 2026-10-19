@@ -26,7 +26,7 @@ test('production preview, variations, upload, errors, retry, loading, outdated a
     const {ContentStudioStepper}=await server.ssrLoadModule('/src/pages/ContentCreation/components/ContentStudioStepper.jsx');
     const render=props=>renderToStaticMarkup(createElement(VisualProductionView,{project,state,...props}));
     await t.test('ready preview and missing generation action',()=>{
-      const html=render({}); for(const text of ['1 / 3 prontas','Gerar imagem','Gerar novamente','Usar minha imagem','Selecionada','Gerar imagens faltantes','Narração','Em breve']) assert.ok(html.includes(text),text);
+      const html=render({}); for(const text of ['1 / 3 prontas','Gerar imagem','Gerar novamente','Usar minha imagem','Selecionada','Gerar imagens faltantes','Narração','Legendas disponíveis']) assert.ok(html.includes(text),text);
       assert.match(html,/type="file"/); assert.match(html,/image\/png,image\/jpeg,image\/webp/); assert.match(html,/<progress/); assert.match(html,/assets\/a\/file/);
     });
     await t.test('approved projects can navigate back into production',()=>{

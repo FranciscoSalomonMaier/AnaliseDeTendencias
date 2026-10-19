@@ -71,7 +71,7 @@ export class NarrationRepository {
     );
   }
   async ready(asset: ContentAsset, client?: PoolClient) {
-    const sql = `UPDATE content_assets SET status='READY',storage_key=$2,mime_type=$3,duration_seconds=$4,provider=$5,model=$6,voice=$7,metadata=$8::jsonb,token_usage=$9::jsonb,error=NULL,updated_at=NOW() WHERE id=$1 AND type='AUDIO'`;
+    const sql = `UPDATE content_assets SET status='READY',storage_key=$2,mime_type=$3,duration_seconds=$4,provider=$5,model=$6,voice=$7,metadata=$8::jsonb,token_usage=$9::jsonb,original_prompt=$10,error=NULL,updated_at=NOW() WHERE id=$1 AND type='AUDIO'`;
     const values = [
       asset.id,
       asset.storageKey,
@@ -82,6 +82,7 @@ export class NarrationRepository {
       asset.voice,
       JSON.stringify(asset.metadata),
       JSON.stringify(asset.tokenUsage),
+      asset.originalPrompt,
     ];
     if (client) await client.query(sql, values);
     else await this.db.query(sql, values);

@@ -77,7 +77,7 @@ describe('Audio timeline and mix graph', () => {
         durationSeconds: 4,
         metadata: { audioRole: 'SOUND_EFFECT' },
       },
-    ] as ContentAsset[];
+    ] as unknown as ContentAsset[];
   });
   const build = () => builder.build(timeline, settings, assets, projectId);
   function mix(): AudioMixSnapshot {

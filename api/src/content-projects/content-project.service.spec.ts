@@ -38,7 +38,12 @@ const script = {
 const scenes = [
   {
     order: 1,
-    narration: 'Narração dos fatos conhecidos',
+    narration: [
+      script.hook,
+      script.introduction,
+      ...script.sections.map((section) => section.narration),
+      script.conclusion,
+    ].join(' '),
     visualDescription: 'Aeroporto durante a noite',
     imagePrompt: 'Dark documentary airport at night',
     estimatedDurationSeconds: 8,

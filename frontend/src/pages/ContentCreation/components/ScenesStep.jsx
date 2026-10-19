@@ -1,9 +1,11 @@
 import { ArrowLeftIcon, PlusIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import { calculateSceneTimestamps, formatStudioDuration } from "../../../utils/contentStudioTime";
+import { CopyTextButton } from "./CopyTextButton";
 
 export function ScenesStep({ videoPlan, onSceneChange, onBack, onApprove, busy, saveStatus, error, onSave, onRegenerate }) {
   const timestamps = calculateSceneTimestamps(videoPlan.scenes);
   const totalDuration = videoPlan.scenes.reduce((sum, scene) => sum + scene.estimatedDurationSeconds, 0);
+  const fullNarration = [...videoPlan.scenes].sort((a, b) => a.order - b.order).map(scene => scene.narration?.trim()).filter(Boolean).join("\n\n");
 
   return (
     <section className="space-y-5">
@@ -11,6 +13,8 @@ export function ScenesStep({ videoPlan, onSceneChange, onBack, onApprove, busy, 
         <div><p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-300">Etapa {onSave ? 4 : 3}</p><h2 className="mt-1 text-xl font-semibold text-white">Cenas</h2></div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground"><span>{videoPlan.scenes.length} cenas · {formatStudioDuration(totalDuration)}</span>{saveStatus === "saving" && <span role="status">Salvando alterações…</span>}{saveStatus === "saved" && <span role="status" className="text-emerald-300">Alterações salvas</span>}{saveStatus === "error" && <span role="alert" className="text-red-300">Falha ao salvar</span>}</div>
       </div>
+
+      <CopyTextButton text={fullNarration} disabled={busy} />
 
       <div className="space-y-3">
         {videoPlan.scenes.map((scene, index) => <article key={scene.order} className="rounded-2xl border border-border bg-card p-4 md:p-5">

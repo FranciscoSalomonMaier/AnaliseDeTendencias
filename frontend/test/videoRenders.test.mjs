@@ -17,6 +17,25 @@ test('render production UI and request contracts',async t=>{
   await t.test('missing assets disable generation and show useful reasons',()=>{const html=render({preview:{...preview,ready:false,issues:[{sceneId:'s',order:1,message:'Narração não selecionada'}]}});assert.ok(html.includes('Cena 1: Narração não selecionada'));assert.match(html,/disabled/);});
   await t.test('actual status/progress and working cancellation action',()=>{const active={...job,status:'RENDERING',progress:65};const html=render({jobs:[active]});for(const text of ['65%','Renderizando cenas','Cancelar renderização'])assert.ok(html.includes(text));assert.match(html,/<progress/);});
   await t.test('history, HTML5 player, download, reopen and failure',()=>{const html=render({jobs:[job,{...job,id:'failed',status:'FAILED',error:'FFmpeg indisponível'}]});for(const text of ['Histórico de renderizações','Baixar MP4','Gerar nova versão','FFmpeg indisponível'])assert.ok(html.includes(text));assert.match(html,/<video[^>]+controls/);assert.match(html,/href="[^"]*\/download"/);});
+  await t.test('completed videos allow generating another version and expose actual blockers',()=>{
+    const generationButton = html => html.match(/<button[^>]*>Gerar nova versão do vídeo<\/button>/)?.[0];
+    assert.ok(generationButton(render({jobs:[job]})));
+    assert.doesNotMatch(generationButton(render({jobs:[job]})), /\sdisabled(?:=|\s|>)/);
+    for (const [props, message] of [
+      [{audioDraftDirty:true}, 'Salve a mixagem'],
+      [{subtitleDraftDirty:true}, 'Salve as legendas'],
+      [{loading:true}, 'Aguarde o carregamento'],
+      [{busy:true}, 'Aguarde a operação'],
+      [{preview:null}, 'A timeline ainda não foi validada'],
+      [{preview:{...preview,ready:false,issues:[{order:1,message:'Imagem pendente'}]}}, 'Corrija as pendências'],
+    ]) {
+      const html=render({jobs:[job],...props});
+      assert.match(generationButton(html), /\sdisabled(?:=|\s|>)/);
+      assert.ok(html.includes('video-render-block-reasons'));
+      assert.ok(html.includes(message), message);
+    }
+    assert.ok(render({jobs:[job,{...job,id:'active',status:'RENDERING'}]}).includes('Já existe um vídeo em processamento'));
+  });
   await t.test('service sends revision and propagates detailed validation errors',async()=>{const {videoRenders}=await server.ssrLoadModule('/src/services/videoRenderService.js');const original=globalThis.fetch,calls=[];globalThis.fetch=async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>job};};try{await videoRenders.create(project);await videoRenders.cancel(project.id,job.id);await videoRenders.list(project.id);await videoRenders.timeline(project.id);assert.equal(JSON.parse(calls[0].options.body).revision,2);assert.equal(calls[1].options.method,'POST');assert.ok(calls[1].url.endsWith('/renders/job/cancel'));globalThis.fetch=async()=>({ok:false,status:400,json:async()=>({message:'Assets pendentes',issues:[{order:1,message:'Falta áudio'}]})});await assert.rejects(videoRenders.create(project),e=>e.issues.length===1);}finally{globalThis.fetch=original;}});
  }finally{await server.close();}
 });

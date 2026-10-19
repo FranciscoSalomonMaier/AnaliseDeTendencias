@@ -1,4 +1,6 @@
 import { ProjectAudioRepository } from '../content-audio/project-audio.repository';
+import { SubtitleRepository } from '../content-subtitles/subtitle.repository';
+import { subtitleSnapshot } from '../content-subtitles/subtitle.builder';
 import { AudioTimelineBuilder } from '../content-audio/audio-timeline.builder';
 import {
   Injectable,
@@ -44,6 +46,7 @@ export class VideoRenderService
     private readonly storage: StorageProvider,
     private readonly settings: RenderSettings,
     @Optional() private readonly projectAudio?: ProjectAudioRepository,
+    @Optional() private readonly subtitles?: SubtitleRepository,
   ) {}
   async onApplicationBootstrap() {
     this.stopped = false;
@@ -77,6 +80,13 @@ export class VideoRenderService
       );
       result.snapshot.audioMix = mix.mix;
       result.issues.push(...mix.issues);
+    }
+    if (this.subtitles) {
+      const state = await this.subtitles.state(id, client),
+        versions = await this.subtitles.list(id, client);
+      const built = subtitleSnapshot(result.snapshot, project, state, versions);
+      result.snapshot.subtitles = built.snapshot;
+      result.issues.push(...built.issues);
     }
     return { ...result, project };
   }

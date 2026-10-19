@@ -1,4 +1,5 @@
 import type { AudioMixSnapshot } from '../content-audio/audio-timeline.builder';
+import type { SubtitleSnapshot } from '../content-subtitles/subtitle.schema';
 import type { RenderConfig } from './render-settings';
 export type MotionPreset =
   'SLOW_ZOOM_IN' | 'PAN_RIGHT' | 'SLOW_ZOOM_OUT' | 'PAN_LEFT' | 'STATIC';
@@ -19,6 +20,7 @@ export interface TimelineScene {
   motion: MotionPreset;
 }
 export interface RenderSnapshot {
+  subtitles?: SubtitleSnapshot;
   audioMix?: AudioMixSnapshot;
   projectRevision: number;
   title: string;

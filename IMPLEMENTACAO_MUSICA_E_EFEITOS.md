@@ -163,3 +163,11 @@ npm test
 ```
 
 Filtros e compensação de latência foram conferidos na [documentação oficial do FFmpeg](https://ffmpeg.org/ffmpeg-filters.html). Os testes reais validam os binários instalados no projeto.
+
+## Correção de duração na concatenação de narrações
+
+Corrigida a mixagem de cenas com descontinuidades nos timestamps dos pacotes Matroska. Ao gravar WAV intermediário, esses intervalos não eram representados e a quantidade de amostras ficava abaixo da duração da timeline. A narração agora usa `aresample=48000:async=1:first_pts=0` antes da mixagem para preencher as lacunas seguindo os timestamps e preservar o posicionamento das cenas. A validação de duração foi mantida; falhas agora registram a duração obtida, a esperada e o limite de arquivo no diagnóstico interno.
+
+Reprodução com as 14 narrações e a música selecionada de um projeto de 476,333333 segundos: saída anterior com 475,539854 segundos; correção com 476,333333 segundos. Nenhuma chamada de IA ou regeneração dos assets.
+
+Teste independente `npm run test:audio-mix:timestamps`: FFmpeg real com três cenas e lacunas de timestamps, comparação com o comportamento anterior, duração completa do WAV, posições das narrações, música em loop/ducking até o fim e MP4 H.264/AAC. Fixtures inteiramente sintéticas, sem banco ou chamadas pagas. Suíte backend: 280 testes aprovados; build, TypeScript e lint aprovados.

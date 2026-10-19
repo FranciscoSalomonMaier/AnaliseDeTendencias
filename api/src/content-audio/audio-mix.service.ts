@@ -24,7 +24,10 @@ export class AudioMixService {
     const base =
       'aresample=48000,aformat=sample_fmts=fltp:channel_layouts=stereo';
     const filters = [
-        `[0:a:0]${base},apad,atrim=duration=${total},asetpts=PTS-STARTPTS[narr]`,
+        // Matroska concat preserves packet timestamps, including small gaps at
+        // scene boundaries. PCM WAV cannot represent those gaps: fill them
+        // before mixing so narration stays aligned to the video timeline.
+        `[0:a:0]aresample=48000:async=1:first_pts=0,aformat=sample_fmts=fltp:channel_layouts=stereo,apad,atrim=duration=${total},asetpts=PTS-STARTPTS[narr]`,
       ],
       labels = ['[voice]'];
     if (mix.music && mix.settings.duckingEnabled)

@@ -213,3 +213,13 @@ Usage retornada pelo provider fica no asset, incluindo falha posterior de storag
 Reinicie o backend no terminal habitual, sem executar uma segunda instância na mesma porta. Abra YouTube → Criação → projeto com cenas aprovadas → Produção. Teste uma imagem por ação explícita; confira as variações e então gere as faltantes. Uploads e seleções são salvos imediatamente. Para editar prompt, volte às cenas, salve e aprove conforme o fluxo existente.
 
 Próximas etapas: adapter de storage remoto e autenticação conforme necessidade de deploy; depois TTS a partir de `scene.narration`, assets de áudio e duração real. Timeline/render poderão consumir as seleções e identidades de assets existentes. `estimatedDurationSeconds` continua como base de planejamento, sem misturar narração e descrição visual.
+
+## Continuidade visual entre cenas
+
+Os prompts de planejamento de cenas agora exigem descrições concretas e repetidas de cada personagem recorrente (idade, rosto, pele, cabelo, marcas, roupa e acessórios) e de cada local (arquitetura, disposição, portas/janelas, cores, materiais e objetos). Essas instruções ficam exclusivamente nos campos visuais, sem entrar na narração. Alterações são permitidas quando a própria história exige mudança de roupa, horário ou local.
+
+Cada nova solicitação de imagem também recebe as mesmas referências textuais do projeto, ordenadas pelas cenas e limitadas a 12.000 caracteres, além do contexto da cena atual e das vizinhas. As primeiras descrições servem como âncora para os personagens e ambientes recorrentes; locais distintos não devem ser confundidos. A ordenação não modifica o projeto original.
+
+As imagens salvas e suas seleções permanecem disponíveis. O ajuste vale para novas solicitações de imagens, inclusive regenerações em projetos existentes; as instruções de planejamento mais detalhadas valem para novas gerações de cenas. Projetos longos usam somente as primeiras referências que cabem no limite. Mudanças em descrições de outras cenas não invalidam automaticamente seleções existentes.
+
+Esta etapa melhora o contexto textual; não envia uma imagem de referência nem mantém uma memória visual das imagens já geradas. Portanto, rostos e cenários ainda podem variar entre gerações independentes. Os testes verificam os prompts e a estabilidade do contexto, sem gerar imagens ou consumir créditos. Consistência visual efetiva precisa ser revisada nas imagens produzidas.

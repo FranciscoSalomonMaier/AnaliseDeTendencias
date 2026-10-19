@@ -153,6 +153,20 @@ describe('Video timeline, configuration and media ranges', () => {
     visuals[0].fingerprint = sceneVisualFingerprint(p, p.scenes[0]);
     expect(build().issues).toEqual([]);
   });
+  test('historical TTS with image directions must be regenerated even when previously accepted', () => {
+    const voice = assets.find((a) => a.type === 'AUDIO')!;
+    voice.source = 'AI_GENERATED';
+    voice.originalPrompt =
+      '[Imagem: corredor escuro.] ' + p.scenes[0].narration;
+    voice.sceneFingerprint = narrationFingerprint(
+      p.scenes[0].narration,
+      tts.forProject(p),
+    );
+    audio[0].acceptedFingerprint = voice.sceneFingerprint;
+    expect(
+      build().issues.some((i) => i.message.includes('instruções visuais')),
+    ).toBe(true);
+  });
   test('rejects unapproved/empty scenes and broken order', () => {
     p.status = 'SCENES_GENERATED';
     p.scenes[0].order = 5;

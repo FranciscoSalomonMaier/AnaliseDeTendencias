@@ -383,14 +383,14 @@ describe('ContentGenerationService', () => {
     const scenes = [
       {
         order: 1,
-        narration: 'Researchers observed an unusual signal.',
+        narration: `${persistedScript.hook} ${persistedScript.introduction} Researchers observed an unusual signal.`,
         visualDescription: 'A research observatory at night.',
         imagePrompt: 'cinematic observatory under a starry sky, realistic',
         estimatedDurationSeconds: 8,
       },
       {
         order: 2,
-        narration: 'The available trend data describes the observation.',
+        narration: `The available trend data describes the observation. ${persistedScript.conclusion}`,
         visualDescription: 'A data chart on a monitor.',
         imagePrompt:
           'close-up of a scientific data chart on a monitor, cinematic lighting',

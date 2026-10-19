@@ -1,3 +1,4 @@
+import { SCRIPT_NARRATIVE_CONTINUITY } from './narrative-continuity.prompt';
 export function scriptGenerationPrompt(
   language: string,
   durationPreference = '8-10',
@@ -6,6 +7,8 @@ export function scriptGenerationPrompt(
 
 Aim for a finished video duration of ${durationPreference} minutes. Estimate narration length naturally for this duration; do not pad with repetition.
 Respect the selected idea's additionalInstructions when present, provided they do not conflict with factual accuracy.
+
+${SCRIPT_NARRATIVE_CONTINUITY}
 
 Return title, hook, introduction, sections (each with title and narration), conclusion, estimatedDurationSeconds, researchRequired, and researchNotes. Make the hook strong, keep the introduction short, build a clear narrative progression across sections, and end naturally. Include a non-forced engagement invitation only when it fits.
 

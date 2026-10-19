@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:ital,wght@0,100..900;1,100..900&display=swap');
 @import "tailwindcss";
 
+@font-face { font-family: "Subtitle Liberation"; src: url("/fonts/LiberationSans-Regular.ttf") format("truetype"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Subtitle Liberation"; src: url("/fonts/LiberationSans-Bold.ttf") format("truetype"); font-weight: 700; font-display: swap; }
+
 @theme {
   --color-neutral-gray: lab(90.1282 -0.491738 -2.2038);
   --color-theme: #0b1220;

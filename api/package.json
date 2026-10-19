@@ -36,7 +36,11 @@
     "test:renders:integration": "node test/content/renders.integration.cjs",
     "migrate:audio-mix": "node scripts/migrate-assets.cjs",
     "test:audio-mix": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=content-audio",
-    "test:audio-mix:integration": "node test/content/audio-mix.integration.cjs"
+    "test:audio-mix:integration": "node test/content/audio-mix.integration.cjs",
+    "migrate:subtitles": "node scripts/migrate-assets.cjs",
+    "test:subtitles": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=content-subtitles",
+    "test:subtitles:integration": "node test/content/subtitles.integration.cjs",
+    "test:audio-mix:timestamps": "node test/content/audio-mix-timestamps.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

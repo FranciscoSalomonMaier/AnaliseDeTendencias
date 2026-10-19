@@ -9,6 +9,8 @@ import {
 } from '../ai/content-generation/content-generation.schema';
 import { projectPrompt } from '../ai/content-generation/prompts/content-project.prompt';
 import { ContentProject, estimateScript } from './content-project.schema';
+import { spokenText } from '../ai/content-generation/spoken-text';
+import { scenesPreserveNarration } from '../ai/content-generation/narrative-continuity';
 
 @Injectable()
 export class ContentProjectGenerationService {
@@ -57,8 +59,22 @@ export class ContentProjectGenerationService {
       const data = GeneratedScriptSchema.safeParse(result.data);
       if (!data.success)
         throw new BadGatewayException('A IA retornou um roteiro inválido');
+      const spokenScript = GeneratedScriptSchema.safeParse({
+        ...data.data,
+        hook: spokenText(data.data.hook),
+        introduction: spokenText(data.data.introduction),
+        sections: data.data.sections.map((s) => ({
+          ...s,
+          narration: spokenText(s.narration),
+        })),
+        conclusion: spokenText(data.data.conclusion),
+      });
+      if (!spokenScript.success)
+        throw new BadGatewayException(
+          'O roteiro deve conter texto falado válido, sem instruções visuais.',
+        );
       return {
-        script: estimateScript(data.data),
+        script: estimateScript(spokenScript.data),
         usage: {
           stage,
           ...result.usage,
@@ -76,8 +92,26 @@ export class ContentProjectGenerationService {
       throw new BadGatewayException(
         'A IA retornou cenas inválidas ou fora de ordem',
       );
+    const spokenScenes = GeneratedScenesResponseSchema.safeParse({
+      ...data.data,
+      scenes: data.data.scenes.map((s) => ({
+        ...s,
+        narration: spokenText(s.narration),
+      })),
+    });
+    if (!spokenScenes.success)
+      throw new BadGatewayException(
+        'As cenas devem conter narração válida, sem instruções visuais.',
+      );
+    if (
+      !project.script ||
+      !scenesPreserveNarration(project.script, spokenScenes.data.scenes)
+    )
+      throw new BadGatewayException(
+        'As cenas geradas não preservaram a narração aprovada na ordem correta. O roteiro foi mantido; tente gerar as cenas novamente.',
+      );
     return {
-      scenes: data.data.scenes.map((s) => ({ ...s, id: randomUUID() })),
+      scenes: spokenScenes.data.scenes.map((s) => ({ ...s, id: randomUUID() })),
       usage: {
         stage,
         ...result.usage,
