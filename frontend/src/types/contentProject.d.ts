@@ -123,3 +123,20 @@ export interface SubtitleWord { text: string; startSeconds: number; endSeconds: 
 export interface SubtitleSegment extends SubtitleWord { id: string; order: number; words?: SubtitleWord[] }
 export interface SubtitleSnapshot { settings: SubtitleSettings; versions: Array<{ id: string; sceneId: string; audioAssetId: string; granularity: 'WORD' | 'SEGMENT' }>; segments: Array<SubtitleSegment & { sceneId: string }> }
 export interface SubtitleVersion { id: string; projectId: string; sceneId: string; audioAssetId: string; status: 'QUEUED' | 'PROCESSING' | 'READY' | 'FAILED'; error: string | null; createdAt: string; data: { referenceText: string; referenceHash: string; language: string; audioDurationSeconds: number; settings: SubtitleSettings; segments: SubtitleSegment[]; words?: SubtitleWord[]; granularity: 'WORD' | 'SEGMENT'; provider: string; model: string; transcript: string; matchScore: number | null; reviewRequired: boolean; edited: boolean; alignmentNote?: string } }
+
+export interface PublicationTitle { id:string; text:string; source:'MANUAL'|'AI'; createdAt:string }
+export interface PublicationChapter { startSeconds:number; title:string }
+export interface PublicationThumbnailText { enabled:boolean; text:string; position:'TOP'|'CENTER'|'BOTTOM'; fontSize:number; color:string; outline:boolean }
+export interface PublicationPreparation {
+ platform:'YOUTUBE';renderJobId:string|null;selectedTitleId:string|null;selectedThumbnailId:string|null;
+ titles:PublicationTitle[];description:string;tags:string[];hashtags:string[];
+ chaptersEnabled:boolean;chapters:PublicationChapter[];chaptersRenderJobId:string|null;contextRevision:number|null;metadataRenderJobId:string|null;
+ language:string;titleStyle:'AUTO'|'MYSTERY'|'CURIOSITY'|'DIRECT'|'STORYTELLING'|'SEO';
+ thumbnailStyle:'CINEMATIC'|'MYSTERY'|'HORROR'|'DOCUMENTARY'|'MINIMALIST';thumbnailText:PublicationThumbnailText;status:'DRAFT'|'READY';
+}
+export interface PublicationState {
+ revision:number;data:PublicationPreparation;updatedAt:string|null;finalDescription:string;
+ checklist:{ready:boolean;errors:string[];warnings:string[];items:Array<{key:string;label:string;required:boolean;valid:boolean}>};
+ renders:VideoRenderJob[];thumbnails:Array<{id:string;assetId:string;overlay:PublicationThumbnailText;provider:string|null;model:string|null;status:string;createdAt:string;url:string}>;
+ generations:Array<{id:string;kind:'METADATA'|'TITLES'|'DESCRIPTION'|'THUMBNAILS';status:'RUNNING'|'COMPLETED'|'FAILED';result:unknown;provider:string|null;model:string|null;usage:unknown;error:string|null;created_at:string}>;
+}

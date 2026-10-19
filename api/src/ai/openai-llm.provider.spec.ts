@@ -2,6 +2,7 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import { OpenAiLlmProvider } from './openai-llm.provider';
 import { z } from 'zod';
 
+const mockClientOptions = jest.fn();
 const mockEmbed = jest.fn<Promise<unknown>, [unknown]>();
 const mockParse = jest.fn<Promise<unknown>, [unknown]>();
 
@@ -28,6 +29,9 @@ jest.mock('openai', () => {
   return {
     __esModule: true,
     default: class OpenAI {
+      constructor(options: unknown) {
+        mockClientOptions(options);
+      }
       embeddings = {
         create: (request: unknown): Promise<unknown> => mockEmbed(request),
       };
@@ -81,6 +85,29 @@ describe('OpenAiLlmProvider', () => {
       model: 'test-model',
       usage: { inputTokens: 14, outputTokens: 9, totalTokens: 23 },
     });
+  });
+
+  it('allows publication calls to disable SDK retries while preserving the default', async () => {
+    mockParse.mockResolvedValue({ output_parsed: { answer: 'ok' } });
+    const provider = new OpenAiLlmProvider({ get: () => 'test-key' } as never);
+    const request = {
+      model: 'test-model',
+      schemaName: 'test_output',
+      schema: z.object({ answer: z.string() }),
+      systemPrompt: 'system',
+      userPrompt: 'user',
+    };
+    await provider.generateStructuredOutput(request);
+    expect(mockClientOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ maxRetries: 1 }),
+    );
+    await provider.generateStructuredOutput({
+      ...request,
+      disableRetries: true,
+    });
+    expect(mockClientOptions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ maxRetries: 0 }),
+    );
   });
 
   it('fails before making a request when no API key is configured', async () => {

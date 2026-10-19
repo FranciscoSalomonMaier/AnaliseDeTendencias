@@ -7,6 +7,7 @@ export interface LlmUsage {
 }
 
 export interface StructuredOutputRequest<T> {
+  disableRetries?: boolean;
   model: string;
   schemaName: string;
   schema: z.ZodType<T>;

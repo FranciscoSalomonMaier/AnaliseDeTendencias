@@ -30,7 +30,7 @@ test('production preview, variations, upload, errors, retry, loading, outdated a
       assert.match(html,/type="file"/); assert.match(html,/image\/png,image\/jpeg,image\/webp/); assert.match(html,/<progress/); assert.match(html,/assets\/a\/file/);
     });
     await t.test('approved projects can navigate back into production',()=>{
-      const html=renderToStaticMarkup(createElement(ContentStudioStepper,{activeStep:'scenes',hasScenes:true,projectSteps:{config:true,idea:true,script:true,scenes:true,production:true}}));
+      const html=renderToStaticMarkup(createElement(ContentStudioStepper,{activeStep:'scenes',hasScenes:true,projectSteps:{config:true,idea:true,script:true,scenes:true,production:true,publication:true}}));
       assert.ok(!html.includes('disponível em breve')); assert.doesNotMatch(html, /disabled=""/);
     });
     await t.test('multiple variations do not trigger generation to select',()=>{

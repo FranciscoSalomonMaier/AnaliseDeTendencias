@@ -27,6 +27,7 @@ export function canGenerateScenes(project) {
 export function validProjectSteps(project) {
   return {
     config: true,
+    publication: Boolean(project),
     idea: Boolean(
       project && project.status !== "DRAFT" && project.ideas.length,
     ),

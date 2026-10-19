@@ -4,6 +4,7 @@ async function request(projectId, path, method = "GET", body) {
   let response;
   try {
     response = await fetch(`${API_URL}/content-projects/${encodeURIComponent(projectId)}${path}`, {
+    credentials: "include",
       method, headers: body && !(body instanceof FormData) ? { "Content-Type": "application/json" } : {},
       body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
     });

@@ -90,19 +90,19 @@ export class OpenAiLlmProvider extends LlmProvider {
     }
   }
 
-  private createClient() {
+  private createClient(maxRetries = 1) {
     const apiKey = this.configService.get<string>('OPENAI_API_KEY');
     if (!apiKey)
       throw new ServiceUnavailableException(
         'A análise com IA não está configurada',
       );
-    return new OpenAI({ apiKey, timeout: this.timeoutMs, maxRetries: 1 });
+    return new OpenAI({ apiKey, timeout: this.timeoutMs, maxRetries });
   }
 
   async generateStructuredOutput<T>(
     request: StructuredOutputRequest<T>,
   ): Promise<StructuredOutputResult<T>> {
-    const openai = this.createClient();
+    const openai = this.createClient(request.disableRetries ? 0 : 1);
 
     try {
       const response = await openai.responses.parse({

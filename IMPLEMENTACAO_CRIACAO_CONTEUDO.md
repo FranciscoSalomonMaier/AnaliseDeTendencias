@@ -194,3 +194,7 @@ Os roteiros, cenas, imagens, áudios e vídeos já persistidos não são reescri
 ## Conclusão da Etapa 4 — edição e renderização
 
 Movimentos por cena, enquadramento, transições CUT/FADE/CROSSFADE, persistência e prévia pelo renderer existente estão documentados em [IMPLEMENTACAO_ETAPA4_EDICAO.md](IMPLEMENTACAO_ETAPA4_EDICAO.md). Aplicar a migration 010 pelo runner de renders antes de usar as configurações de edição.
+
+## Etapa 7 — Preparação para publicação
+
+Adicionada a etapa Publicação após Produção, com seleção de render, metadados, capítulos reais, thumbnails, persistência e acesso local por chave/proprietário. Consulte [IMPLEMENTACAO_PUBLICACAO_YOUTUBE.md](IMPLEMENTACAO_PUBLICACAO_YOUTUBE.md) para configuração, endpoints, validações e limitações. Esta etapa não publica vídeos no YouTube.

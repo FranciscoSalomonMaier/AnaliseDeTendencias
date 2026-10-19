@@ -1,6 +1,8 @@
+import { ConfigService } from '@nestjs/config';
 import {
   ConflictException,
   Injectable,
+  Optional,
   NotFoundException,
 } from '@nestjs/common';
 import { PoolClient } from 'pg';
@@ -43,7 +45,10 @@ function mapRow(r: Row): ContentProject {
 }
 @Injectable()
 export class ContentProjectRepository {
-  constructor(private readonly db: PostgresDatabaseService) {}
+  constructor(
+    private readonly db: PostgresDatabaseService,
+    @Optional() private readonly accessConfig?: ConfigService,
+  ) {}
   async create(config: ProjectConfig) {
     const id = randomUUID();
     const result = await this.db.query<Row>(
@@ -56,12 +61,28 @@ export class ContentProjectRepository {
         JSON.stringify(config),
       ],
     );
+    if (this.accessConfig?.get<string>('CONTENT_ACCESS_KEY'))
+      await this.db.query(
+        'UPDATE content_generation_runs SET owner_id=$2 WHERE generation_id=$1',
+        [
+          id,
+          this.accessConfig.get<string>('CONTENT_OWNER_ID') ?? 'local-owner',
+        ],
+      );
     return mapRow(result.rows[0]);
   }
   async list(limit = 50, offset = 0) {
     const result = await this.db.query<Row>(
-      'SELECT * FROM content_generation_runs WHERE project_config IS NOT NULL ORDER BY updated_at DESC,generation_id LIMIT $1 OFFSET $2',
-      [limit, offset],
+      this.accessConfig?.get<string>('CONTENT_ACCESS_KEY')
+        ? 'SELECT * FROM content_generation_runs WHERE project_config IS NOT NULL AND (owner_id IS NULL OR owner_id=$3) ORDER BY updated_at DESC,generation_id LIMIT $1 OFFSET $2'
+        : 'SELECT * FROM content_generation_runs WHERE project_config IS NOT NULL ORDER BY updated_at DESC,generation_id LIMIT $1 OFFSET $2',
+      this.accessConfig?.get<string>('CONTENT_ACCESS_KEY')
+        ? [
+            limit,
+            offset,
+            this.accessConfig.get<string>('CONTENT_OWNER_ID') ?? 'local-owner',
+          ]
+        : [limit, offset],
     );
     return { items: result.rows.map(mapRow), limit, offset };
   }

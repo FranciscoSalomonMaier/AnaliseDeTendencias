@@ -28,6 +28,7 @@ const { Client } = require('pg');
       '008_project_audio_mix.sql',
       '009_content_subtitles.sql',
       '010_content_project_editing.sql',
+      '011_content_publication.sql',
     ]) {
       const applied = await client.query(
         'SELECT 1 FROM content_schema_migrations WHERE name=$1',
@@ -65,6 +66,7 @@ const { Client } = require('pg');
         [file],
       );
     }
+    if(process.env.CONTENT_ACCESS_KEY)await client.query('UPDATE content_generation_runs SET owner_id=$1 WHERE owner_id IS NULL',[process.env.CONTENT_OWNER_ID??'local-owner']);
     console.log(
       'Migrations de projetos e assets aplicadas. Dados existentes preservados.',
     );

@@ -1,3 +1,5 @@
+import { PublicationPreparation } from "./components/PublicationPreparation";
+import { StudioAccess } from "./components/StudioAccess";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { contentProjects } from "../../services/contentProjectService";
 import {
@@ -36,6 +38,7 @@ export function ContentProjectCreation({ analysis, onNavigate }) {
   const [busy, setBusy] = useState(initialId ? "restore" : ""),
     [error, setError] = useState(""),
     [saved, setSaved] = useState("");
+  const [publicationDirty,setPublicationDirty]=useState(false);
   const inFlight = useRef(false);
   const accept = useCallback((p, move = false) => {
     setProject(p);
@@ -109,6 +112,8 @@ export function ContentProjectCreation({ analysis, onNavigate }) {
     };
   }, [dirty]);
   function ensureNavigation(callback) {
+    if(publicationDirty&&!window.confirm("Há alterações não salvas na publicação. Descartar?"))return;
+    setPublicationDirty(false);
     if (
       !dirty ||
       window.confirm("Existem alterações não salvas. Deseja sair sem salvar?")
@@ -260,6 +265,7 @@ export function ContentProjectCreation({ analysis, onNavigate }) {
           Novo projeto
         </button>
       </div>
+      <StudioAccess />
       <div className="space-y-4">
         <ContentStudioStepper
           activeStep={step}
@@ -465,6 +471,7 @@ export function ContentProjectCreation({ analysis, onNavigate }) {
             saveStatus={saved ? "saved" : ""}
           />
         )}
+        {step === "publication" && project && <PublicationPreparation project={project} onDirtyChange={setPublicationDirty} />}
         {step === "production" && project && (
           <VisualProduction
             project={project}

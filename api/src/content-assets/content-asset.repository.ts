@@ -88,7 +88,7 @@ export class ContentAssetRepository {
   }
   async list(projectId: string, client?: PoolClient) {
     const result = await this.query<AssetRow>(
-      'SELECT * FROM content_assets WHERE project_id=$1 ORDER BY created_at,id',
+      "SELECT * FROM content_assets WHERE project_id=$1 AND metadata->>'assetRole' IS DISTINCT FROM 'PUBLICATION_THUMBNAIL' ORDER BY created_at,id",
       [projectId],
       client,
     );

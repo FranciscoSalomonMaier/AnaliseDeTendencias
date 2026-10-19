@@ -2,7 +2,7 @@ const API_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 export const renderMediaUrl = path => path ? `${API_URL}${path}` : "";
 async function request(projectId, path, method = "GET", body) {
   let response;
-  try { response = await fetch(`${API_URL}/content-projects/${encodeURIComponent(projectId)}${path}`, { method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined }); }
+  try { response = await fetch(`${API_URL}/content-projects/${encodeURIComponent(projectId)}${path}`, { credentials: "include", method, headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined }); }
   catch { throw new Error("Não foi possível conectar à API de renderização."); }
   if (!response.ok) {
     let result = {}; try { result = await response.json(); } catch { /* Non-JSON error. */ }

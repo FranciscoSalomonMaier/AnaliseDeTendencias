@@ -1,3 +1,12 @@
+import { APP_GUARD } from '@nestjs/core';
+import {
+  ContentAccessGuard,
+  ContentAccessController,
+} from '../content-publication/content-access';
+import { PublicationController } from '../content-publication/publication.controller';
+import { PublicationRepository } from '../content-publication/publication.repository';
+import { PublicationService } from '../content-publication/publication.service';
+import { PublicationThumbnailService } from '../content-publication/publication-thumbnail.service';
 import { EditingRepository } from '../video-render/editing.repository';
 import { SubtitleController } from '../content-subtitles/subtitle.controller';
 import { SubtitleService } from '../content-subtitles/subtitle.service';
@@ -40,6 +49,8 @@ import { ImageFileValidator } from './image-file.validator';
 @Module({
   imports: [AiModule, ContentProjectModule],
   controllers: [
+    ContentAccessController,
+    PublicationController,
     SubtitleController,
     ContentAssetsController,
     ContentNarrationController,
@@ -47,6 +58,10 @@ import { ImageFileValidator } from './image-file.validator';
     ProjectAudioController,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: ContentAccessGuard },
+    PublicationRepository,
+    PublicationService,
+    PublicationThumbnailService,
     SubtitleService,
     SubtitleRepository,
     {
