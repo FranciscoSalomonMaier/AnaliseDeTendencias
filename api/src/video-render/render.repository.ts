@@ -168,8 +168,8 @@ export class RenderRepository {
           ],
         );
         await client.query(
-          "UPDATE content_video_renders SET status='COMPLETED',progress=100,output_asset_id=$2,completed_at=NOW(),render_duration_seconds=EXTRACT(EPOCH FROM NOW()-started_at) WHERE id=$1",
-          [job.id, assetId],
+          "UPDATE content_video_renders SET status='COMPLETED',progress=100,output_asset_id=$2,snapshot=$3::jsonb,completed_at=NOW(),render_duration_seconds=EXTRACT(EPOCH FROM NOW()-started_at) WHERE id=$1",
+          [job.id, assetId, JSON.stringify(job.snapshot)],
         );
         await client.query('COMMIT');
         return true;

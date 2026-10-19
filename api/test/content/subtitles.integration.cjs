@@ -855,8 +855,9 @@ function wav(seconds) {
         errors.push(event.params.exceptionDetails.text);
     };
     const evaluate = async (expression) => {
+      // Production sections are collapsible; open them before browser interactions.
       const r = await command('Runtime.evaluate', {
-        expression,
+        expression: `document.querySelectorAll('details').forEach(d => d.open = true);\n${expression}`,
         returnByValue: true,
         awaitPromise: true,
         userGesture: true,
@@ -900,7 +901,7 @@ function wav(seconds) {
     );
     assert.equal(
       await evaluate(
-        `document.querySelector('[aria-label="Montagem do vídeo"] button').disabled`,
+        `document.querySelector('[aria-label="Montagem do vídeo"] button[aria-label="Gerar vídeo"]').disabled`,
       ),
       true,
     );
@@ -1001,7 +1002,17 @@ function wav(seconds) {
     if (app) await app.close();
     if (db) await db.onModuleDestroy();
     await client.end();
-    await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);
+    // Pool.end() can resolve just before socket shutdown. Avoid force-killing
+    // closing clients and racing their final error events during fixture cleanup.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await admin.query(`DROP DATABASE "${name}"`);
+        break;
+      } catch (error) {
+        if (error.code !== '55006' || attempt >= 30) throw error;
+        await pause(100);
+      }
+    }
     await admin.end();
   }
 })().catch((e) => {

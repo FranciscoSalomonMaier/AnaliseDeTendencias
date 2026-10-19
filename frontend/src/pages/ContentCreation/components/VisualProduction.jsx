@@ -1,3 +1,4 @@
+import { videoRenders } from "../../../services/videoRenderService";
 import { AudioMixProduction } from "./AudioMixProduction";
 import { ProductionPanel } from "./ProductionPanel";
 import { SubtitleProduction } from "./SubtitleProduction";
@@ -10,7 +11,13 @@ import { calculateSceneTimestamps, formatStudioDuration } from "../../../utils/c
 
 const button = "rounded-lg border border-sky-400/40 px-3 py-2 text-sm text-sky-100 disabled:opacity-50";
 export function VisualProductionView({ project, state, busy, error, loading, onGenerate, onUpload, onSelect, onMissing, onRefresh, onBack }) {
-  const timestamps = calculateSceneTimestamps(project.scenes);
+  const [timeline, setTimeline] = useState(null);
+  useEffect(() => {
+    let active = true;
+    videoRenders.timeline(project.id).then(value => { if (active) setTimeline(value.timeline); }).catch(() => { if (active) setTimeline(null); });
+    return () => { active = false; };
+  }, [project.id, project.revision, state]);
+  const timestamps = calculateSceneTimestamps(project.scenes, timeline);
   const missing = missingVisualCount(state, project.scenes);
   const required = requiredReferencesMissing(state);
   const approved = project.status === "SCENES_APPROVED" && !project.scenesStale && !project.scriptStale;
@@ -29,7 +36,7 @@ export function VisualProductionView({ project, state, busy, error, loading, onG
       const v = sceneVisual(state,scene);
       const available = state.assets.filter(a => a.status === "READY" && (a.sceneId === scene.id || a.sceneId === null || !project.scenes.some(s => s.id === a.sceneId)));
       return <article key={scene.id} className="rounded-2xl border border-border bg-card p-5 space-y-4">
-        <div className="flex justify-between gap-3"><h3 className="font-semibold">Cena {scene.order}</h3><span className="text-xs text-muted-foreground">{formatStudioDuration(timestamps[index].startSeconds)} → {formatStudioDuration(timestamps[index].endSeconds)}</span></div>
+        <div className="flex justify-between gap-3"><h3 className="font-semibold">Cena {scene.order}</h3><span className="text-xs text-muted-foreground">{timestamps[index].estimated === false ? "Real: " : "Estimado: "}{formatStudioDuration(timestamps[index].startSeconds)} → {formatStudioDuration(timestamps[index].endSeconds)}</span></div>
         {v.selected ? <img src={assetImageUrl(v.selected)} alt={`Imagem selecionada da cena ${scene.order}`} className="aspect-video max-h-96 w-full rounded-xl bg-theme object-contain" /> : <div className="grid aspect-video max-h-64 place-items-center rounded-xl border border-border bg-theme text-sm text-muted-foreground">{v.pending ? "Gerando imagem…" : "Cena sem imagem selecionada"}</div>}
         {v.outdated && <div className="rounded-lg border border-amber-400/30 p-3 text-sm text-amber-200">Imagem selecionada para uma versão anterior da cena. <button className="underline" disabled={Boolean(busy) || !approved} onClick={() => onSelect(scene.id,v.selected.id)}>Manter esta imagem</button> ou gere uma nova.</div>}
         <p className="whitespace-pre-wrap text-sm"><strong>Narração:</strong> {scene.narration}</p>

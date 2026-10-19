@@ -15,7 +15,7 @@ export interface RenderConfig {
   audioRate: number;
   audioBitrate: string;
   paddingSeconds: number;
-  transition: 'CUT';
+  transition: 'CUT' | 'FADE' | 'CROSSFADE';
   motion: boolean;
   normalizeAudio: boolean;
   threads: number;

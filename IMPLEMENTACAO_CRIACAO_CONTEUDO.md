@@ -190,3 +190,7 @@ A geração de cenas recebe também `approvedNarration`, uma fonte textual monta
 Após validar o schema e a numeração das cenas, o backend compara a sequência das palavras geradas com a fonte aprovada. Tolera maiúsculas, pontuação e espaços, mas rejeita omissões, duplicações, novas palavras e trocas de ordem. O resultado inválido não substitui o trabalho armazenado e não dispara retries pagos automaticamente. Essa conferência protege a fidelidade do roteiro durante a divisão; não é uma avaliação semântica automática da qualidade ou lógica da história. A revisão humana continua necessária.
 
 Os roteiros, cenas, imagens, áudios e vídeos já persistidos não são reescritos. Os novos prompts e verificações se aplicam às próximas gerações. Testes usam respostas simuladas, sem geração real ou consumo de créditos de IA.
+
+## Conclusão da Etapa 4 — edição e renderização
+
+Movimentos por cena, enquadramento, transições CUT/FADE/CROSSFADE, persistência e prévia pelo renderer existente estão documentados em [IMPLEMENTACAO_ETAPA4_EDICAO.md](IMPLEMENTACAO_ETAPA4_EDICAO.md). Aplicar a migration 010 pelo runner de renders antes de usar as configurações de edição.

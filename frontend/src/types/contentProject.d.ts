@@ -71,14 +71,17 @@ export type VideoRenderStatus = 'QUEUED' | 'PREPARING' | 'RENDERING' | 'FINALIZI
 export interface VideoRenderConfig {
  width: number; height: number; fps: number; codec: 'libx264'; audioCodec: 'aac'; pixelFormat: 'yuv420p';
  crf: number; preset: 'veryfast'; audioRate: number; audioBitrate: string; paddingSeconds: number;
- transition: 'CUT'; motion: boolean; normalizeAudio: boolean; threads: number;
+ transition: 'CUT' | 'FADE' | 'CROSSFADE'; motion: boolean; normalizeAudio: boolean; threads: number;
 }
 export interface VideoTimelineScene {
  sceneId: string; order: number; imageAssetId: string; audioAssetId: string; imageKey: string; audioKey: string;
  imageMime: string; audioMime: string; audioDurationSeconds: number; startSeconds: number; endSeconds: number;
- durationSeconds: number; frames: number; motion: 'SLOW_ZOOM_IN' | 'SLOW_ZOOM_OUT' | 'PAN_RIGHT' | 'PAN_LEFT' | 'STATIC';
+ durationSeconds: number; frames: number; motion: 'SLOW_ZOOM_IN' | 'SLOW_ZOOM_OUT' | 'PAN_RIGHT' | 'PAN_LEFT' | 'PAN_UP' | 'PAN_DOWN' | 'STATIC';
+ requestedMotion?: VideoTimelineScene['motion'] | 'AUTO'; fit?: 'CONTAIN' | 'COVER' | 'BLURRED_BACKGROUND'; amplitude?: number; easing?: boolean; fallbackReason?: string;
+ transition?: { type: VideoRenderConfig['transition']; durationSeconds: number; startSeconds: number; endSeconds: number };
 }
 export interface VideoRenderSnapshot {
+ schemaVersion?: 2; preview?: boolean; editing?: { revision: number; transition: VideoRenderConfig['transition']; transitionSeconds: number; scenes: Record<string, {motion: VideoTimelineScene['motion'] | 'AUTO'; fit: 'CONTAIN' | 'COVER' | 'BLURRED_BACKGROUND'; amplitude: number}> };
  subtitles?: SubtitleSnapshot;
  audioMix?: AudioMixSnapshot;
  projectRevision: number; title: string; config: VideoRenderConfig; scenes: VideoTimelineScene[]; totalDurationSeconds: number;

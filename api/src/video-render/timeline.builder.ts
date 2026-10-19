@@ -1,3 +1,4 @@
+import { defaultEditing, EditingSettings } from './editing-settings';
 import { Injectable } from '@nestjs/common';
 import { hasVisualDirections } from '../ai/content-generation/spoken-text';
 import type { ContentProject } from '../content-projects/content-project.schema';
@@ -30,6 +31,7 @@ export class TimelineBuilder {
     assets: ContentAsset[],
     visuals: VisualSelection[],
     audio: AudioSelection[],
+    editing: EditingSettings = defaultEditing(),
   ) {
     const issues: RenderIssue[] = [];
     if (p.config.type !== 'VIDEO')
@@ -128,6 +130,32 @@ export class TimelineBuilder {
       );
       const startSeconds = frameOffset / this.settings.config.fps;
       frameOffset += frames;
+      const choice = editing.scenes[scene.id];
+      const requestedMotion = choice?.motion ?? 'AUTO';
+      const portrait = Number(image.height) > Number(image.width);
+      const candidates: MotionPreset[] = portrait
+        ? ['SLOW_ZOOM_IN', 'PAN_DOWN', 'SLOW_ZOOM_OUT', 'PAN_UP']
+        : presets;
+      let motion: MotionPreset = !this.settings.config.motion
+        ? 'STATIC'
+        : requestedMotion === 'AUTO'
+          ? candidates[i % candidates.length]
+          : requestedMotion;
+      if (
+        this.settings.config.motion &&
+        requestedMotion === 'AUTO' &&
+        motion === scenes.at(-1)?.motion
+      )
+        motion = candidates[(i + 1) % candidates.length];
+      const fit = choice?.fit ?? 'CONTAIN';
+      // Contain/background keep the complete foreground. Moving their entire canvas
+      // would crop that foreground, so use a recorded geometric fallback.
+      const fallbackReason =
+        motion !== 'STATIC' &&
+        ((choice && fit !== 'COVER') || (choice?.amplitude ?? 0.05) === 0)
+          ? 'Movimento estático para preservar a imagem inteira ou amplitude zero.'
+          : undefined;
+      if (fallbackReason) motion = 'STATIC';
       scenes.push({
         sceneId: scene.id,
         order: scene.order,
@@ -142,11 +170,45 @@ export class TimelineBuilder {
         startSeconds,
         durationSeconds: frames / this.settings.config.fps,
         endSeconds: frameOffset / this.settings.config.fps,
-        motion: this.settings.config.motion
-          ? presets[i % presets.length]
-          : 'STATIC',
+        motion,
+        requestedMotion,
+        fit,
+        amplitude: choice?.amplitude ?? 0.05,
+        easing: true,
+        fallbackReason,
       });
     });
+    const fps = this.settings.config.fps;
+    for (let i = 0; i < scenes.length - 1; i++) {
+      const scene = scenes[i],
+        next = scenes[i + 1];
+      const available = Math.max(
+        0,
+        scene.frames - Math.ceil(scene.audioDurationSeconds * fps),
+      );
+      const frames =
+        editing.transition === 'CUT'
+          ? 0
+          : Math.min(
+              Math.floor(editing.transitionSeconds * fps),
+              available,
+              Math.floor(scene.frames / 2),
+              Math.floor(next.frames / 2),
+            );
+      const durationSeconds = frames >= 2 ? frames / fps : 0;
+      scene.transition = {
+        type: durationSeconds ? editing.transition : 'CUT',
+        durationSeconds,
+        startSeconds:
+          scene.endSeconds -
+          (editing.transition === 'FADE'
+            ? durationSeconds / 2
+            : durationSeconds),
+        endSeconds:
+          scene.endSeconds +
+          (editing.transition === 'FADE' ? durationSeconds / 2 : 0),
+      };
+    }
     const totalDurationSeconds = frameOffset / this.settings.config.fps;
     if (totalDurationSeconds > this.settings.maxDurationSeconds)
       issues.push({
@@ -155,9 +217,11 @@ export class TimelineBuilder {
         message: `Vídeo excede ${this.settings.maxDurationSeconds} segundos.`,
       });
     const snapshot: RenderSnapshot = {
+      schemaVersion: 2,
+      editing: structuredClone(editing),
       projectRevision: p.revision,
       title: p.script?.title ?? p.config.topic,
-      config: { ...this.settings.config },
+      config: { ...this.settings.config, transition: editing.transition },
       scenes,
       totalDurationSeconds,
     };

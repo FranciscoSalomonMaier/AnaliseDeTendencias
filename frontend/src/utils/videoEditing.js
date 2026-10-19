@@ -1,0 +1,1 @@
+export const motionNames = { AUTO: "Automático", SLOW_ZOOM_IN: "Zoom-in", SLOW_ZOOM_OUT: "Zoom-out", PAN_LEFT: "Pan esquerda", PAN_RIGHT: "Pan direita", PAN_UP: "Pan cima", PAN_DOWN: "Pan baixo", STATIC: "Estático" };

@@ -20,6 +20,9 @@ Loader._resolveFilename = function (name, ...args) {
     ...args,
   );
 };
+const {
+  EditingRepository,
+} = require('../../dist/src/video-render/editing.repository');
 const { NestFactory } = require('@nestjs/core'),
   { Module } = require('@nestjs/common');
 const load = (folder, name) => require(`../../dist/src/${folder}/${name}`);
@@ -121,6 +124,7 @@ function wav(seconds, frequency = 440) {
       '005_content_visual_assets.sql',
       '006_content_narration.sql',
       '007_video_renders.sql',
+      '010_content_project_editing.sql',
     ]) {
       const sql = readFileSync(resolve('migrations', file), 'utf8');
       await client.query(sql);
@@ -149,6 +153,9 @@ function wav(seconds, frequency = 440) {
         renderer,
         storage,
         settings,
+        undefined,
+        undefined,
+        new EditingRepository(db),
       );
     const imageSettings = new ImageSettings({ get: () => undefined }),
       images = new ContentAssetsService(
@@ -366,6 +373,73 @@ function wav(seconds, frequency = 440) {
       frameHashes.push(readFileSync(frame));
     }
     assert.equal(frameHashes[0].equals(frameHashes[1]), false);
+    const originalSettings = await request(`/${p.id}/render-settings`);
+    assert.equal(originalSettings.status, 200);
+    const sceneId = first.snapshot.scenes[0].sceneId;
+    const requestedEditing = {
+      ...originalSettings.body,
+      transition: 'CROSSFADE',
+      transitionSeconds: 0.5,
+      scenes: {
+        [sceneId]: { motion: 'PAN_UP', fit: 'COVER', amplitude: 0.04 },
+      },
+    };
+    const savedEditing = await request(`/${p.id}/render-settings`, 'PATCH', {
+      revision: p.revision,
+      settings: requestedEditing,
+    });
+    assert.equal(savedEditing.status, 200, JSON.stringify(savedEditing.body));
+    assert.equal(
+      (await request(`/${p.id}/render-settings`)).body.scenes[sceneId].motion,
+      'PAN_UP',
+    );
+    assert.equal(
+      (
+        await request(`/${p.id}/render-settings`, 'PATCH', {
+          revision: p.revision,
+          settings: requestedEditing,
+        })
+      ).status,
+      409,
+      'stale editing revisions are rejected',
+    );
+    const editedTimeline = (await request(`/${p.id}/timeline`)).body.timeline;
+    assert.equal(editedTimeline.scenes[0].motion, 'PAN_UP');
+    assert.equal(editedTimeline.scenes[0].transition.type, 'CROSSFADE');
+    assert.equal(
+      editedTimeline.totalDurationSeconds,
+      first.snapshot.totalDurationSeconds,
+    );
+    assert.equal(
+      (await repo.get(p.id, first.id)).snapshot.config.transition,
+      'CUT',
+      'historical snapshot remains unchanged',
+    );
+    const previewJob = await request(`/${p.id}/render-preview`, 'POST', {
+      revision: p.revision,
+      editingRevision: savedEditing.body.revision,
+      sceneId,
+    });
+    assert.equal(previewJob.status, 202, JSON.stringify(previewJob.body));
+    const previewDone = await done(p, previewJob.body.id);
+    assert.equal(previewDone.status, 'COMPLETED', previewDone.error);
+    assert.equal(previewDone.snapshot.preview, true);
+    assert.equal(previewDone.snapshot.config.width, 640);
+    assert.ok(previewDone.snapshot.totalDurationSeconds <= 6);
+    const restoredEditing = {
+      ...savedEditing.body,
+      transition: 'CUT',
+      scenes: {},
+    };
+    assert.equal(
+      (
+        await request(`/${p.id}/render-settings`, 'PATCH', {
+          revision: p.revision,
+          settings: restoredEditing,
+        })
+      ).status,
+      200,
+    );
     const range = await fetch('http://127.0.0.1:33552' + first.videoUrl, {
       headers: { Range: 'bytes=0-99' },
     });
@@ -407,7 +481,7 @@ function wav(seconds, frequency = 440) {
     assert.equal(secondDone.status, 'COMPLETED', secondDone.error);
     assert.equal(secondDone.snapshot.scenes[0].imageAssetId, before);
     assert.notEqual(secondDone.outputAssetId, first.outputAssetId);
-    assert.equal((await request(`/${p.id}/renders`)).body.jobs.length, 2);
+    assert.equal((await request(`/${p.id}/renders`)).body.jobs.length, 3);
     assert.equal((await create(p)).status, 400);
     await client.query(
       'INSERT INTO content_scene_visuals(project_id,scene_id,asset_id,fingerprint) VALUES($1,$2,$3,$4)',
@@ -582,8 +656,9 @@ function wav(seconds, frequency = 440) {
         errors.push(event.params.exceptionDetails.text);
     };
     const evaluate = async (expression) => {
+      // Production sections are collapsible; open them before browser interactions.
       const r = await command('Runtime.evaluate', {
-        expression,
+        expression: `document.querySelectorAll('details').forEach(d => d.open = true);\n${expression}`,
         returnByValue: true,
         awaitPromise: true,
         userGesture: true,
@@ -605,6 +680,45 @@ function wav(seconds, frequency = 440) {
     await command('Page.navigate', { url: browserUrl });
     await until(() =>
       evaluate('document.body.innerText.includes("Montagem do vídeo")'),
+    );
+    await until(() =>
+      evaluate(
+        `!!document.querySelector('[aria-label="Movimento da cena 1"]')`,
+      ),
+    );
+    await evaluate(
+      `document.querySelectorAll('details').forEach(d=>d.open=true)`,
+    );
+    await evaluate(
+      `(()=>{const motion=document.querySelector('[aria-label="Movimento da cena 1"]');motion.value='PAN_DOWN';motion.dispatchEvent(new Event('change',{bubbles:true}));})()`,
+    );
+    await evaluate(
+      `(()=>{const fit=document.querySelector('[aria-label="Enquadramento da cena 1"]');fit.value='COVER';fit.dispatchEvent(new Event('change',{bubbles:true}));})()`,
+    );
+    console.log(
+      'Editing browser state',
+      await evaluate(
+        `JSON.stringify({motion:document.querySelector('[aria-label="Movimento da cena 1"]').value, buttons:[...document.querySelectorAll('button')].filter(b=>b.textContent.includes('edição')).map(b=>({text:b.textContent,disabled:b.disabled}))})`,
+      ),
+    );
+    await click('Salvar edição');
+    await until(
+      async () =>
+        (await request(`/${bp.id}/render-settings`)).body.scenes[
+          bp.scenes[0].id
+        ]?.motion === 'PAN_DOWN',
+    );
+    await command('Page.navigate', { url: browserUrl });
+    await until(() =>
+      evaluate(
+        `document.querySelector('[aria-label="Movimento da cena 1"]')?.value==='PAN_DOWN'`,
+      ),
+    );
+    assert.equal(
+      await evaluate(
+        `document.querySelector('[aria-label="Enquadramento da cena 1"]').value`,
+      ),
+      'COVER',
     );
     await click('Gerar vídeo');
     await until(() => evaluate('!!document.querySelector("video")'));
@@ -660,7 +774,17 @@ function wav(seconds, frequency = 440) {
     if (app) await app.close();
     if (db) await db.onModuleDestroy();
     await client.end();
-    await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);
+    // Pool.end() can resolve just before socket shutdown. Avoid force-killing
+    // closing clients and racing their final error events during fixture cleanup.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await admin.query(`DROP DATABASE "${name}"`);
+        break;
+      } catch (error) {
+        if (error.code !== '55006' || attempt >= 30) throw error;
+        await pause(100);
+      }
+    }
     await admin.end();
   }
 })().catch((e) => {

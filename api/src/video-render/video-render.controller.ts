@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Patch,
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -37,6 +38,23 @@ export function videoRange(
 @Controller('content-projects/:projectId')
 export class VideoRenderController {
   constructor(private readonly service: VideoRenderService) {}
+  @Get('render-settings') settings(
+    @Param('projectId', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.getEditing(id);
+  }
+  @Patch('render-settings') saveSettings(
+    @Param('projectId', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ) {
+    return this.service.saveEditing(id, body);
+  }
+  @Post('render-preview') @HttpCode(202) preview(
+    @Param('projectId', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ) {
+    return this.service.create(id, body, true);
+  }
   @Get('timeline') timeline(@Param('projectId', ParseUUIDPipe) id: string) {
     return this.service.preview(id);
   }

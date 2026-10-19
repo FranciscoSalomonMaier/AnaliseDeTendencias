@@ -1,6 +1,6 @@
 import { AudioMixService } from '../content-audio/audio-mix.service';
 import type { MixAsset } from '../content-audio/audio-timeline.builder';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   mkdtemp,
   mkdir,
@@ -44,25 +44,87 @@ interface Probe {
   }>;
 }
 export function imageMotionFilter(scene: TimelineScene, c: RenderConfig) {
-  const n = Math.max(1, scene.frames - 1),
-    z =
-      scene.motion === 'SLOW_ZOOM_IN'
-        ? `1+0.05*on/${n}`
-        : scene.motion === 'SLOW_ZOOM_OUT'
-          ? `1.05-0.05*on/${n}`
-          : scene.motion === 'STATIC'
-            ? '1'
-            : '1.05';
+  const n = Math.max(1, scene.frames - 1);
+  const t = scene.easing ? `(on/${n})*(on/${n})*(3-2*on/${n})` : `on/${n}`;
+  const amplitude = scene.amplitude ?? 0.05;
+  const z =
+    scene.motion === 'SLOW_ZOOM_IN'
+      ? `1+${amplitude}*(${t})`
+      : scene.motion === 'SLOW_ZOOM_OUT'
+        ? `${1 + amplitude}-${amplitude}*(${t})`
+        : scene.motion === 'STATIC'
+          ? '1'
+          : String(1 + amplitude);
   const x =
     scene.motion === 'PAN_RIGHT'
-      ? `(iw-iw/zoom)*on/${n}`
+      ? `(iw-iw/zoom)*(${t})`
       : scene.motion === 'PAN_LEFT'
-        ? `(iw-iw/zoom)*(1-on/${n})`
+        ? `(iw-iw/zoom)*(1-(${t}))`
         : 'iw/2-iw/zoom/2';
-  return `zoompan=z='${z}':x='${x}':y='ih/2-ih/zoom/2':d=${scene.frames}:s=${c.width}x${c.height}:fps=${c.fps},setsar=1,format=${c.pixelFormat}`;
+  const y =
+    scene.motion === 'PAN_DOWN'
+      ? `(ih-ih/zoom)*(${t})`
+      : scene.motion === 'PAN_UP'
+        ? `(ih-ih/zoom)*(1-(${t}))`
+        : 'ih/2-ih/zoom/2';
+  return `zoompan=z='${z}':x='${x}':y='${y}':d=${scene.frames}:s=${c.width}x${c.height}:fps=${c.fps},setsar=1,format=${c.pixelFormat}`;
+}
+export async function prepareRenderImage(
+  source: string,
+  output: string,
+  scene: TimelineScene,
+  c: RenderConfig,
+) {
+  const width = c.width * 2,
+    height = c.height * 2;
+  const input = () => sharp(source, { limitInputPixels: 24000000 }).rotate();
+  if (scene.fit === 'BLURRED_BACKGROUND') {
+    const foreground = await input()
+      .resize(width, height, { fit: 'inside' })
+      .png()
+      .toBuffer();
+    await input()
+      .resize(width, height, { fit: 'cover' })
+      .blur(30)
+      .composite([{ input: foreground, gravity: 'centre' }])
+      .png()
+      .toFile(output);
+  } else {
+    await input()
+      .resize(width, height, {
+        fit: scene.fit === 'COVER' ? 'cover' : 'contain',
+        background: '#000000',
+      })
+      .png()
+      .toFile(output);
+  }
+}
+// The next scene appears during outgoing silence. Narration timestamps never move.
+export function sceneVideoGraph(
+  scene: TimelineScene,
+  next: TimelineScene | undefined,
+  previous: TimelineScene | undefined,
+  c: RenderConfig,
+  suffix = '',
+) {
+  let base = imageMotionFilter(scene, c);
+  if (previous?.transition?.type === 'FADE')
+    base += `,fade=t=in:st=0:d=${previous.transition.durationSeconds / 2}`;
+  if (scene.transition?.type === 'FADE')
+    base += `,fade=t=out:st=${scene.durationSeconds - scene.transition.durationSeconds / 2}:d=${scene.transition.durationSeconds / 2}`;
+  if (scene.transition?.type === 'CROSSFADE' && next) {
+    const duration = scene.transition.durationSeconds;
+    const first = imageMotionFilter(
+      { ...next, frames: Math.round(duration * c.fps) + 2 },
+      c,
+    ).replace(/\bon\b/g, '0');
+    return `[0:v:0]${base},settb=AVTB,setpts=PTS-STARTPTS,fps=${c.fps}[current];[2:v:0]${first},settb=AVTB,setpts=PTS-STARTPTS,fps=${c.fps}[incoming];[current][incoming]xfade=transition=fade:duration=${duration}:offset=${scene.durationSeconds - duration}${suffix}[visual]`;
+  }
+  return `[0:v:0]${base}${suffix}[visual]`;
 }
 @Injectable()
 export class FfmpegRenderer {
+  private readonly logger = new Logger(FfmpegRenderer.name);
   constructor(
     private readonly settings: RenderSettings,
     private readonly process: MediaProcess,
@@ -216,6 +278,28 @@ export class FfmpegRenderer {
         return ms;
       };
     try {
+      const transitions = new Set(
+        job.snapshot.scenes.map((scene) => scene.transition?.type),
+      );
+      if (transitions.has('FADE') || transitions.has('CROSSFADE')) {
+        const filters = await this.process.run(
+          this.settings.ffmpegPath,
+          ['-filters'],
+          10000,
+          signal,
+        );
+        for (const [type, filter] of [
+          ['FADE', 'fade'],
+          ['CROSSFADE', 'xfade'],
+        ] as const)
+          if (
+            transitions.has(type) &&
+            !new RegExp(`\\b${filter}\\s+`).test(filters)
+          )
+            throw new RenderFailure(
+              `FFmpeg configurado não oferece o filtro ${filter}. Selecione CUT ou configure um executável compatível.`,
+            );
+      }
       const subtitles = job.snapshot.subtitles;
       if (subtitles?.settings.enabled) {
         const filters = await this.process.run(
@@ -270,13 +354,7 @@ export class FfmpegRenderer {
         await this.storage.copyTo!(scene.imageKey, imageSource);
         await this.storage.copyTo!(scene.audioKey, audio);
         try {
-          await sharp(imageSource, { limitInputPixels: 24000000 })
-            .resize(c.width * 2, c.height * 2, {
-              fit: 'contain',
-              background: '#000000',
-            })
-            .png()
-            .toFile(image);
+          await prepareRenderImage(imageSource, image, scene, c);
         } catch {
           throw new RenderFailure(
             `Cena ${scene.order}: imagem inválida ou não decodificável.`,
@@ -299,7 +377,7 @@ export class FfmpegRenderer {
           !Number.isFinite(duration) ||
           duration <= 0 ||
           duration > 600 ||
-          duration > scene.durationSeconds ||
+          (!job.snapshot.preview && duration > scene.durationSeconds) ||
           Math.abs(duration - scene.audioDurationSeconds) > 0.15
         )
           throw new RenderFailure(
@@ -316,7 +394,8 @@ export class FfmpegRenderer {
       for (const [index, scene] of job.snapshot.scenes.entries()) {
         const segment = join(dir, `segment-${index}.mkv`),
           audioFilter = `aresample=${c.audioRate},aformat=sample_fmts=fltp:channel_layouts=stereo${c.normalizeAudio ? ',loudnorm=I=-16:TP=-1.5:LRA=11' : ''},apad,atrim=duration=${scene.durationSeconds},asetpts=PTS-STARTPTS`;
-        let videoFilter = imageMotionFilter(scene, c);
+        let subtitleFilter = '';
+        const next = job.snapshot.scenes[index + 1];
         if (subtitles?.settings.enabled) {
           const assPath = join(dir, `subtitles-${index}.ass`);
           const local = {
@@ -335,8 +414,15 @@ export class FfmpegRenderer {
               })),
           };
           await writeFile(assPath, exportAss(local, c.width, c.height), 'utf8');
-          videoFilter += `,ass=filename='${filterPath(assPath)}':fontsdir='${filterPath(join(dir, 'fonts'))}'`;
+          subtitleFilter = `,ass=filename='${filterPath(assPath)}':fontsdir='${filterPath(join(dir, 'fonts'))}'`;
         }
+        const videoGraph = sceneVideoGraph(
+          scene,
+          next,
+          job.snapshot.scenes[index - 1],
+          c,
+          subtitleFilter,
+        );
         const args = [
           '-hide_banner',
           '-loglevel',
@@ -355,14 +441,17 @@ export class FfmpegRenderer {
           'file,pipe',
           '-i',
           paths[index].audio,
+          ...(scene.transition?.type === 'CROSSFADE' && next
+            ? ['-i', paths[index + 1].image]
+            : []),
           '-map',
-          '0:v:0',
+          '[visual]',
           '-map',
           '1:a:0',
-          '-vf',
-          videoFilter,
+          '-filter_complex',
+          videoGraph,
           '-af',
-          audioFilter,
+          audioFilter + (job.snapshot.preview ? ',volume=0' : ''),
           '-t',
           String(scene.durationSeconds),
           '-c:v',
@@ -397,26 +486,58 @@ export class FfmpegRenderer {
               (80 * scene.startSeconds) / job.snapshot.totalDurationSeconds,
             ),
         );
-        await this.process.run(
-          this.settings.ffmpegPath,
-          args,
-          remaining(),
-          signal,
-          (seconds) =>
-            progress(
-              'RENDERING',
-              Math.min(
-                90,
-                10 +
-                  Math.floor(
-                    (80 *
-                      (scene.startSeconds +
-                        Math.min(seconds, scene.durationSeconds))) /
-                      job.snapshot.totalDurationSeconds,
-                  ),
+        try {
+          await this.process.run(
+            this.settings.ffmpegPath,
+            args,
+            remaining(),
+            signal,
+            (seconds) =>
+              progress(
+                'RENDERING',
+                Math.min(
+                  90,
+                  10 +
+                    Math.floor(
+                      (80 *
+                        (scene.startSeconds +
+                          Math.min(seconds, scene.durationSeconds))) /
+                        job.snapshot.totalDurationSeconds,
+                    ),
+                ),
               ),
-            ),
-        );
+          );
+        } catch (error) {
+          if (
+            signal.aborted ||
+            scene.motion === 'STATIC' ||
+            !(error instanceof RenderFailure) ||
+            !/Parsed_zoompan/.test(error.message) ||
+            !/Error when evaluating|Error parsing expression|Undefined constant/.test(
+              error.message,
+            )
+          )
+            throw error;
+          scene.fallbackReason =
+            'Falha específica de expressão do movimento; cena renderizada como estática.';
+          scene.motion = 'STATIC';
+          this.logger.warn(`Cena ${scene.order}: ${scene.fallbackReason}`);
+          args[args.indexOf('-filter_complex') + 1] = sceneVideoGraph(
+            scene,
+            next,
+            job.snapshot.scenes[index - 1],
+            c,
+            subtitleFilter,
+          );
+          await this.process.run(
+            this.settings.ffmpegPath,
+            args,
+            remaining(),
+            signal,
+          );
+        }
+        if (scene.fallbackReason)
+          this.logger.warn(`Cena ${scene.order}: ${scene.fallbackReason}`);
         segments.push(segment);
       }
       progress('FINALIZING', 90);
@@ -597,6 +718,14 @@ export class FfmpegRenderer {
       )
         throw new RenderFailure(
           'O MP4 gerado não passou na validação de codec, resolução ou duração.',
+          JSON.stringify({
+            expected: {
+              config: c,
+              durationSeconds: job.snapshot.totalDurationSeconds,
+            },
+            actual: info,
+            bytes,
+          }),
         );
       remaining();
       progress('FINALIZING', 98);

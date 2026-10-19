@@ -1,3 +1,5 @@
+import { EditingRepository } from './editing.repository';
+import { editingSchema, defaultEditing } from './editing-settings';
 import { ProjectAudioRepository } from '../content-audio/project-audio.repository';
 import { SubtitleRepository } from '../content-subtitles/subtitle.repository';
 import { subtitleSnapshot } from '../content-subtitles/subtitle.builder';
@@ -47,6 +49,7 @@ export class VideoRenderService
     private readonly settings: RenderSettings,
     @Optional() private readonly projectAudio?: ProjectAudioRepository,
     @Optional() private readonly subtitles?: SubtitleRepository,
+    @Optional() private readonly editing?: EditingRepository,
   ) {}
   async onApplicationBootstrap() {
     this.stopped = false;
@@ -69,7 +72,16 @@ export class VideoRenderService
     const assets = await this.assets.list(id, client);
     const visuals = await this.assets.selections(id, client);
     const audio = await this.narration.selections(id, client);
-    const result = this.timeline.build(project, assets, visuals, audio);
+    const editing = this.editing
+      ? await this.editing.get(id, client)
+      : defaultEditing();
+    const result = this.timeline.build(
+      project,
+      assets,
+      visuals,
+      audio,
+      editing,
+    );
     if (this.projectAudio) {
       const settings = await this.projectAudio.get(id, client);
       const mix = new AudioTimelineBuilder().build(
@@ -110,9 +122,57 @@ export class VideoRenderService
     await this.projects.get(id);
     return this.repository.get(id, jobId);
   }
-  async create(id: string, input: unknown) {
+  async getEditing(id: string) {
+    const project = await this.projects.get(id);
+    const settings = this.editing
+      ? await this.editing.get(id)
+      : defaultEditing();
+    const ids = new Set(project.scenes.map((scene) => scene.id));
+    return {
+      ...settings,
+      scenes: Object.fromEntries(
+        Object.entries(settings.scenes).filter(([id]) => ids.has(id)),
+      ),
+    };
+  }
+  async saveEditing(id: string, input: unknown) {
     const parsed = z
-      .object({ revision: z.number().int().nonnegative() })
+      .object({
+        revision: z.number().int().nonnegative(),
+        settings: editingSchema,
+      })
+      .strict()
+      .safeParse(input);
+    if (!parsed.success)
+      throw new BadRequestException('Configuração de edição inválida.');
+    return this.projects.locked(id, async (project, client) => {
+      if (project.revision !== parsed.data.revision)
+        throw new ConflictException('Projeto alterado. Atualize a página.');
+      if (!this.editing)
+        throw new BadRequestException('Persistência de edição indisponível.');
+      const current = await this.editing.get(id, client);
+      if (current.revision !== parsed.data.settings.revision)
+        throw new ConflictException(
+          'Edição alterada em outra janela. Atualize a página.',
+        );
+      for (const sceneId of Object.keys(parsed.data.settings.scenes))
+        if (!project.scenes.some((s) => s.id === sceneId))
+          throw new BadRequestException('Cena não pertence ao projeto.');
+      const settings = {
+        ...parsed.data.settings,
+        revision: current.revision + 1,
+      };
+      await this.editing.save(id, settings, client);
+      return settings;
+    });
+  }
+  async create(id: string, input: unknown, preview = false) {
+    const parsed = z
+      .object({
+        revision: z.number().int().nonnegative(),
+        editingRevision: z.number().int().nonnegative().optional(),
+        ...(preview ? { sceneId: z.string().uuid().optional() } : {}),
+      })
       .strict()
       .safeParse(input);
     if (!parsed.success)
@@ -131,6 +191,67 @@ export class VideoRenderService
           'Já existe uma renderização em andamento neste projeto.',
         );
       const { snapshot, issues } = await this.build(id, client);
+      if (
+        parsed.data.editingRevision !== undefined &&
+        parsed.data.editingRevision !== snapshot.editing?.revision
+      )
+        throw new ConflictException('Edição alterada. Atualize a timeline.');
+      if (preview) {
+        const requested = (input as { sceneId?: string }).sceneId;
+        const start = requested
+          ? snapshot.scenes.findIndex((s) => s.sceneId === requested)
+          : 0;
+        if (start < 0)
+          throw new BadRequestException('Cena da prévia não encontrada.');
+        snapshot.scenes = snapshot.scenes.slice(start, start + 2);
+        snapshot.preview = true;
+        snapshot.config = {
+          ...snapshot.config,
+          width: 640,
+          height: 360,
+          crf: 28,
+          normalizeAudio: false,
+        };
+        delete snapshot.subtitles;
+        delete snapshot.audioMix;
+        let offset = 0;
+        for (const [i, scene] of snapshot.scenes.entries()) {
+          scene.frames = Math.min(scene.frames, snapshot.config.fps * 3);
+          scene.durationSeconds = scene.frames / snapshot.config.fps;
+          scene.startSeconds = offset;
+          offset += scene.durationSeconds;
+          scene.endSeconds = offset;
+          const frames =
+            i < snapshot.scenes.length - 1 &&
+            snapshot.editing?.transition !== 'CUT'
+              ? Math.min(
+                  Math.floor(
+                    (snapshot.editing?.transitionSeconds ?? 0.5) *
+                      snapshot.config.fps,
+                  ),
+                  Math.floor(scene.frames / 2),
+                  Math.floor(snapshot.scenes[i + 1].frames / 2),
+                )
+              : 0;
+          const durationSeconds =
+            frames >= 2 ? frames / snapshot.config.fps : 0;
+          scene.transition = {
+            type: durationSeconds ? snapshot.editing!.transition : 'CUT',
+            durationSeconds,
+            startSeconds:
+              offset -
+              (snapshot.editing?.transition === 'FADE'
+                ? durationSeconds / 2
+                : durationSeconds),
+            endSeconds:
+              offset +
+              (snapshot.editing?.transition === 'FADE'
+                ? durationSeconds / 2
+                : 0),
+          };
+        }
+        snapshot.totalDurationSeconds = offset;
+      }
       issues.push(...(await this.renderer.physical(snapshot)));
       if (issues.length)
         throw new BadRequestException({

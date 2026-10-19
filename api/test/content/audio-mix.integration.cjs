@@ -809,8 +809,9 @@ function wav(seconds, frequency = 440, amplitude = 1500, gate = () => true) {
         errors.push(event.params.exceptionDetails.text);
     };
     const evaluate = async (expression) => {
+      // Production sections are collapsible; open them before browser interactions.
       const r = await command('Runtime.evaluate', {
-        expression,
+        expression: `document.querySelectorAll('details').forEach(d => d.open = true);\n${expression}`,
         returnByValue: true,
         awaitPromise: true,
         userGesture: true,
@@ -878,13 +879,16 @@ function wav(seconds, frequency = 440, amplitude = 1500, gate = () => true) {
       ),
       true,
     );
+    await evaluate(
+      `document.querySelectorAll('details').forEach(d=>d.open=true)`,
+    );
     await uploadBrowser(
       'Enviar efeito sonoro',
       '/tmp/trends-browser-effect.wav',
     );
     await until(() =>
       evaluate(
-        '![...document.querySelectorAll("button")].find(b=>b.innerText.trim()==="Adicionar efeito na cena 1").disabled',
+        '![...document.querySelectorAll("button")].find(b=>b.innerText.trim()==="Adicionar efeito na cena 1")?.disabled',
       ),
     );
     await click('Adicionar efeito na cena 1');
@@ -981,7 +985,17 @@ function wav(seconds, frequency = 440, amplitude = 1500, gate = () => true) {
     if (app) await app.close();
     if (db) await db.onModuleDestroy();
     await client.end();
-    await admin.query(`DROP DATABASE "${name}" WITH (FORCE)`);
+    // Pool.end() can resolve just before socket shutdown. Avoid force-killing
+    // closing clients and racing their final error events during fixture cleanup.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await admin.query(`DROP DATABASE "${name}"`);
+        break;
+      } catch (error) {
+        if (error.code !== '55006' || attempt >= 30) throw error;
+        await pause(100);
+      }
+    }
     await admin.end();
   }
 })().catch((e) => {

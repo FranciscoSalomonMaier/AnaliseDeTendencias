@@ -40,7 +40,9 @@
     "migrate:subtitles": "node scripts/migrate-assets.cjs",
     "test:subtitles": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=content-subtitles",
     "test:subtitles:integration": "node test/content/subtitles.integration.cjs",
-    "test:audio-mix:timestamps": "node test/content/audio-mix-timestamps.integration.cjs"
+    "test:audio-mix:timestamps": "node test/content/audio-mix-timestamps.integration.cjs",
+    "test:editing:integration": "node test/content/editing.integration.cjs",
+    "migrate:editing": "node scripts/migrate-assets.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

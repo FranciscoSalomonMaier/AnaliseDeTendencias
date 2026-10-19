@@ -2,7 +2,13 @@ import type { AudioMixSnapshot } from '../content-audio/audio-timeline.builder';
 import type { SubtitleSnapshot } from '../content-subtitles/subtitle.schema';
 import type { RenderConfig } from './render-settings';
 export type MotionPreset =
-  'SLOW_ZOOM_IN' | 'PAN_RIGHT' | 'SLOW_ZOOM_OUT' | 'PAN_LEFT' | 'STATIC';
+  | 'SLOW_ZOOM_IN'
+  | 'PAN_RIGHT'
+  | 'SLOW_ZOOM_OUT'
+  | 'PAN_LEFT'
+  | 'PAN_UP'
+  | 'PAN_DOWN'
+  | 'STATIC';
 export interface TimelineScene {
   sceneId: string;
   order: number;
@@ -18,8 +24,23 @@ export interface TimelineScene {
   endSeconds: number;
   frames: number;
   motion: MotionPreset;
+  requestedMotion?: MotionPreset | 'AUTO';
+  fit?: 'CONTAIN' | 'COVER' | 'BLURRED_BACKGROUND';
+  amplitude?: number;
+  easing?: boolean;
+  fallbackReason?: string;
+  transition?: {
+    type: 'CUT' | 'FADE' | 'CROSSFADE';
+    durationSeconds: number;
+    startSeconds: number;
+    endSeconds: number;
+  };
 }
 export interface RenderSnapshot {
+  schemaVersion?: 2;
+  editing?: import('./editing-settings').EditingSettings;
+  preview?: boolean;
+
   subtitles?: SubtitleSnapshot;
   audioMix?: AudioMixSnapshot;
   projectRevision: number;

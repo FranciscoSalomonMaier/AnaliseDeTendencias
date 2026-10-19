@@ -1,4 +1,5 @@
 jest.mock('@nestjs/config', () => ({ ConfigService: class {} }));
+import { editingSchema, defaultEditing } from './editing-settings';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import type { ContentProject } from '../content-projects/content-project.schema';
@@ -198,10 +199,166 @@ describe('Video timeline, configuration and media ranges', () => {
   });
   test('motion expressions depend on frame count, never user strings', () => {
     const scene = build().snapshot.scenes[0];
-    expect(imageMotionFilter(scene, settings.config)).toContain('0.05*on/98');
+    expect(imageMotionFilter(scene, settings.config)).toContain(
+      '(on/98)*(on/98)*(3-2*on/98)',
+    );
     expect(
       imageMotionFilter({ ...scene, motion: 'STATIC' }, settings.config),
     ).toContain("z='1'");
+  });
+  test.each(['CUT', 'FADE', 'CROSSFADE'] as const)(
+    'keeps voice times and total duration with %s',
+    (transition) => {
+      const result = new TimelineBuilder(settings, tts).build(
+        p,
+        assets,
+        visuals,
+        audio,
+        { ...defaultEditing(), transition, transitionSeconds: 0.5 },
+      );
+      expect(result.snapshot.scenes.map((scene) => scene.startSeconds)).toEqual(
+        [0, 3.3, 7.6],
+      );
+      expect(result.snapshot.totalDurationSeconds).toBe(12.9);
+      expect(result.snapshot.scenes[0].transition?.durationSeconds).toBe(
+        transition === 'CUT' ? 0 : 0.3,
+      );
+      expect(result.snapshot.scenes.at(-1)?.transition).toBeUndefined();
+    },
+  );
+  test('short/no padding transitions degrade explicitly to CUT without shortening speech', () => {
+    const noPadding = new RenderSettings({
+      get: (key: string) =>
+        key === 'VIDEO_RENDER_PADDING_MS' ? '0' : undefined,
+    } as unknown as ConfigService);
+    const result = new TimelineBuilder(noPadding, tts).build(
+      p,
+      assets,
+      visuals,
+      audio,
+      { ...defaultEditing(), transition: 'CROSSFADE' },
+    );
+    expect(result.snapshot.scenes[0].transition?.type).toBe('CUT');
+    expect(result.snapshot.totalDurationSeconds).toBe(12);
+  });
+  test.each([
+    'SLOW_ZOOM_IN',
+    'SLOW_ZOOM_OUT',
+    'PAN_LEFT',
+    'PAN_RIGHT',
+    'PAN_UP',
+    'PAN_DOWN',
+    'STATIC',
+  ] as const)('captures requested and effective manual %s', (motion) => {
+    const editing = defaultEditing();
+    editing.scenes[p.scenes[0].id] = { motion, fit: 'COVER', amplitude: 0.04 };
+    const result = new TimelineBuilder(settings, tts).build(
+      p,
+      assets,
+      visuals,
+      audio,
+      editing,
+    );
+    expect(result.snapshot.scenes[0]).toMatchObject({
+      motion,
+      requestedMotion: motion,
+      fit: 'COVER',
+      amplitude: 0.04,
+    });
+    editing.scenes[p.scenes[0].id].motion = 'STATIC';
+    expect(result.snapshot.editing?.scenes[p.scenes[0].id].motion).toBe(motion);
+  });
+  test.each(['CONTAIN', 'BLURRED_BACKGROUND'] as const)(
+    'records geometric fallback preserving the full %s foreground',
+    (fit) => {
+      const editing = defaultEditing();
+      editing.scenes[p.scenes[0].id] = {
+        motion: 'PAN_UP',
+        fit,
+        amplitude: 0.05,
+      };
+      const result = new TimelineBuilder(settings, tts).build(
+        p,
+        assets,
+        visuals,
+        audio,
+        editing,
+      );
+      expect(result.snapshot.scenes[0]).toMatchObject({
+        motion: 'STATIC',
+        requestedMotion: 'PAN_UP',
+        fit,
+      });
+      expect(result.snapshot.scenes[0].fallbackReason).toBeTruthy();
+    },
+  );
+  test('portrait automatic movements are deterministic, vertical and not consecutive repeats', () => {
+    assets
+      .filter((a) => a.type === 'IMAGE')
+      .forEach((image) => {
+        image.width = 360;
+        image.height = 640;
+      });
+    const a = build(),
+      b = build();
+    expect(a.snapshot.scenes.map((s) => s.motion)).toEqual([
+      'SLOW_ZOOM_IN',
+      'PAN_DOWN',
+      'SLOW_ZOOM_OUT',
+    ]);
+    expect(a.snapshot.scenes.map((s) => s.motion)).toEqual(
+      b.snapshot.scenes.map((s) => s.motion),
+    );
+  });
+  test('global movement disable remains authoritative for automatic and manual choices', () => {
+    const disabled = new RenderSettings({
+      get: (key: string) =>
+        key === 'VIDEO_RENDER_MOTION' ? 'false' : undefined,
+    } as unknown as ConfigService);
+    const editing = defaultEditing();
+    editing.scenes[p.scenes[2].id] = {
+      motion: 'PAN_UP',
+      fit: 'COVER',
+      amplitude: 0.05,
+    };
+    const result = new TimelineBuilder(disabled, tts).build(
+      p,
+      assets,
+      visuals,
+      audio,
+      editing,
+    );
+    expect(result.snapshot.scenes.map((scene) => scene.motion)).toEqual([
+      'STATIC',
+      'STATIC',
+      'STATIC',
+    ]);
+  });
+  test('single scene has no transition, including nonzero requested duration', () => {
+    p.scenes = p.scenes.slice(0, 1);
+    const result = new TimelineBuilder(settings, tts).build(
+      p,
+      assets,
+      visuals,
+      audio,
+      { ...defaultEditing(), transition: 'CROSSFADE' },
+    );
+    expect(result.snapshot.scenes[0].transition).toBeUndefined();
+    expect(result.snapshot.totalDurationSeconds).toBe(3.3);
+  });
+  test('rejects invalid durations, amplitudes and arbitrary filter strings', () => {
+    for (const transitionSeconds of [-1, Infinity, 3])
+      expect(editingSchema.safeParse({ transitionSeconds }).success).toBe(
+        false,
+      );
+    expect(editingSchema.safeParse({ transition: 'xfade=evil' }).success).toBe(
+      false,
+    );
+    expect(
+      editingSchema.safeParse({
+        scenes: { [p.scenes[0].id]: { motion: 'PAN_UP', amplitude: 0.5 } },
+      }).success,
+    ).toBe(false);
   });
   test('ranges support complete, prefix, suffix and reject malformed/out-of-bounds requests', () => {
     expect(videoRange(undefined, 100)).toBeNull();

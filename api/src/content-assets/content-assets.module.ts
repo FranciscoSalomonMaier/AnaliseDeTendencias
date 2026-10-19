@@ -1,3 +1,4 @@
+import { EditingRepository } from '../video-render/editing.repository';
 import { SubtitleController } from '../content-subtitles/subtitle.controller';
 import { SubtitleService } from '../content-subtitles/subtitle.service';
 import { SubtitleRepository } from '../content-subtitles/subtitle.repository';
@@ -52,6 +53,7 @@ import { ImageFileValidator } from './image-file.validator';
       provide: SpeechAlignmentProvider,
       useClass: OpenAiSpeechAlignmentProvider,
     },
+    EditingRepository,
     VideoRenderService,
     ProjectAudioService,
     ProjectAudioRepository,

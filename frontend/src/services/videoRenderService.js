@@ -12,6 +12,9 @@ async function request(projectId, path, method = "GET", body) {
 }
 export const videoRenders = {
   timeline: id => request(id, "/timeline"), list: id => request(id, "/renders"),
-  create: project => request(project.id, "/renders", "POST", { revision: project.revision }),
+  settings: id => request(id, "/render-settings"),
+  saveSettings: (project, settings) => request(project.id, "/render-settings", "PATCH", { revision: project.revision, settings }),
+  preview: (project, editingRevision, sceneId) => request(project.id, "/render-preview", "POST", { revision: project.revision, editingRevision, sceneId }),
+  create: (project, editingRevision) => request(project.id, "/renders", "POST", { revision: project.revision, editingRevision }),
   cancel: (projectId, jobId) => request(projectId, `/renders/${jobId}/cancel`, "POST"),
 };

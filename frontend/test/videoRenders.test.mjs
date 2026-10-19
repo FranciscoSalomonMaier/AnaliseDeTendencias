@@ -22,6 +22,7 @@ test('render production UI and request contracts',async t=>{
     assert.ok(generationButton(render({jobs:[job]})));
     assert.doesNotMatch(generationButton(render({jobs:[job]})), /\sdisabled(?:=|\s|>)/);
     for (const [props, message] of [
+      [{editingDirty:true}, 'Salve a edição'],
       [{audioDraftDirty:true}, 'Salve a mixagem'],
       [{subtitleDraftDirty:true}, 'Salve as legendas'],
       [{loading:true}, 'Aguarde o carregamento'],
@@ -35,6 +36,23 @@ test('render production UI and request contracts',async t=>{
       assert.ok(html.includes(message), message);
     }
     assert.ok(render({jobs:[job,{...job,id:'active',status:'RENDERING'}]}).includes('Já existe um vídeo em processamento'));
+  });
+  await t.test('preview jobs are labeled and preserve first final generation action',()=>{
+    const html=render({jobs:[{...job,snapshot:{...snapshot,preview:true}}]});
+    assert.ok(html.includes('Prévia animada'));
+    assert.ok(html.includes('>Gerar vídeo</button>'));
+  });
+  await t.test('editing endpoints persist complete settings and preview scene/revision', async()=>{
+    const {videoRenders}=await server.ssrLoadModule('/src/services/videoRenderService.js');
+    const saved={revision:3,transition:'CROSSFADE',transitionSeconds:0.5,scenes:{s:{motion:'PAN_UP',fit:'COVER',amplitude:0.05}}};
+    const original=globalThis.fetch,calls=[];
+    globalThis.fetch=async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>saved};};
+    try{
+      await videoRenders.saveSettings(project,saved);await videoRenders.settings(project.id);await videoRenders.preview(project,3,'s');
+      assert.equal(calls[0].options.method,'PATCH');assert.deepEqual(JSON.parse(calls[0].options.body),{revision:2,settings:saved});
+      assert.ok(calls[1].url.endsWith('/render-settings'));assert.ok(calls[2].url.endsWith('/render-preview'));
+      assert.deepEqual(JSON.parse(calls[2].options.body),{revision:2,editingRevision:3,sceneId:'s'});
+    } finally{globalThis.fetch=original;}
   });
   await t.test('service sends revision and propagates detailed validation errors',async()=>{const {videoRenders}=await server.ssrLoadModule('/src/services/videoRenderService.js');const original=globalThis.fetch,calls=[];globalThis.fetch=async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>job};};try{await videoRenders.create(project);await videoRenders.cancel(project.id,job.id);await videoRenders.list(project.id);await videoRenders.timeline(project.id);assert.equal(JSON.parse(calls[0].options.body).revision,2);assert.equal(calls[1].options.method,'POST');assert.ok(calls[1].url.endsWith('/renders/job/cancel'));globalThis.fetch=async()=>({ok:false,status:400,json:async()=>({message:'Assets pendentes',issues:[{order:1,message:'Falta áudio'}]})});await assert.rejects(videoRenders.create(project),e=>e.issues.length===1);}finally{globalThis.fetch=original;}});
  }finally{await server.close();}

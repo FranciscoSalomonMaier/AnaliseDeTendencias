@@ -10,12 +10,13 @@ export function formatStudioDuration(totalSeconds) {
     : `${paddedMinutes}:${paddedSeconds}`;
 }
 
-export function calculateSceneTimestamps(scenes) {
+export function calculateSceneTimestamps(scenes, timeline) {
   let elapsedSeconds = 0;
   return scenes.map((scene) => {
     const startSeconds = elapsedSeconds;
     elapsedSeconds += Math.max(0, Number(scene.estimatedDurationSeconds) || 0);
-    return { startSeconds, endSeconds: elapsedSeconds };
+    const actual = timeline?.scenes?.find(item => item.sceneId === scene.id);
+    return actual ? { startSeconds: actual.startSeconds, endSeconds: actual.endSeconds, estimated: false } : { startSeconds, endSeconds: elapsedSeconds };
   });
 }
 
