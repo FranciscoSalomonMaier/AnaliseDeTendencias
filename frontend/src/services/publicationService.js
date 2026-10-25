@@ -4,9 +4,9 @@ async function request(path,method='GET',body){let response;try{response=await f
 const base=id=>`/content-projects/${encodeURIComponent(id)}/publication`;
 export const publications={
  login:key=>request('/content-access/session','POST',{key}),
- get:id=>request(base(id)),save:(id,state)=>request(base(id),'PATCH',{revision:state.revision,data:state.data}),
- generate:(id,revision,kind,count=3)=>request(base(id)+'/generate','POST',{revision,kind,count}),
- chapters:(id,revision)=>request(base(id)+'/chapters','POST',{revision}),
+ get:(id,target='YOUTUBE_VIDEO')=>request(base(id)+`?target=${encodeURIComponent(target)}`),save:(id,state,target='YOUTUBE_VIDEO')=>request(base(id)+`?target=${encodeURIComponent(target)}`,'PATCH',{revision:state.revision,data:state.data}),
+ generate:(id,revision,kind,count=3,target='YOUTUBE_VIDEO')=>request(base(id)+`/generate?target=${encodeURIComponent(target)}`,'POST',{revision,kind,count}),
+ chapters:(id,revision,target='YOUTUBE_VIDEO')=>request(base(id)+`/chapters?target=${encodeURIComponent(target)}`,'POST',{revision}),
  upload:(id,file,overlay)=>{const form=new FormData();form.append('file',file);form.append('overlay',JSON.stringify(overlay));return request(base(id)+'/thumbnails/upload','POST',form);},
  compose:(id,thumbId,overlay)=>request(base(id)+`/thumbnails/${thumbId}/compose`,'POST',overlay),
 };

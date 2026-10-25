@@ -37,6 +37,7 @@ interface Probe {
     width?: number;
     height?: number;
     pix_fmt?: string;
+    sample_aspect_ratio?: string;
     avg_frame_rate?: string;
     duration?: string;
     sample_rate?: string;
@@ -78,6 +79,41 @@ export async function prepareRenderImage(
   const width = c.width * 2,
     height = c.height * 2;
   const input = () => sharp(source, { limitInputPixels: 24000000 }).rotate();
+  if (scene.fit === 'COVER') {
+    const normalized = await input().png().toBuffer();
+    const meta = await sharp(normalized).metadata();
+    const sourceWidth = meta.width,
+      sourceHeight = meta.height;
+    const zoom = scene.zoom ?? 1;
+    const cropWidth = Math.max(
+      1,
+      Math.floor(Math.min(sourceWidth, (sourceHeight * width) / height) / zoom),
+    );
+    const cropHeight = Math.max(
+      1,
+      Math.floor(Math.min(sourceHeight, (sourceWidth * height) / width) / zoom),
+    );
+    const left = Math.max(
+      0,
+      Math.min(
+        sourceWidth - cropWidth,
+        Math.round(sourceWidth * (scene.focalX ?? 0.5) - cropWidth / 2),
+      ),
+    );
+    const top = Math.max(
+      0,
+      Math.min(
+        sourceHeight - cropHeight,
+        Math.round(sourceHeight * (scene.focalY ?? 0.5) - cropHeight / 2),
+      ),
+    );
+    await sharp(normalized)
+      .extract({ left, top, width: cropWidth, height: cropHeight })
+      .resize(width, height)
+      .png()
+      .toFile(output);
+    return;
+  }
   if (scene.fit === 'BLURRED_BACKGROUND') {
     const foreground = await input()
       .resize(width, height, { fit: 'inside' })
@@ -92,7 +128,7 @@ export async function prepareRenderImage(
   } else {
     await input()
       .resize(width, height, {
-        fit: scene.fit === 'COVER' ? 'cover' : 'contain',
+        fit: 'contain',
         background: '#000000',
       })
       .png()
@@ -710,6 +746,8 @@ export class FfmpegRenderer {
         video.width !== c.width ||
         video.height !== c.height ||
         video.pix_fmt !== c.pixelFormat ||
+        (video.sample_aspect_ratio !== undefined &&
+          video.sample_aspect_ratio !== '1:1') ||
         Math.abs(num / den - c.fps) > 0.01 ||
         !Number.isFinite(durationSeconds) ||
         Math.abs(durationSeconds - job.snapshot.totalDurationSeconds) > 0.15 ||

@@ -2,7 +2,12 @@ import { z } from 'zod';
 export const SubtitleSettingsSchema = z
   .object({
     enabled: z.boolean().default(false),
-    preset: z.enum(['CLASSIC', 'DARK_CINEMATIC', 'DYNAMIC']).default('CLASSIC'),
+    horizontalMargin: z.number().min(0.03).max(0.2).optional(),
+    safeTop: z.number().min(0.03).max(0.3).optional(),
+    safeBottom: z.number().min(0.03).max(0.35).optional(),
+    preset: z
+      .enum(['CLASSIC', 'DARK_CINEMATIC', 'DYNAMIC', 'BOLD_SHORTS'])
+      .default('CLASSIC'),
     fontSize: z.number().int().min(24).max(96).default(48),
     textColor: z
       .string()

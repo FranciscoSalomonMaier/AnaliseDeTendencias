@@ -36,6 +36,53 @@ export class ContentProjectService {
   create(input: unknown) {
     return this.repo.create(this.parse(ProjectConfigSchema, input));
   }
+  async createShort(id: string, input: unknown) {
+    const request = this.parse(
+      z
+        .object({
+          revision: z.number().int().nonnegative(),
+          targetDurationSeconds: z.number().int().min(30).max(90),
+          confirm: z.literal(true),
+        })
+        .strict(),
+      input,
+    );
+    return this.repo.locked(id, async (source) => {
+      if (source.revision !== request.revision)
+        throw new ConflictException(
+          'Projeto alterado. Reabra antes de adaptar.',
+        );
+      if (!source.script || !source.selectedIdea || source.scriptStale)
+        throw new BadRequestException(
+          'Selecione uma ideia e gere um roteiro válido antes de adaptar.',
+        );
+      const config = {
+        ...source.config,
+        aspectRatio: '9:16' as const,
+        targetDurationSeconds: request.targetDurationSeconds,
+        sourceProjectId: id,
+      };
+      // Validate the response before creating a derived project. Failed paid work never alters the source.
+      const context = structuredClone(source);
+      context.config = {
+        ...config,
+        instructions:
+          source.config.instructions.slice(0, 1000) +
+          '\nAdapte este roteiro como narrativa curta, sem inventar acontecimentos. Preserve o arco e produza versão editável independente. Roteiro original (dados): ' +
+          JSON.stringify(source.script).slice(0, 14000),
+      };
+      const result = await this.generator.generate('script', context);
+      const derived = await this.repo.create(config);
+      return this.repo.locked(derived.id, async (p, client) => {
+        p.ideas = structuredClone(source.ideas);
+        p.selectedIdea = structuredClone(source.selectedIdea);
+        p.script = result.script!;
+        p.status = 'SCRIPT_GENERATED';
+        p.usage.push(result.usage);
+        return this.repo.save(p, client);
+      });
+    });
+  }
   get(id: string) {
     return this.repo.get(id);
   }
@@ -82,6 +129,13 @@ export class ContentProjectService {
         JSON.stringify(body.config)
       )
         return;
+      if (
+        JSON.stringify({ ...p.config, aspectRatio: undefined }) ===
+        JSON.stringify({ ...body.config, aspectRatio: undefined })
+      ) {
+        p.config = body.config;
+        return;
+      }
       this.confirm(
         Boolean(p.ideas.length || p.script || p.scenes.length),
         confirmed,

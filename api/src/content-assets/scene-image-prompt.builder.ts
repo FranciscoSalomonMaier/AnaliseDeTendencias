@@ -38,15 +38,23 @@ export function sceneVisualFingerprint(
 }
 @Injectable()
 export class SceneImagePromptBuilder {
-  build(project: ContentProject, scene: ProjectScene) {
+  build(
+    project: ContentProject,
+    scene: ProjectScene,
+    outputAspectRatio?: '16:9' | '9:16',
+  ) {
     const ordered = [...project.scenes].sort((a, b) => a.order - b.order);
     const index = ordered.findIndex((s) => s.id === scene.id);
-    const aspectRatio = project.config.type === 'VIDEO' ? '16:9' : '1:1';
+    const aspectRatio =
+      outputAspectRatio ?? project.config.aspectRatio ?? '16:9';
     return {
       aspectRatio: aspectRatio,
       style: project.config.style,
       prompt: [
         'Create one visual frame for a YouTube storytelling scene. No captions, watermarks or text overlays.',
+        aspectRatio === '9:16'
+          ? 'Vertical composition: keep faces and story-critical objects inside the central 80% of the frame. Leave space in the lower central area for captions; avoid important details at top, bottom and right edges.'
+          : '',
         `Project topic: ${project.config.topic}`,
         `Visual style: ${VISUAL_STYLE_PRESETS[project.config.style]}`,
         `Composition: ${aspectRatio}; coherent framing and visual language throughout this project.`,

@@ -13,7 +13,9 @@ export const ProjectConfigSchema = z
     instructions: z.string().trim().max(4000).default(''),
     style: z.literal('DARK').default('DARK'),
     language: z.literal('pt-BR').default('pt-BR'),
-    targetDurationSeconds: z.number().int().min(60).max(600).default(300),
+    aspectRatio: z.enum(['16:9', '9:16']).optional(),
+    sourceProjectId: z.string().uuid().optional(),
+    targetDurationSeconds: z.number().int().min(30).max(600).default(300),
     reference: z
       .object({
         type: z.enum(['TOPIC', 'VIDEO', 'MANUAL']),

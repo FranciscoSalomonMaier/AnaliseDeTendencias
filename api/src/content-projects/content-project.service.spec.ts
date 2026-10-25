@@ -102,6 +102,21 @@ describe('Content projects lifecycle', () => {
       generator,
     );
   });
+  test('changing only aspect ratio preserves approved script and scenes', async () => {
+    p.status = 'SCENES_APPROVED';
+    p.script = structuredClone(script);
+    p.scenes = scenes.map((s) => ({ ...s, id: randomUUID() }));
+    const result = await service.update(p.id, {
+      revision: p.revision,
+      config: { ...p.config, aspectRatio: '9:16' },
+    });
+    expect(result.status).toBe('SCENES_APPROVED');
+    expect(result.scriptStale).toBe(false);
+    expect(result.scenesStale).toBe(false);
+    expect(result.script).toEqual(script);
+    expect(result.scenes).toHaveLength(1);
+    expect(output).not.toHaveBeenCalled();
+  });
   const request = () => ({ revision: p.revision, confirm: true });
   function respond(data: unknown) {
     output.mockResolvedValueOnce({

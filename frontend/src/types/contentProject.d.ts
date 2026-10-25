@@ -1,3 +1,5 @@
+export type VideoAspectRatio = '16:9' | '9:16';
+export type PublicationTarget = 'YOUTUBE_VIDEO' | 'YOUTUBE_SHORTS' | 'INSTAGRAM_REELS';
 import type { GeneratedScript, GeneratedScene, ContentIdea } from './contentGeneration';
 export type ProjectStatus = 'DRAFT' | 'IDEAS_GENERATED' | 'IDEA_SELECTED' | 'SCRIPT_GENERATED' | 'SCRIPT_APPROVED' | 'SCENES_GENERATED' | 'SCENES_APPROVED';
 export interface ContentProjectConfig {
@@ -6,7 +8,7 @@ export interface ContentProjectConfig {
  instructions: string;
  style: 'DARK';
  language: 'pt-BR';
- targetDurationSeconds: number;
+ targetDurationSeconds: number; aspectRatio?: VideoAspectRatio; sourceProjectId?: string;
  reference?: { type: 'TOPIC' | 'VIDEO' | 'MANUAL'; id?: string };
 }
 export interface NarrationSettings {
@@ -69,6 +71,7 @@ export interface ContentVisualState {
 
 export type VideoRenderStatus = 'QUEUED' | 'PREPARING' | 'RENDERING' | 'FINALIZING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 export interface VideoRenderConfig {
+ aspectRatio?: VideoAspectRatio;
  width: number; height: number; fps: number; codec: 'libx264'; audioCodec: 'aac'; pixelFormat: 'yuv420p';
  crf: number; preset: 'veryfast'; audioRate: number; audioBitrate: string; paddingSeconds: number;
  transition: 'CUT' | 'FADE' | 'CROSSFADE'; motion: boolean; normalizeAudio: boolean; threads: number;
@@ -77,11 +80,12 @@ export interface VideoTimelineScene {
  sceneId: string; order: number; imageAssetId: string; audioAssetId: string; imageKey: string; audioKey: string;
  imageMime: string; audioMime: string; audioDurationSeconds: number; startSeconds: number; endSeconds: number;
  durationSeconds: number; frames: number; motion: 'SLOW_ZOOM_IN' | 'SLOW_ZOOM_OUT' | 'PAN_RIGHT' | 'PAN_LEFT' | 'PAN_UP' | 'PAN_DOWN' | 'STATIC';
- requestedMotion?: VideoTimelineScene['motion'] | 'AUTO'; fit?: 'CONTAIN' | 'COVER' | 'BLURRED_BACKGROUND'; amplitude?: number; easing?: boolean; fallbackReason?: string;
+ requestedMotion?: VideoTimelineScene['motion'] | 'AUTO'; fit?: 'CONTAIN' | 'COVER' | 'BLURRED_BACKGROUND'; amplitude?: number; focalX?: number; focalY?: number; zoom?: number; easing?: boolean; fallbackReason?: string;
  transition?: { type: VideoRenderConfig['transition']; durationSeconds: number; startSeconds: number; endSeconds: number };
 }
+export interface SceneVisualSettings { motion: VideoTimelineScene['motion'] | 'AUTO'; fit: 'CONTAIN' | 'COVER' | 'BLURRED_BACKGROUND'; amplitude: number; focalX?: number; focalY?: number; zoom?: number }
 export interface VideoRenderSnapshot {
- schemaVersion?: 2; preview?: boolean; editing?: { revision: number; transition: VideoRenderConfig['transition']; transitionSeconds: number; scenes: Record<string, {motion: VideoTimelineScene['motion'] | 'AUTO'; fit: 'CONTAIN' | 'COVER' | 'BLURRED_BACKGROUND'; amplitude: number}> };
+ schemaVersion?: 2; preview?: boolean; editing?: { aspectRatio?: VideoAspectRatio; subtitleVariants?: Partial<Record<VideoAspectRatio,SubtitleSettings>>; variants?: Partial<Record<VideoAspectRatio,Record<string,SceneVisualSettings>>>; revision: number; transition: VideoRenderConfig['transition']; transitionSeconds: number; scenes: Record<string, SceneVisualSettings> };
  subtitles?: SubtitleSnapshot;
  audioMix?: AudioMixSnapshot;
  projectRevision: number; title: string; config: VideoRenderConfig; scenes: VideoTimelineScene[]; totalDurationSeconds: number;
@@ -114,7 +118,8 @@ export interface AudioMixSnapshot { settings: ProjectAudioSettings; music: Audio
 
 export interface SubtitleSettings {
  enabled: boolean;
- preset: 'CLASSIC' | 'DARK_CINEMATIC' | 'DYNAMIC';
+ preset: 'CLASSIC' | 'DARK_CINEMATIC' | 'DYNAMIC' | 'BOLD_SHORTS';
+ horizontalMargin?: number; safeTop?: number; safeBottom?: number;
  fontSize: number; textColor: string; highlightColor: string;
  outlineWidth: number; shadow: number; verticalPosition: number; bottomMargin: number;
  maxLines: number; maxWords: number; maxCharacters: number; maxDurationSeconds: number; pauseSeconds: number;
@@ -126,7 +131,7 @@ export interface SubtitleVersion { id: string; projectId: string; sceneId: strin
 
 export interface PublicationTitle { id:string; text:string; source:'MANUAL'|'AI'; createdAt:string }
 export interface PublicationChapter { startSeconds:number; title:string }
-export interface PublicationThumbnailText { enabled:boolean; text:string; position:'TOP'|'CENTER'|'BOTTOM'; fontSize:number; color:string; outline:boolean }
+export interface PublicationThumbnailText { aspectRatio?: VideoAspectRatio; enabled:boolean; text:string; position:'TOP'|'CENTER'|'BOTTOM'; fontSize:number; color:string; outline:boolean }
 export interface PublicationPreparation {
  platform:'YOUTUBE';renderJobId:string|null;selectedTitleId:string|null;selectedThumbnailId:string|null;
  titles:PublicationTitle[];description:string;tags:string[];hashtags:string[];
@@ -135,6 +140,7 @@ export interface PublicationPreparation {
  thumbnailStyle:'CINEMATIC'|'MYSTERY'|'HORROR'|'DOCUMENTARY'|'MINIMALIST';thumbnailText:PublicationThumbnailText;status:'DRAFT'|'READY';
 }
 export interface PublicationState {
+ target?: PublicationTarget;
  revision:number;data:PublicationPreparation;updatedAt:string|null;finalDescription:string;
  checklist:{ready:boolean;errors:string[];warnings:string[];items:Array<{key:string;label:string;required:boolean;valid:boolean}>};
  renders:VideoRenderJob[];thumbnails:Array<{id:string;assetId:string;overlay:PublicationThumbnailText;provider:string|null;model:string|null;status:string;createdAt:string;url:string}>;

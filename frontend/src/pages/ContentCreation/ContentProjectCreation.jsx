@@ -38,6 +38,7 @@ export function ContentProjectCreation({ analysis, onNavigate }) {
   const [busy, setBusy] = useState(initialId ? "restore" : ""),
     [error, setError] = useState(""),
     [saved, setSaved] = useState("");
+  const [shortDuration, setShortDuration] = useState(60);
   const [publicationDirty,setPublicationDirty]=useState(false);
   const inFlight = useRef(false);
   const accept = useCallback((p, move = false) => {
@@ -202,7 +203,8 @@ export function ContentProjectCreation({ analysis, onNavigate }) {
   async function configure(event) {
     event.preventDefault();
     if (project) {
-      const confirm = Boolean(
+      const contentChanged = JSON.stringify({...config,aspectRatio:undefined}) !== JSON.stringify({...project.config,aspectRatio:undefined});
+      const confirm = contentChanged && Boolean(
         project.ideas.length || project.script || project.scenes.length,
       );
       if (
@@ -266,6 +268,8 @@ export function ContentProjectCreation({ analysis, onNavigate }) {
         </button>
       </div>
       <StudioAccess />
+      {project?.script && <details className="mb-4 rounded-xl border border-border p-4"><summary>Criar versão curta independente</summary><p className="my-3 text-sm">Para manter o roteiro e a duração, use Vertical na montagem do vídeo. Para resumir, crie um projeto derivado abaixo: o roteiro original será preservado. A adaptação usa IA e pode consumir créditos; novas imagens e narração exigem ações separadas.</p><label>Duração planejada<select className="m-2 rounded border bg-theme p-2" value={shortDuration} onChange={e=>setShortDuration(Number(e.target.value))}>{[30,60,90].map(s=><option key={s} value={s}>{s} segundos</option>)}</select></label><button disabled={Boolean(busy)||dirty||project.scriptStale} className="rounded border border-sky-400/40 p-2 disabled:opacity-50" onClick={()=>{if(window.confirm('Criar outro projeto e adaptar o roteiro com IA? Esta ação pode consumir créditos.'))void run('short',()=>contentProjects.createShort(project,shortDuration),true);}}>Criar versão curta com IA</button></details>}
+      {project?.config.sourceProjectId && <p className="mb-3 text-sm">Projeto derivado de {project.config.sourceProjectId}. O roteiro e os arquivos originais foram preservados.</p>}
       <div className="space-y-4">
         <ContentStudioStepper
           activeStep={step}

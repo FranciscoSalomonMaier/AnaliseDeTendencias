@@ -19,7 +19,7 @@ export function ProjectConfiguration({
         <span className="rounded-lg border border-sky-400 bg-sky-400/10 px-4 py-2">
           Vídeo
         </span>
-        {["Reels", "Imagem"].map((type) => (
+        {["Imagem"].map((type) => (
           <button
             key={type}
             type="button"
@@ -31,6 +31,7 @@ export function ProjectConfiguration({
         ))}
       </div>
       <fieldset disabled={busy} className="space-y-4">
+        <label className="block">Formato do vídeo<select className={field} value={config.aspectRatio ?? "16:9"} onChange={e => onChange("aspectRatio", e.target.value)}><option value="16:9">Horizontal — 16:9</option><option value="9:16">Vertical — 9:16 (Shorts e Reels)</option></select></label>
         <label className="block">
           Tema *
           <input
@@ -71,13 +72,14 @@ export function ProjectConfiguration({
               }
               className={field}
             >
-              {[60, 180, 300, 600].map((s) => (
+              {[30, 60, 90, 180, 300, 600].map((s) => (
                 <option key={s} value={s}>
-                  {s / 60} {s === 60 ? "minuto" : "minutos"}
+                  {s >= 120 && s % 60 === 0 ? `${s / 60} minutos` : `${s} segundos`}
                 </option>
               ))}
             </select>
           </label>
+          <label>Duração personalizada (30–600 segundos)<input type="number" min="30" max="600" step="1" className={field} value={config.targetDurationSeconds} onChange={e => onChange("targetDurationSeconds", Number(e.target.value))}/></label>
           <label>
             Idioma
             <select

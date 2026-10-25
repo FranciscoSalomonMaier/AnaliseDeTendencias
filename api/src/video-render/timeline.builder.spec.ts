@@ -27,6 +27,46 @@ describe('Video timeline, configuration and media ranges', () => {
     assets: ContentAsset[],
     visuals: VisualSelection[],
     audio: AudioSelection[];
+  test('same selected assets render in both orientations without changing narration or timeline', () => {
+    const builder = new TimelineBuilder(settings, tts);
+    const horizontal = builder.build(p, assets, visuals, audio);
+    const vertical = builder.build(
+      p,
+      assets,
+      visuals,
+      audio,
+      editingSchema.parse({ aspectRatio: '9:16' }),
+    );
+    expect(vertical.issues).toEqual([]);
+    expect(vertical.snapshot.config).toMatchObject({
+      width: 1080,
+      height: 1920,
+      fps: 30,
+    });
+    expect(vertical.snapshot.totalDurationSeconds).toBe(
+      horizontal.snapshot.totalDurationSeconds,
+    );
+    expect(
+      vertical.snapshot.scenes.map((s) => [
+        s.imageAssetId,
+        s.audioAssetId,
+        s.startSeconds,
+      ]),
+    ).toEqual(
+      horizontal.snapshot.scenes.map((s) => [
+        s.imageAssetId,
+        s.audioAssetId,
+        s.startSeconds,
+      ]),
+    );
+    expect(horizontal.snapshot.config.width).toBe(1920);
+    const json = JSON.stringify(horizontal.snapshot);
+    p.config.aspectRatio = '9:16';
+    expect(JSON.stringify(horizontal.snapshot)).toBe(json);
+    expect(
+      builder.build(p, assets, visuals, audio).snapshot.config.height,
+    ).toBe(1920);
+  });
   beforeEach(() => {
     p = {
       id: randomUUID(),

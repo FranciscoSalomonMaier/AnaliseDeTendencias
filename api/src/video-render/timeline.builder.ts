@@ -1,3 +1,4 @@
+import { VIDEO_FORMATS } from './video-formats';
 import { defaultEditing, EditingSettings } from './editing-settings';
 import { Injectable } from '@nestjs/common';
 import { hasVisualDirections } from '../ai/content-generation/spoken-text';
@@ -33,6 +34,11 @@ export class TimelineBuilder {
     audio: AudioSelection[],
     editing: EditingSettings = defaultEditing(),
   ) {
+    const aspectRatio = editing.aspectRatio ?? p.config.aspectRatio;
+    const config = {
+      ...this.settings.config,
+      ...(aspectRatio ? VIDEO_FORMATS[aspectRatio] : {}),
+    };
     const issues: RenderIssue[] = [];
     if (p.config.type !== 'VIDEO')
       issues.push({
@@ -125,24 +131,25 @@ export class TimelineBuilder {
       }
       if (!imageValid || !audioValid) return;
       const frames = Math.ceil(
-        (Number(voice.durationSeconds) + this.settings.config.paddingSeconds) *
-          this.settings.config.fps,
+        (Number(voice.durationSeconds) + config.paddingSeconds) * config.fps,
       );
-      const startSeconds = frameOffset / this.settings.config.fps;
+      const startSeconds = frameOffset / config.fps;
       frameOffset += frames;
-      const choice = editing.scenes[scene.id];
+      const choice =
+        (aspectRatio && editing.variants?.[aspectRatio]?.[scene.id]) ??
+        editing.scenes[scene.id];
       const requestedMotion = choice?.motion ?? 'AUTO';
       const portrait = Number(image.height) > Number(image.width);
       const candidates: MotionPreset[] = portrait
         ? ['SLOW_ZOOM_IN', 'PAN_DOWN', 'SLOW_ZOOM_OUT', 'PAN_UP']
         : presets;
-      let motion: MotionPreset = !this.settings.config.motion
+      let motion: MotionPreset = !config.motion
         ? 'STATIC'
         : requestedMotion === 'AUTO'
           ? candidates[i % candidates.length]
           : requestedMotion;
       if (
-        this.settings.config.motion &&
+        config.motion &&
         requestedMotion === 'AUTO' &&
         motion === scenes.at(-1)?.motion
       )
@@ -168,17 +175,20 @@ export class TimelineBuilder {
         audioDurationSeconds: Number(voice.durationSeconds),
         frames,
         startSeconds,
-        durationSeconds: frames / this.settings.config.fps,
-        endSeconds: frameOffset / this.settings.config.fps,
+        durationSeconds: frames / config.fps,
+        endSeconds: frameOffset / config.fps,
         motion,
         requestedMotion,
         fit,
         amplitude: choice?.amplitude ?? 0.05,
+        focalX: choice?.focalX ?? 0.5,
+        focalY: choice?.focalY ?? 0.5,
+        zoom: choice?.zoom ?? 1,
         easing: true,
         fallbackReason,
       });
     });
-    const fps = this.settings.config.fps;
+    const fps = config.fps;
     for (let i = 0; i < scenes.length - 1; i++) {
       const scene = scenes[i],
         next = scenes[i + 1];
@@ -209,7 +219,7 @@ export class TimelineBuilder {
           (editing.transition === 'FADE' ? durationSeconds / 2 : 0),
       };
     }
-    const totalDurationSeconds = frameOffset / this.settings.config.fps;
+    const totalDurationSeconds = frameOffset / config.fps;
     if (totalDurationSeconds > this.settings.maxDurationSeconds)
       issues.push({
         sceneId: null,
@@ -221,7 +231,7 @@ export class TimelineBuilder {
       editing: structuredClone(editing),
       projectRevision: p.revision,
       title: p.script?.title ?? p.config.topic,
-      config: { ...this.settings.config, transition: editing.transition },
+      config: { ...config, transition: editing.transition },
       scenes,
       totalDurationSeconds,
     };

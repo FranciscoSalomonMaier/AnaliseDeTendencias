@@ -42,13 +42,15 @@ export async function composeThumbnail(input: Buffer, overlay: Overlay) {
     throw new BadRequestException(
       'Envie JPEG ou PNG estático com pelo menos 640 × 360 pixels.',
     );
+  const width = overlay.aspectRatio === '9:16' ? 720 : 1280;
+  const canvasHeight = overlay.aspectRatio === '9:16' ? 1280 : 720;
   let base = await sharp(input, { limitInputPixels: 24000000 })
     .rotate()
-    .resize(1280, 720, { fit: 'contain', background: '#101018' })
+    .resize(width, canvasHeight, { fit: 'contain', background: '#101018' })
     .png()
     .toBuffer();
   if (overlay.enabled && overlay.text) {
-    const max = Math.floor(1120 / overlay.fontSize);
+    const max = Math.floor((width - 160) / overlay.fontSize);
     const words = overlay.text.split(/\s+/u);
     const lines: string[] = [];
     for (const word of words) {
@@ -61,7 +63,7 @@ export async function composeThumbnail(input: Buffer, overlay: Overlay) {
       else lines[lines.length - 1] += ' ' + word;
     }
     const height = lines.length * overlay.fontSize * 1.2;
-    if (height > 580)
+    if (height > canvasHeight - 140)
       throw new BadRequestException(
         'Texto excede a área segura. Reduza a fonte.',
       );
@@ -69,8 +71,8 @@ export async function composeThumbnail(input: Buffer, overlay: Overlay) {
       overlay.position === 'TOP'
         ? 70
         : overlay.position === 'CENTER'
-          ? (720 - height) / 2
-          : 650 - height;
+          ? (canvasHeight - height) / 2
+          : canvasHeight - 70 - height;
     const channels = [1, 3, 5].map((i) =>
       parseInt(overlay.color.slice(i, i + 2), 16),
     );
@@ -80,14 +82,14 @@ export async function composeThumbnail(input: Buffer, overlay: Overlay) {
     const text = lines
       .map(
         (line, i) =>
-          `<text x="640" y="${y + overlay.fontSize * (i * 1.2 + 1)}" text-anchor="middle" font-family="Liberation Sans,DejaVu Sans,sans-serif" font-size="${overlay.fontSize}" font-weight="bold" fill="${overlay.color}" stroke="${backing}" stroke-width="${overlay.outline ? 6 : 0}" paint-order="stroke">${escapeXml(line)}</text>`,
+          `<text x="${width / 2}" y="${y + overlay.fontSize * (i * 1.2 + 1)}" text-anchor="middle" font-family="Liberation Sans,DejaVu Sans,sans-serif" font-size="${overlay.fontSize}" font-weight="bold" fill="${overlay.color}" stroke="${backing}" stroke-width="${overlay.outline ? 6 : 0}" paint-order="stroke">${escapeXml(line)}</text>`,
       )
       .join('');
     base = await sharp(base)
       .composite([
         {
           input: Buffer.from(
-            `<svg width="1280" height="720"><rect x="30" y="${y - 10}" width="1220" height="${height + 35}" rx="16" fill="${backing}" fill-opacity="0.58"/>${text}</svg>`,
+            `<svg width="${width}" height="${canvasHeight}"><rect x="30" y="${y - 10}" width="${width - 60}" height="${height + 35}" rx="16" fill="${backing}" fill-opacity="0.58"/>${text}</svg>`,
           ),
         },
       ])
@@ -143,7 +145,7 @@ export class PublicationThumbnailService {
         try {
           await this.repository.ensure(projectId, client);
           await client.query(
-            `INSERT INTO content_assets(id,project_id,type,source,status,usage,storage_key,mime_type,width,height,provider,model,original_prompt,final_generation_prompt,metadata,token_usage) VALUES($1,$2,'IMAGE',$3,'READY','OPTIONAL',$4,'image/jpeg',1280,720,$5,$6,$7,$7,$8::jsonb,$9::jsonb)`,
+            `INSERT INTO content_assets(id,project_id,type,source,status,usage,storage_key,mime_type,width,height,provider,model,original_prompt,final_generation_prompt,metadata,token_usage) VALUES($1,$2,'IMAGE',$3,'READY','OPTIONAL',$4,'image/jpeg',$10,$11,$5,$6,$7,$7,$8::jsonb,$9::jsonb)`,
             [
               assetId,
               projectId,
@@ -158,6 +160,8 @@ export class PublicationThumbnailService {
                 overlay,
               }),
               JSON.stringify(details.usage ?? null),
+              overlay.aspectRatio === '9:16' ? 720 : 1280,
+              overlay.aspectRatio === '9:16' ? 1280 : 720,
             ],
           );
           await client.query(
@@ -191,7 +195,7 @@ export class PublicationThumbnailService {
     const result = await this.image.generate({
       prompt,
       style,
-      aspectRatio: '16:9',
+      aspectRatio: overlay.aspectRatio ?? '16:9',
     });
     return this.create(projectId, result.image, overlay, {
       source: 'AI_GENERATED',
@@ -239,11 +243,11 @@ export class PublicationThumbnailService {
     }
     if (
       metadata.format !== 'jpeg' ||
-      metadata.width !== 1280 ||
-      metadata.height !== 720
+      metadata.width !== (asset.width ?? 1280) ||
+      metadata.height !== (asset.height ?? 720)
     )
       throw new BadRequestException(
-        'Thumbnail final deve ser JPEG 1280 × 720.',
+        'Capa final deve ser JPEG com as dimensões registradas.',
       );
     return buffer;
   }

@@ -27,6 +27,9 @@ export interface TimelineScene {
   requestedMotion?: MotionPreset | 'AUTO';
   fit?: 'CONTAIN' | 'COVER' | 'BLURRED_BACKGROUND';
   amplitude?: number;
+  focalX?: number;
+  focalY?: number;
+  zoom?: number;
   easing?: boolean;
   fallbackReason?: string;
   transition?: {

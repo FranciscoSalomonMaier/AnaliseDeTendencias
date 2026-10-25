@@ -141,7 +141,7 @@ module.exports = async function publicationBrowser({
     );
     await until(() =>
       evaluate(
-        `document.querySelectorAll('img[alt="Thumbnail final processada"]').length>=3&&[...document.querySelectorAll('img[alt="Thumbnail final processada"]')].every(img=>img.complete&&img.naturalWidth===1280)`,
+        `document.querySelectorAll('img[alt="Thumbnail final processada"]').length>=3&&[...document.querySelectorAll('img[alt="Thumbnail final processada"]')].every(img=>img.complete&&[1280,720].includes(img.naturalWidth))`,
       ),
     );
     await click('Marcar como pronto');
@@ -170,7 +170,13 @@ module.exports = async function publicationBrowser({
         `no overflow at ${width}`,
       );
     }
-    assert.equal(await evaluate(`(()=>{const root=document.querySelector('[aria-label="Preparação para publicação"]');const bounds=root.getBoundingClientRect();return [...root.querySelector('fieldset').children].every(el=>el.getBoundingClientRect().right<=bounds.right+1);})()`),true,'publication cards fit inside their container');
+    assert.equal(
+      await evaluate(
+        `(()=>{const root=document.querySelector('[aria-label="Preparação para publicação"]');const bounds=root.getBoundingClientRect();return [...root.querySelector('fieldset').children].every(el=>el.getBoundingClientRect().right<=bounds.right+1);})()`,
+      ),
+      true,
+      'publication cards fit inside their container',
+    );
     const shot = await command('Page.captureScreenshot', {
       format: 'png',
       captureBeyondViewport: false,

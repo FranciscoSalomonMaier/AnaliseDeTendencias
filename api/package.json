@@ -45,7 +45,9 @@
     "migrate:editing": "node scripts/migrate-assets.cjs",
     "migrate:publication": "node scripts/migrate-assets.cjs",
     "test:publication": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=content-publication",
-    "test:publication:integration": "node test/content/publication.integration.cjs"
+    "test:publication:integration": "node test/content/publication.integration.cjs",
+    "migrate:vertical": "node scripts/migrate-assets.cjs",
+    "test:vertical:integration": "node test/content/vertical.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

@@ -23,6 +23,7 @@ async function request(path = "", method = "GET", body) {
 export const contentProjects = {
   list: (offset = 0) => request(`?limit=50&offset=${offset}`),
   get: (id) => request(`/${encodeURIComponent(id)}`),
+  createShort: (project, seconds) => request(`/${project.id}/create-short-version`, "POST", {revision: project.revision, targetDurationSeconds: seconds, confirm: true}),
   create: (config) => request("", "POST", config),
   update: (project, config, confirm) =>
     request(`/${project.id}`, "PATCH", {

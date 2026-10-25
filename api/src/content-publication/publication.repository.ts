@@ -5,7 +5,31 @@ import { defaultPreparation, Preparation } from './publication.schema';
 @Injectable()
 export class PublicationRepository {
   constructor(private readonly db: PostgresDatabaseService) {}
-  async get(id: string, client?: PoolClient) {
+  async get(id: string, client?: PoolClient, target = 'YOUTUBE_VIDEO') {
+    if (target !== 'YOUTUBE_VIDEO') {
+      const query =
+        'SELECT revision,data,updated_at FROM content_publication_destinations WHERE project_id=$1 AND target=$2';
+      const result = client
+        ? await client.query<{
+            revision: number;
+            data: Preparation;
+            updated_at: Date;
+          }>(query, [id, target])
+        : await this.db.query<{
+            revision: number;
+            data: Preparation;
+            updated_at: Date;
+          }>(query, [id, target]);
+      const row = result.rows[0];
+      const data = { ...defaultPreparation(), ...row?.data };
+      if (!row)
+        data.thumbnailText = { ...data.thumbnailText, aspectRatio: '9:16' };
+      return {
+        revision: row?.revision ?? 0,
+        data,
+        updatedAt: row?.updated_at.toISOString() ?? null,
+      };
+    }
     const sql =
       'SELECT revision,data,updated_at FROM content_publication WHERE project_id=$1';
     const r = client
@@ -38,8 +62,24 @@ export class PublicationRepository {
     revision: number,
     data: Preparation,
     client: PoolClient,
+    target = 'YOUTUBE_VIDEO',
   ) {
     await this.ensure(id, client);
+    if (target !== 'YOUTUBE_VIDEO') {
+      await client.query(
+        'INSERT INTO content_publication_destinations(project_id,target,data) VALUES($1,$2,$3::jsonb) ON CONFLICT DO NOTHING',
+        [id, target, JSON.stringify(defaultPreparation())],
+      );
+      const result = await client.query(
+        'UPDATE content_publication_destinations SET data=$4::jsonb, revision=revision+1, updated_at=NOW() WHERE project_id=$1 AND target=$2 AND revision=$3',
+        [id, target, revision, JSON.stringify(data)],
+      );
+      if (!result.rowCount)
+        throw new ConflictException(
+          'Preparação alterada em outra janela. Reabra antes de salvar.',
+        );
+      return;
+    }
     const r = await client.query(
       'UPDATE content_publication SET data=$3::jsonb,revision=revision+1,updated_at=NOW() WHERE project_id=$1 AND revision=$2 RETURNING revision',
       [id, revision, JSON.stringify(data)],
@@ -75,15 +115,21 @@ export class PublicationRepository {
       )
     ).rows[0];
   }
-  async generations(id: string) {
+  async generations(id: string, target = 'YOUTUBE_VIDEO') {
     return (
       await this.db.query(
-        'SELECT id,kind,status,result,provider,model,usage,error,created_at FROM content_publication_generations WHERE project_id=$1 ORDER BY created_at DESC LIMIT 30',
-        [id],
+        'SELECT id,kind,status,result,provider,model,usage,error,created_at FROM content_publication_generations WHERE project_id=$1 AND target=$2 ORDER BY created_at DESC LIMIT 30',
+        [id, target],
       )
     ).rows;
   }
-  async start(id: string, kind: string, client: PoolClient, jobId: string) {
+  async start(
+    id: string,
+    kind: string,
+    client: PoolClient,
+    jobId: string,
+    target = 'YOUTUBE_VIDEO',
+  ) {
     await this.ensure(id, client);
     const recent = await client.query<{ count: string }>(
       "SELECT count(*) FROM content_publication_generations WHERE project_id=$1 AND created_at>NOW()-INTERVAL '1 minute'",
@@ -108,8 +154,8 @@ export class PublicationRepository {
         'Já existe uma geração de publicação em andamento.',
       );
     await client.query(
-      "INSERT INTO content_publication_generations(id,project_id,kind,status) VALUES($1,$2,$3,'RUNNING')",
-      [jobId, id, kind],
+      "INSERT INTO content_publication_generations(id,project_id,kind,status,target) VALUES($1,$2,$3,'RUNNING',$4)",
+      [jobId, id, kind, target],
     );
   }
   async finish(

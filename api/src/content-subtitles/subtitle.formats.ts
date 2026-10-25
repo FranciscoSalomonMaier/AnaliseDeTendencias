@@ -69,20 +69,36 @@ export function exportAss(
   width: number,
   height: number,
 ) {
-  const s = snapshot.settings,
+  const portrait = height > width;
+  const scale = Math.min(width, height) / 1080;
+  const margin =
+    snapshot.settings.horizontalMargin ?? (portrait ? 0.1 : 0.03125);
+  const s = {
+      ...snapshot.settings,
+      maxCharacters: Math.min(
+        snapshot.settings.maxCharacters,
+        Math.floor(
+          (width * (1 - 2 * margin)) / (snapshot.settings.fontSize * scale),
+        ),
+      ),
+    },
     y = Math.round(
       Math.max(
-        height * 0.05 + (s.fontSize * 1.3 * s.maxLines * height) / 1080,
+        height * (s.safeTop ?? 0.05) + s.fontSize * 1.3 * s.maxLines * scale,
         Math.min(
-          height - (s.bottomMargin * height) / 1080,
+          height -
+            Math.max(
+              s.bottomMargin * scale,
+              height * (s.safeBottom ?? (portrait ? 0.18 : 0)),
+            ),
           height * s.verticalPosition,
         ),
       ),
     );
-  const fontSize = (s.fontSize * height) / 1080,
-    outline = (s.outlineWidth * height) / 1080,
-    shadow = (s.shadow * height) / 1080;
-  const header = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${width}\nPlayResY: ${height}\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,Liberation Sans,${fontSize},${color(s.textColor)},${color(s.highlightColor)},&H00000000,&H80000000,${s.preset === 'CLASSIC' ? 0 : -1},0,0,0,100,100,0,0,1,${outline},${shadow},2,60,60,${s.bottomMargin},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
+  const fontSize = s.fontSize * scale,
+    outline = s.outlineWidth * scale,
+    shadow = s.shadow * scale;
+  const header = `[Script Info]\nScriptType: v4.00+\nPlayResX: ${width}\nPlayResY: ${height}\nWrapStyle: 2\nScaledBorderAndShadow: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,Liberation Sans,${fontSize},${color(s.textColor)},${color(s.highlightColor)},&H00000000,&H80000000,${s.preset === 'CLASSIC' ? 0 : -1},0,0,0,100,100,0,0,1,${outline},${shadow},2,${Math.round(width * margin)},${Math.round(width * margin)},${s.bottomMargin},1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n`;
   const event = (
     segment: SubtitleSegment,
     start: number,

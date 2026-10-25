@@ -94,6 +94,7 @@ const key = 'fixture-local-access-key-with-more-than-32-characters';
       '009_content_subtitles.sql',
       '010_content_project_editing.sql',
       '011_content_publication.sql',
+      '012_content_vertical.sql',
     ]) {
       const sql = fs.readFileSync(resolve('migrations', file), 'utf8');
       await client.query(sql);
@@ -215,7 +216,19 @@ const key = 'fixture-local-access-key-with-more-than-32-characters';
         { provide: PublicationThumbnailService, useValue: thumbs },
         {
           provide: ContentProjectService,
-          useValue: new ContentProjectService(projects, {}),
+          useValue: new ContentProjectService(projects, {
+            generate: async (_stage, project) => ({
+              script: { ...project.script, title: 'A casa — versão curta' },
+              usage: {
+                stage: 'script',
+                provider: 'mock',
+                model: 'mock-short',
+                inputTokens: 1,
+                outputTokens: 1,
+                totalTokens: 2,
+              },
+            }),
+          }),
         },
         { provide: VideoRenderService, useValue: videos },
       ],
@@ -626,6 +639,132 @@ const key = 'fixture-local-access-key-with-more-than-32-characters';
       ).status,
       400,
     );
+    const originalProject = await projects.get(id);
+    // Fixture supplies an idea for explicit adaptation, leaving existing script/audio/render untouched.
+    const idea = {
+      ideaId: randomUUID(),
+      title: 'A casa',
+      hook: 'Um mistério',
+      angle: 'Uma ficção',
+      summary: 'Uma história de ficção',
+      targetAudience: null,
+    };
+    await client.query(
+      'UPDATE content_generation_runs SET selected_idea=$2::jsonb WHERE generation_id=$1',
+      [id, JSON.stringify(idea)],
+    );
+    const sourceBefore = await projects.get(id);
+    const derivedResponse = await request(
+      `/content-projects/${id}/create-short-version`,
+      'POST',
+      {
+        revision: sourceBefore.revision,
+        targetDurationSeconds: 60,
+        confirm: true,
+      },
+    );
+    assert.equal(
+      derivedResponse.status,
+      201,
+      JSON.stringify(derivedResponse.body),
+    );
+    const derived = derivedResponse.body;
+    assert.notEqual(derived.id, id);
+    assert.equal(derived.config.sourceProjectId, id);
+    assert.equal(derived.config.aspectRatio, '9:16');
+    assert.equal(derived.config.targetDurationSeconds, 60);
+    assert.equal(derived.status, 'SCRIPT_GENERATED');
+    assert.deepEqual(derived.scenes, []);
+    assert.deepEqual((await projects.get(id)).script, originalProject.script);
+    assert.equal(
+      (
+        await request(`/content-projects/${id}/create-short-version`, 'POST', {
+          revision: sourceBefore.revision,
+          targetDurationSeconds: 60,
+          confirm: false,
+        })
+      ).status,
+      400,
+    );
+    // Destinations persist independently and can share the same MP4 without duplicate jobs.
+    const traditional = (await request(prefix)).body;
+    for (const target of ['YOUTUBE_SHORTS', 'INSTAGRAM_REELS']) {
+      const suffix = '?target=' + target;
+      let variant = (await request(prefix + suffix)).body;
+      assert.equal(variant.revision, 0);
+      assert.equal(variant.data.thumbnailText.aspectRatio, '9:16');
+      assert.equal(variant.data.description, '');
+      const saved = await request(prefix + suffix, 'PATCH', {
+        revision: variant.revision,
+        data: {
+          ...variant.data,
+          description: 'Descrição independente ' + target,
+          renderJobId: renderId,
+        },
+      });
+      assert.equal(saved.status, 200, JSON.stringify(saved.body));
+      variant = (await request(prefix + suffix)).body;
+      assert.equal(
+        variant.data.description,
+        'Descrição independente ' + target,
+      );
+      assert.ok(variant.checklist.errors.some((e) => e.includes('vertical')));
+      assert.equal(
+        (await request(prefix)).body.data.description,
+        traditional.data.description,
+      );
+      assert.equal(
+        (
+          await request(prefix + suffix, 'PATCH', {
+            revision: 0,
+            data: variant.data,
+          })
+        ).status,
+        409,
+      );
+    }
+    assert.equal((await request(prefix + '?target=BAD')).status, 400);
+    const verticalCover = new FormData();
+    verticalCover.append(
+      'file',
+      new Blob(
+        [
+          await sharp({
+            create: {
+              width: 720,
+              height: 1280,
+              channels: 3,
+              background: '#293456',
+            },
+          })
+            .png()
+            .toBuffer(),
+        ],
+        { type: 'image/png' },
+      ),
+      'cover.png',
+    );
+    verticalCover.append(
+      'overlay',
+      JSON.stringify({
+        aspectRatio: '9:16',
+        enabled: true,
+        text: 'O SEGREDO',
+        fontSize: 60,
+      }),
+    );
+    const coverResponse = await request(
+      prefix + '/thumbnails/upload',
+      'POST',
+      verticalCover,
+    );
+    assert.equal(coverResponse.status, 201, JSON.stringify(coverResponse.body));
+    const cover = await app
+      .get(PublicationThumbnailService)
+      .file(id, coverResponse.body.id);
+    const coverMeta = await sharp(cover).metadata();
+    assert.equal(coverMeta.width, 720);
+    assert.equal(coverMeta.height, 1280);
     const previous = state.data.selectedThumbnailId;
     await storage.delete(`${id}/final.mp4`);
     state = (await request(prefix)).body;

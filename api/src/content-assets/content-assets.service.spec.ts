@@ -169,6 +169,18 @@ describe('Content assets', () => {
       settings,
     );
   });
+  it('explicit vertical image generation uses provider portrait capability without regenerating narration', async () => {
+    project.config.aspectRatio = '9:16';
+    await service.generate(project.id, project.scenes[0].id, { revision: 5 });
+    await settled(service, project.id);
+    const request = (
+      provider.generate.mock.calls[0] as [
+        { aspectRatio: string; prompt: string },
+      ]
+    )[0];
+    expect(request.aspectRatio).toBe('9:16');
+    expect(request.prompt).toContain('Vertical composition');
+  });
   it('generates, stores, selects and regenerates without losing prior assets', async () => {
     const scene = project.scenes[0];
     expect(

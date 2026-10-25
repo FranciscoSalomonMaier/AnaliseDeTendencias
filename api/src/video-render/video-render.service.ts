@@ -96,7 +96,20 @@ export class VideoRenderService
     if (this.subtitles) {
       const state = await this.subtitles.state(id, client),
         versions = await this.subtitles.list(id, client);
-      const built = subtitleSnapshot(result.snapshot, project, state, versions);
+      const format =
+        result.snapshot.config.height > result.snapshot.config.width
+          ? '9:16'
+          : '16:9';
+      const variant = editing.subtitleVariants?.[format];
+      const effectiveState = variant
+        ? { ...state, settings: structuredClone(variant) }
+        : state;
+      const built = subtitleSnapshot(
+        result.snapshot,
+        project,
+        effectiveState,
+        versions,
+      );
       result.snapshot.subtitles = built.snapshot;
       result.issues.push(...built.issues);
     }
@@ -133,6 +146,18 @@ export class VideoRenderService
       scenes: Object.fromEntries(
         Object.entries(settings.scenes).filter(([id]) => ids.has(id)),
       ),
+      variants: settings.variants
+        ? Object.fromEntries(
+            Object.entries(settings.variants).map(([format, scenes]) => [
+              format,
+              Object.fromEntries(
+                Object.entries(scenes ?? {}).filter(([sceneId]) =>
+                  ids.has(sceneId),
+                ),
+              ),
+            ]),
+          )
+        : undefined,
     };
   }
   async saveEditing(id: string, input: unknown) {
@@ -155,13 +180,22 @@ export class VideoRenderService
         throw new ConflictException(
           'Edição alterada em outra janela. Atualize a página.',
         );
-      for (const sceneId of Object.keys(parsed.data.settings.scenes))
+      for (const sceneId of new Set([
+        ...Object.keys(parsed.data.settings.scenes),
+        ...Object.values(parsed.data.settings.variants ?? {}).flatMap((v) =>
+          Object.keys(v ?? {}),
+        ),
+      ]))
         if (!project.scenes.some((s) => s.id === sceneId))
           throw new BadRequestException('Cena não pertence ao projeto.');
       const settings = {
         ...parsed.data.settings,
         revision: current.revision + 1,
       };
+      const format =
+        settings.aspectRatio ?? project.config.aspectRatio ?? '16:9';
+      if (settings.variants)
+        settings.variants[format] = structuredClone(settings.scenes);
       await this.editing.save(id, settings, client);
       return settings;
     });
@@ -207,8 +241,8 @@ export class VideoRenderService
         snapshot.preview = true;
         snapshot.config = {
           ...snapshot.config,
-          width: 640,
-          height: 360,
+          width: snapshot.config.height > snapshot.config.width ? 360 : 640,
+          height: snapshot.config.height > snapshot.config.width ? 640 : 360,
           crf: 28,
           normalizeAudio: false,
         };

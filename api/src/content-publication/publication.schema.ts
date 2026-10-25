@@ -1,4 +1,10 @@
 import { z } from 'zod';
+export const targetSchema = z.enum([
+  'YOUTUBE_VIDEO',
+  'YOUTUBE_SHORTS',
+  'INSTAGRAM_REELS',
+]);
+export type PublicationTarget = z.infer<typeof targetSchema>;
 export const titleText = z
   .string()
   .trim()
@@ -12,6 +18,7 @@ export const chapterSchema = z
   .strict();
 export const textOverlaySchema = z
   .object({
+    aspectRatio: z.enum(['16:9', '9:16']).optional(),
     enabled: z.boolean().default(false),
     text: z.string().trim().max(60).default(''),
     position: z.enum(['TOP', 'CENTER', 'BOTTOM']).default('BOTTOM'),

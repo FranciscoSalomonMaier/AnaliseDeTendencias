@@ -1,9 +1,11 @@
+import { VIDEO_FORMATS } from './video-formats';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { resolve } from 'node:path';
 import ffmpeg from 'ffmpeg-static';
 import ffprobe from 'ffprobe-static';
 export interface RenderConfig {
+  aspectRatio?: '16:9' | '9:16';
   width: number;
   height: number;
   fps: number;
@@ -58,10 +60,28 @@ export class RenderSettings {
       this.number(c, 'VIDEO_RENDER_MIN_FREE_MB', 1024, 1, 100000) * 1024 * 1024;
     this.maxFileBytes =
       this.number(c, 'VIDEO_RENDER_MAX_FILE_MB', 2048, 1, 10000) * 1024 * 1024;
-    const width = this.number(c, 'VIDEO_RENDER_WIDTH', 1920, 320, 1920),
-      height = this.number(c, 'VIDEO_RENDER_HEIGHT', 1080, 180, 1080);
-    if (width % 2 || height % 2 || width * 9 !== height * 16)
-      throw new Error('Resolução de render deve ser 16:9, par e até 1080p');
+    const width = this.number(
+        c,
+        'VIDEO_RENDER_WIDTH',
+        VIDEO_FORMATS['16:9'].width,
+        320,
+        1920,
+      ),
+      height = this.number(
+        c,
+        'VIDEO_RENDER_HEIGHT',
+        VIDEO_FORMATS['16:9'].height,
+        180,
+        1920,
+      );
+    if (
+      width % 2 ||
+      height % 2 ||
+      (width * 9 !== height * 16 && width * 16 !== height * 9)
+    )
+      throw new Error(
+        'Resolução de render deve ser 16:9 ou 9:16, par e até 1920 pixels por lado',
+      );
     if (
       (c.get<string>('VIDEO_RENDER_CODEC') ?? 'libx264') !== 'libx264' ||
       (c.get<string>('VIDEO_RENDER_AUDIO_CODEC') ?? 'aac') !== 'aac'

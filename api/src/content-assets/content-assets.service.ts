@@ -1,8 +1,10 @@
+import { EditingRepository } from '../video-render/editing.repository';
 import {
   BadRequestException,
   ConflictException,
   HttpException,
   Injectable,
+  Optional,
   Logger,
   NotFoundException,
   OnApplicationBootstrap,
@@ -48,6 +50,7 @@ export class ContentAssetsService
     private readonly validator: ImageFileValidator,
     private readonly queue: ImageGenerationQueue,
     private readonly settings: ImageSettings,
+    @Optional() private readonly editing?: EditingRepository,
   ) {}
   async onApplicationBootstrap() {
     await this.assets.recoverInterrupted();
@@ -147,9 +150,10 @@ export class ContentAssetsService
     scene: ProjectScene | null,
     source: ContentAsset['source'],
     usage: AssetUsage,
+    aspectRatio?: '16:9' | '9:16',
   ): ContentAsset {
     const now = new Date().toISOString();
-    const request = scene ? this.builder.build(p, scene) : null;
+    const request = scene ? this.builder.build(p, scene, aspectRatio) : null;
     return {
       id: randomUUID(),
       projectId: p.id,
@@ -198,12 +202,21 @@ export class ContentAssetsService
         );
       if (sceneId && pending(sceneId))
         throw new ConflictException('Já existe uma geração para esta cena.');
+      const aspectRatio =
+        (await this.editing?.get(id, client))?.aspectRatio ??
+        p.config.aspectRatio;
       const available = targets.filter((s) => !pending(s.id));
       this.queue.ensureCapacity(available.length);
       return this.transaction(client, async () => {
         const result: ContentAsset[] = [];
         for (const scene of available) {
-          const asset = this.asset(p, scene, 'AI_GENERATED', 'OPTIONAL');
+          const asset = this.asset(
+            p,
+            scene,
+            'AI_GENERATED',
+            'OPTIONAL',
+            aspectRatio,
+          );
           asset.metadata.previousSelection =
             state.selections.find((s) => s.sceneId === scene.id)?.assetId ??
             null;
@@ -285,7 +298,7 @@ export class ContentAssetsService
       await this.assets.generating(asset.id);
       const result = await this.provider.generate({
         prompt: asset.finalGenerationPrompt!,
-        aspectRatio: asset.metadata.aspectRatio as '16:9',
+        aspectRatio: asset.metadata.aspectRatio as '16:9' | '9:16',
         style: asset.metadata.style as string,
       });
       asset.provider = result.provider;

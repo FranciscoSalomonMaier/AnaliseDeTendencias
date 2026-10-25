@@ -198,3 +198,7 @@ Movimentos por cena, enquadramento, transições CUT/FADE/CROSSFADE, persistênc
 ## Etapa 7 — Preparação para publicação
 
 Adicionada a etapa Publicação após Produção, com seleção de render, metadados, capítulos reais, thumbnails, persistência e acesso local por chave/proprietário. Consulte [IMPLEMENTACAO_PUBLICACAO_YOUTUBE.md](IMPLEMENTACAO_PUBLICACAO_YOUTUBE.md) para configuração, endpoints, validações e limitações. Esta etapa não publica vídeos no YouTube.
+
+## Etapa 8 — Shorts e Reels
+
+Suporte a saídas 16:9/9:16 na pipeline existente, enquadramento por cena, legendas por formato, projetos curtos derivados e preparação independente por destino. Diagnóstico, migration, testes, evidências e limitações: [IMPLEMENTACAO_SHORTS_REELS.md](IMPLEMENTACAO_SHORTS_REELS.md).

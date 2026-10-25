@@ -1,5 +1,6 @@
 import {
   Body,
+  Query,
   Controller,
   Get,
   Param,
@@ -16,7 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { z } from 'zod';
 import { PublicationService } from './publication.service';
 import { PublicationThumbnailService } from './publication-thumbnail.service';
-import { textOverlaySchema } from './publication.schema';
+import { targetSchema, textOverlaySchema } from './publication.schema';
 const revisionSchema = z
   .object({ revision: z.number().int().nonnegative() })
   .strict();
@@ -26,33 +27,46 @@ export class PublicationController {
     private readonly service: PublicationService,
     private readonly thumbs: PublicationThumbnailService,
   ) {}
-  @Get() get(@Param('projectId', ParseUUIDPipe) id: string) {
-    return this.service.get(id);
+  private target(value?: string) {
+    const parsed = targetSchema.safeParse(value ?? 'YOUTUBE_VIDEO');
+    if (!parsed.success)
+      throw new BadRequestException('Destino de publicação inválido.');
+    return parsed.data;
+  }
+  @Get() get(
+    @Param('projectId', ParseUUIDPipe) id: string,
+    @Query('target') target?: string,
+  ) {
+    return this.service.get(id, this.target(target));
   }
   @Patch() save(
     @Param('projectId', ParseUUIDPipe) id: string,
     @Body() body: unknown,
+    @Query('target') target?: string,
   ) {
-    return this.service.save(id, body);
+    return this.service.save(id, body, this.target(target));
   }
   @Post('generate') generate(
     @Param('projectId', ParseUUIDPipe) id: string,
     @Body() body: unknown,
+    @Query('target') target?: string,
   ) {
-    return this.service.generate(id, body);
+    return this.service.generate(id, body, this.target(target));
   }
   @Post('chapters') chapters(
     @Param('projectId', ParseUUIDPipe) id: string,
     @Body() body: unknown,
+    @Query('target') target?: string,
   ) {
     const parsed = revisionSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException('Revisão inválida.');
-    return this.service.chapters(id, parsed.data.revision);
+    return this.service.chapters(id, parsed.data.revision, this.target(target));
   }
   @Post('validate') async validate(
     @Param('projectId', ParseUUIDPipe) id: string,
+    @Query('target') target?: string,
   ) {
-    return (await this.service.get(id)).checklist;
+    return (await this.service.get(id, this.target(target))).checklist;
   }
   @Post('thumbnails/upload')
   @UseInterceptors(

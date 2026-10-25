@@ -27,6 +27,12 @@ export class ContentProjectController {
   ) {
     return this.service.update(id, body);
   }
+  @Post(':id/create-short-version') createShort(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: unknown,
+  ) {
+    return this.service.createShort(id, body);
+  }
   @Post(':id/ideas/generate') ideas(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: unknown,
