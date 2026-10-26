@@ -1,3 +1,16 @@
+import { YoutubePublishingSettings } from './../youtube-publishing/youtube-settings';
+import { YoutubeSecretBox } from './../youtube-publishing/youtube-crypto';
+import {
+  YoutubeHttpTransport,
+  GoogleYoutubeTransport,
+  YoutubeApiClient,
+} from './../youtube-publishing/youtube-http';
+import { YoutubePublishingRepository } from './../youtube-publishing/youtube.repository';
+import { YoutubeOAuthService } from './../youtube-publishing/youtube-oauth.service';
+import { YoutubeUploadService } from './../youtube-publishing/youtube-upload.service';
+import { YoutubePublicationService } from './../youtube-publishing/youtube-publication.service';
+import { YoutubePublicationWorker } from './../youtube-publishing/youtube-publication.worker';
+import { YoutubePublishingController } from './../youtube-publishing/youtube-publishing.controller';
 import { APP_GUARD } from '@nestjs/core';
 import {
   ContentAccessGuard,
@@ -49,6 +62,7 @@ import { ImageFileValidator } from './image-file.validator';
 @Module({
   imports: [AiModule, ContentProjectModule],
   controllers: [
+    YoutubePublishingController,
     ContentAccessController,
     PublicationController,
     SubtitleController,
@@ -58,6 +72,15 @@ import { ImageFileValidator } from './image-file.validator';
     ProjectAudioController,
   ],
   providers: [
+    YoutubePublishingSettings,
+    YoutubeSecretBox,
+    YoutubeApiClient,
+    YoutubePublishingRepository,
+    YoutubeOAuthService,
+    YoutubeUploadService,
+    YoutubePublicationService,
+    YoutubePublicationWorker,
+    { provide: YoutubeHttpTransport, useClass: GoogleYoutubeTransport },
     { provide: APP_GUARD, useClass: ContentAccessGuard },
     PublicationRepository,
     PublicationService,

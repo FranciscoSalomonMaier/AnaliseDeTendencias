@@ -47,7 +47,10 @@
     "test:publication": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=content-publication",
     "test:publication:integration": "node test/content/publication.integration.cjs",
     "migrate:vertical": "node scripts/migrate-assets.cjs",
-    "test:vertical:integration": "node test/content/vertical.integration.cjs"
+    "test:vertical:integration": "node test/content/vertical.integration.cjs",
+    "migrate:youtube-publishing": "node scripts/migrate-assets.cjs",
+    "test:youtube-publishing": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=youtube-publishing",
+    "test:youtube-publishing:integration": "node test/content/youtube-publishing.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

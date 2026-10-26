@@ -82,7 +82,7 @@ const key = 'fixture-local-access-key-with-more-than-32-characters';
   url.pathname = '/' + name;
   const client = new Client({ connectionString: url.toString() });
   await client.connect();
-  let app, db;
+  let app, db, youtubeFixture;
   const root = fs.mkdtempSync('/tmp/trends-publication-');
   try {
     for (const file of [
@@ -95,6 +95,7 @@ const key = 'fixture-local-access-key-with-more-than-32-characters';
       '010_content_project_editing.sql',
       '011_content_publication.sql',
       '012_content_vertical.sql',
+      '013_youtube_publishing.sql',
     ]) {
       const sql = fs.readFileSync(resolve('migrations', file), 'utf8');
       await client.query(sql);
@@ -197,15 +198,30 @@ const key = 'fixture-local-access-key-with-more-than-32-characters';
         { getModel: () => 'mock-text-model' },
         new ImageGenerationQueue({ concurrency: 2, maxQueued: 20 }),
       );
+    if (process.env.CONTENT_YOUTUBE_PUBLISHING_TEST === 'true')
+      youtubeFixture = await require('./youtube-publishing.fixture.cjs')({
+        config,
+        db,
+        projects,
+        storage,
+        assets,
+        renders,
+        preparations: service,
+        preparationRepo: repository,
+        thumbs,
+        videos,
+      });
     class TestModule {}
     Module({
       controllers: [
+        ...(youtubeFixture?.controllers ?? []),
         PublicationController,
         ContentAccessController,
         ContentProjectController,
         VideoRenderController,
       ],
       providers: [
+        ...(youtubeFixture?.providers ?? []),
         { provide: ConfigService, useValue: config },
         { provide: APP_GUARD, useValue: new ContentAccessGuard(config, db) },
         {
@@ -253,7 +269,10 @@ const key = 'fixture-local-access-key-with-more-than-32-characters';
               ? JSON.stringify(body)
               : undefined,
       });
-      return { status: r.status, body: await r.json(), headers: r.headers };
+      const text = await r.text();
+      if (!text)
+        throw new Error(`Empty JSON response: ${method} ${path} (${r.status})`);
+      return { status: r.status, body: JSON.parse(text), headers: r.headers };
     };
     assert.equal(
       (await request('/content-projects', 'GET', undefined, false)).status,
@@ -639,6 +658,17 @@ const key = 'fixture-local-access-key-with-more-than-32-characters';
       ).status,
       400,
     );
+    if (youtubeFixture)
+      await youtubeFixture.run({
+        request,
+        base,
+        key,
+        id,
+        renderId,
+        videoAsset,
+        client,
+        root,
+      });
     const originalProject = await projects.get(id);
     // Fixture supplies an idea for explicit adaptation, leaving existing script/audio/render untouched.
     const idea = {
@@ -804,6 +834,7 @@ const key = 'fixture-local-access-key-with-more-than-32-characters';
       });
     console.log('PASS publication integration. Evidence: ' + root);
   } finally {
+    if (youtubeFixture) await youtubeFixture.close();
     if (app) await app.close();
     if (db) await db.onModuleDestroy();
     await client.end();

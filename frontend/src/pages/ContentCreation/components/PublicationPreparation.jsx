@@ -1,3 +1,4 @@
+import { YoutubePublishPanel } from '../../YoutubeIntegration/YoutubePublishPanel';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { publications, publicationUrl } from '../../../services/publicationService';
 const button='rounded-lg border border-sky-400/40 px-3 py-2 disabled:opacity-50';
@@ -52,5 +53,6 @@ function DestinationPreparation({project,onDirtyChange,target}){
   <div className="space-y-3 rounded-xl border border-border bg-card p-4"><h3>Checklist da versão salva · {p.status}</h3>{dirty&&<p>Salve para recalcular o checklist.</p>}{state.checklist.items.map(item=><p key={item.key}>{item.valid?'✓':'○'} {item.label}{item.required?' · obrigatório':''}</p>)}{state.checklist.errors.map(v=><p key={v} className="text-amber-200">{v}</p>)}{state.checklist.warnings.map(v=><p key={v} className="text-amber-200">Aviso: {v}</p>)}<details><summary>Descrição final da versão salva</summary><pre className="whitespace-pre-wrap break-words text-sm">{state.finalDescription}</pre></details><button className={button} onClick={()=>void run(()=>save())}>Salvar rascunho</button><button className={button} onClick={()=>void run(()=>save('READY'))}>Marcar como pronto</button></div>
   <details className="rounded-xl border border-border bg-card p-4"><summary>Histórico de sugestões e gerações</summary><div className="mt-3 space-y-3">{state.generations.map(g=><article key={g.id} className="space-y-2 rounded border border-border p-3 text-sm"><p>{new Date(g.created_at).toLocaleString('pt-BR')} · {g.kind} · {g.status} · {g.provider??'Provider não registrado'}{g.model?` / ${g.model}`:''}</p>{g.error&&<p className="text-amber-200">{g.error}</p>}{g.result?.errors?.map(v=><p key={v} className="text-amber-200">{v}</p>)}{g.result?.description&&<><p className="whitespace-pre-wrap">{g.result.description}</p><button type="button" className={button} onClick={()=>{if(window.confirm('Aplicar esta sugestão ao rascunho? A descrição atual será substituída apenas ao salvar.'))update({description:g.result.description,tags:g.result.tags,hashtags:g.result.hashtags});}}>Usar descrição desta sugestão</button></>}</article>)}</div></details>
   </fieldset>
+  {target!=='INSTAGRAM_REELS'&&<YoutubePublishPanel project={project} state={state} target={target} dirty={dirty}/>}
  </section>;
 }

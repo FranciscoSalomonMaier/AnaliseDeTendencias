@@ -202,3 +202,7 @@ Adicionada a etapa Publicação após Produção, com seleção de render, metad
 ## Etapa 8 — Shorts e Reels
 
 Suporte a saídas 16:9/9:16 na pipeline existente, enquadramento por cena, legendas por formato, projetos curtos derivados e preparação independente por destino. Diagnóstico, migration, testes, evidências e limitações: [IMPLEMENTACAO_SHORTS_REELS.md](IMPLEMENTACAO_SHORTS_REELS.md).
+
+## Etapa 9 — Publicação oficial no YouTube
+
+OAuth, canais, fila persistente, upload retomável, privacidade/agendamento e automação explícita. Relatório: [IMPLEMENTACAO_PUBLICACAO_AUTOMATICA_YOUTUBE.md](IMPLEMENTACAO_PUBLICACAO_AUTOMATICA_YOUTUBE.md). Configuração e operação: [docs/youtube-integration.md](docs/youtube-integration.md).

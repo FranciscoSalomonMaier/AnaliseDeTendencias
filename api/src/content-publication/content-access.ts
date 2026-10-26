@@ -24,10 +24,11 @@ export class ContentAccessGuard implements CanActivate {
   async canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest<Request>();
     const path = req.originalUrl.split('?')[0];
-    if (!path.startsWith('/content-projects')) return true;
+    const youtube = path.startsWith('/youtube-publishing');
+    if (!path.startsWith('/content-projects') && !youtube) return true;
     const configured = this.config.get<string>('CONTENT_ACCESS_KEY');
     if (!configured) {
-      if (path.includes('/publication'))
+      if (path.includes('/publication') || youtube)
         throw new ServiceUnavailableException(
           'Configure CONTENT_ACCESS_KEY no servidor para habilitar a preparação de publicação.',
         );
@@ -55,6 +56,18 @@ export class ContentAccessGuard implements CanActivate {
       throw new UnauthorizedException(
         'Entre com a chave de acesso do estúdio.',
       );
+    if (
+      youtube &&
+      !['GET', 'HEAD'].includes(req.method) &&
+      req.headers.origin
+    ) {
+      const allowed = new URL(
+        this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173',
+      ).origin;
+      if (req.headers.origin !== allowed)
+        throw new ForbiddenException('Origem não autorizada.');
+    }
+    if (youtube) return true;
     const projectId =
       typeof req.params.projectId === 'string'
         ? req.params.projectId

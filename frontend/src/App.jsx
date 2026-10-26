@@ -1,3 +1,4 @@
+import {YoutubeIntegration} from './pages/YoutubeIntegration/YoutubeIntegration';
 import { useEffect, useState } from 'react';
 import './App.css';
 import Aside from './layouts/Aside/Aside';
@@ -13,7 +14,7 @@ function App() {
   const [page, setPage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const route = params.get('page');
-    return route === 'content-creation' || route === 'youtube-list' || route === 'content-library' || route === 'trending-topics' ? route : 'home';
+    return route === 'youtube-integration' || route === 'content-creation' || route === 'youtube-list' || route === 'content-library' || route === 'trending-topics' ? route : 'home';
   });
   const [creationSeed, setCreationSeed] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -59,7 +60,7 @@ function App() {
       });
       (payload?.tags ?? []).forEach((tag) => params.append('tag', tag));
       window.history.pushState({}, '', `${window.location.pathname}?${params}`);
-    } else if (nextPage === 'youtube-list' || nextPage === 'content-library' || nextPage === 'trending-topics') {
+    } else if (nextPage === 'youtube-integration' || nextPage === 'youtube-list' || nextPage === 'content-library' || nextPage === 'trending-topics') {
       window.history.pushState({}, '', `${window.location.pathname}?page=${nextPage}`);
     } else {
       window.history.pushState({}, '', window.location.pathname);
@@ -89,6 +90,7 @@ function App() {
             {page === 'youtube-list' && <YoutubeList onNavigate={navigate}/>}
             {page === 'content-creation' && <ContentCreation key={`${creationKey}:${JSON.stringify(creationSeed)}`} onNavigate={navigate} analysis={creationSeed}/>}
             {page === 'content-library' && <ContentLibrary onNavigate={navigate}/>}
+            {page === 'youtube-integration' && <YoutubeIntegration/>}
             {page === 'home' && <Home onNavigate={navigate}/>}
         </main>
     </div>

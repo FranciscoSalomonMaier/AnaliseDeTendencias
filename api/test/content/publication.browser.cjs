@@ -59,7 +59,8 @@ module.exports = async function publicationBrowser({
     });
     let next = 0;
     const pending = new Map(),
-      errors = [];
+      errors = [],
+      dialogs = [];
     const command = (method, params = {}) =>
       new Promise((r, j) => {
         const id = ++next;
@@ -75,8 +76,10 @@ module.exports = async function publicationBrowser({
         else task.r(e.result);
       } else if (e.method === 'Runtime.exceptionThrown')
         errors.push(e.params.exceptionDetails.text);
-      else if (e.method === 'Page.javascriptDialogOpening')
+      else if (e.method === 'Page.javascriptDialogOpening') {
+        dialogs.push(e.params.message);
         void command('Page.handleJavaScriptDialog', { accept: true });
+      }
     };
     const evaluate = async (expression) => {
       const r = await command('Runtime.evaluate', {
@@ -185,6 +188,76 @@ module.exports = async function publicationBrowser({
       resolve(root, 'publication-ui.png'),
       Buffer.from(shot.data, 'base64'),
     );
+    if (process.env.CONTENT_YOUTUBE_PUBLISHING_TEST === 'true') {
+      await command('Page.navigate', {
+        url: 'http://127.0.0.1:33853/?page=youtube-integration',
+      });
+      await until(() =>
+        evaluate(
+          `document.body.textContent.includes('Canais conectados')&&document.body.textContent.includes('CONNECTED')`,
+        ),
+      );
+      assert.ok(
+        await evaluate(
+          `document.body.textContent.includes('Canal local de teste')`,
+        ),
+      );
+      assert.equal(
+        await evaluate(
+          `document.querySelector('button')?.textContent.includes('undefined')`,
+        ),
+        false,
+      );
+      assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="Integrações do YouTube"]')).backgroundColor`),'rgb(11, 18, 32)','integration uses the existing dark background for readable white text');
+      await click('Confirmar envio do rascunho');
+      await until(()=>evaluate(`document.body.textContent.includes('Na fila')`));
+      await click('Desconectar');
+      await until(()=>evaluate(`document.body.textContent.includes('REVOKED')`));
+      await click('Consultar estado remoto');
+      await until(() =>
+        evaluate(`document.body.textContent.includes('Reconecte o canal')`),
+      );
+      assert.ok(
+        dialogs.some(
+          (text) =>
+            text.includes('Canal:') &&
+            text.includes('Título:') &&
+            text.includes('Privacidade:'),
+        ),
+        'real browser confirmation identifies channel/title/privacy',
+      );
+      assert.equal(
+        await evaluate(
+          `document.body.textContent.includes('fixture-access-token')||document.body.textContent.includes('fixture-refresh-token')`,
+        ),
+        false,
+      );
+      for (const width of [1440, 768, 390]) {
+        await command('Emulation.setDeviceMetricsOverride', {
+          width,
+          height: 1000,
+          deviceScaleFactor: 1,
+          mobile: width === 390,
+        });
+        await pause(100);
+        assert.equal(
+          await evaluate('document.documentElement.scrollWidth>innerWidth'),
+          false,
+          `YouTube integration responsive ${width}`,
+        );
+      }
+      const screenshot = await command('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: false,
+      });
+      fs.writeFileSync(
+        resolve(root, 'youtube-integration-ui.png'),
+        Buffer.from(screenshot.data, 'base64'),
+      );
+      console.log(
+        'PASS Chrome YouTube integration: channel/history/confirmation/error/secret filtering and responsive layout.',
+      );
+    }
     assert.deepEqual(errors, []);
     console.log(
       'PASS Chrome publication: local session, navigation, real thumbnails, edit/save/reopen, READY, download, responsive 1440/768/390.',
