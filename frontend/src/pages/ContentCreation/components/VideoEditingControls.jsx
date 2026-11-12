@@ -11,7 +11,7 @@ export function VideoEditingControls({ project, preview, busy, onSaved, onDirty,
     let active = true;
     videoRenders.settings(project.id).then(value => { if (active) { setSettings(value); setDirty(false); onDirty(false); } }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [project.id, project.revision, onDirty]);
+  }, [project.id, project.revision, preview?.timeline?.editing?.revision, onDirty]);
   function update(value) { setSettings(value); setDirty(true); onDirty(true); }
   async function save() {
     setSaving(true); setError("");
@@ -35,9 +35,11 @@ export function VideoEditingControls({ project, preview, busy, onSaved, onDirty,
       {project.scenes.map(scene => {
         const item = preview?.timeline?.scenes.find(s => s.sceneId === scene.id);
         const choice = settings.scenes[scene.id] ?? { motion: "AUTO", fit: "CONTAIN", amplitude: 0.05 };
-        function change(key, value) { update({ ...settings, scenes: { ...settings.scenes, [scene.id]: { ...choice, [key]: value } }, variants: { ...settings.variants, [settings.aspectRatio ?? project.config.aspectRatio ?? "16:9"]: { ...settings.scenes, [scene.id]: { ...choice, [key]: value } } } }); }
+        function change(key, value) { update({ ...settings, scenes: { ...settings.scenes, [scene.id]: { ...choice, origin: "MANUAL", [key]: value } }, variants: { ...settings.variants, [settings.aspectRatio ?? project.config.aspectRatio ?? "16:9"]: { ...settings.scenes, [scene.id]: { ...choice, origin: "MANUAL", [key]: value } } } }); }
         return <div key={scene.id} className="space-y-2 rounded border border-border p-3 text-sm">
           <strong>Cena {scene.order}</strong>
+          <label className="ml-3"><input type="checkbox" disabled={busy || saving} checked={choice.locked ?? (choice.origin !== "AI" && choice.motion !== "AUTO")} onChange={e => change("locked", e.target.checked)}/> Proteger configuração contra IA</label>
+          <p className="text-xs text-muted-foreground">Origem: {choice.origin ?? (choice.motion === "AUTO" ? "AUTO" : "MANUAL")}</p>
           {item?.imageAssetId && <SceneFramingPreview src={renderMediaUrl(`/content-projects/${project.id}/assets/${item.imageAssetId}/file`)} choice={choice} aspectRatio={settings.aspectRatio ?? project.config.aspectRatio ?? "16:9"}/> }
           <div className="flex flex-wrap gap-3">
             <label>Movimento <select aria-label={`Movimento da cena ${scene.order}`} className="rounded border bg-theme p-2" disabled={busy || saving} value={choice.motion} onChange={e => change("motion", e.target.value)}>{Object.entries(motionNames).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>

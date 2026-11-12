@@ -46,7 +46,17 @@ interface Probe {
 }
 export function imageMotionFilter(scene: TimelineScene, c: RenderConfig) {
   const n = Math.max(1, scene.frames - 1);
-  const t = scene.easing ? `(on/${n})*(on/${n})*(3-2*on/${n})` : `on/${n}`;
+  const progress = `on/${n}`;
+  const t =
+    scene.interpolation === 'LINEAR'
+      ? progress
+      : scene.interpolation === 'EASE_IN'
+        ? `(${progress})*(${progress})`
+        : scene.interpolation === 'EASE_OUT'
+          ? `1-(1-${progress})*(1-${progress})`
+          : scene.easing
+            ? `(${progress})*(${progress})*(3-2*${progress})`
+            : progress;
   const amplitude = scene.amplitude ?? 0.05;
   const z =
     scene.motion === 'SLOW_ZOOM_IN'

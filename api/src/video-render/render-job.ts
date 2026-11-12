@@ -31,6 +31,9 @@ export interface TimelineScene {
   focalY?: number;
   zoom?: number;
   easing?: boolean;
+  interpolation?: 'LINEAR' | 'EASE_IN' | 'EASE_OUT' | 'EASE_IN_OUT';
+  origin?: 'MANUAL' | 'AI' | 'AUTO';
+  planId?: string;
   fallbackReason?: string;
   transition?: {
     type: 'CUT' | 'FADE' | 'CROSSFADE';

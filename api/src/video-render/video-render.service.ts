@@ -194,6 +194,16 @@ export class VideoRenderService
       };
       const format =
         settings.aspectRatio ?? project.config.aspectRatio ?? '16:9';
+      // Edits through the manual editor have explicit provenance. AI application
+      // uses EditingRepository directly and cannot be confused with a manual save.
+      for (const [sceneId, choice] of Object.entries(settings.scenes)) {
+        const previous =
+          current.variants?.[format]?.[sceneId] ?? current.scenes[sceneId];
+        if (JSON.stringify(choice) !== JSON.stringify(previous)) {
+          choice.origin = 'MANUAL';
+          delete choice.planId;
+        }
+      }
       if (settings.variants)
         settings.variants[format] = structuredClone(settings.scenes);
       await this.editing.save(id, settings, client);
@@ -255,12 +265,12 @@ export class VideoRenderService
           scene.startSeconds = offset;
           offset += scene.durationSeconds;
           scene.endSeconds = offset;
+          const transitionType = scene.transition?.type ?? 'CUT';
           const frames =
-            i < snapshot.scenes.length - 1 &&
-            snapshot.editing?.transition !== 'CUT'
+            i < snapshot.scenes.length - 1 && transitionType !== 'CUT'
               ? Math.min(
                   Math.floor(
-                    (snapshot.editing?.transitionSeconds ?? 0.5) *
+                    (scene.transition?.durationSeconds ?? 0) *
                       snapshot.config.fps,
                   ),
                   Math.floor(scene.frames / 2),
@@ -270,18 +280,15 @@ export class VideoRenderService
           const durationSeconds =
             frames >= 2 ? frames / snapshot.config.fps : 0;
           scene.transition = {
-            type: durationSeconds ? snapshot.editing!.transition : 'CUT',
+            type: durationSeconds ? transitionType : 'CUT',
             durationSeconds,
             startSeconds:
               offset -
-              (snapshot.editing?.transition === 'FADE'
+              (transitionType === 'FADE'
                 ? durationSeconds / 2
                 : durationSeconds),
             endSeconds:
-              offset +
-              (snapshot.editing?.transition === 'FADE'
-                ? durationSeconds / 2
-                : 0),
+              offset + (transitionType === 'FADE' ? durationSeconds / 2 : 0),
           };
         }
         snapshot.totalDurationSeconds = offset;

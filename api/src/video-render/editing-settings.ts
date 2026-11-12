@@ -12,6 +12,14 @@ export const motionChoices = [
 ] as const;
 export const sceneEditingSchema = z
   .object({
+    locked: z.boolean().optional(),
+    origin: z.enum(['MANUAL', 'AI', 'AUTO']).optional(),
+    planId: z.string().uuid().optional(),
+    interpolation: z
+      .enum(['LINEAR', 'EASE_IN', 'EASE_OUT', 'EASE_IN_OUT'])
+      .optional(),
+    transition: z.enum(['CUT', 'FADE', 'CROSSFADE']).optional(),
+    transitionSeconds: z.number().finite().min(0).max(2).optional(),
     motion: z.enum(motionChoices).default('AUTO'),
     fit: z.enum(['CONTAIN', 'COVER', 'BLURRED_BACKGROUND']).default('CONTAIN'),
     focalX: z.number().finite().min(0).max(1).optional(),
@@ -22,6 +30,17 @@ export const sceneEditingSchema = z
   .strict();
 export const editingSchema = z
   .object({
+    appliedPlan: z
+      .object({
+        id: z.string().uuid(),
+        version: z.number().int().positive(),
+        revision: z.number().int().nonnegative(),
+        inputHash: z.string().length(64),
+        style: z.string().max(40),
+        intensity: z.string().max(40),
+      })
+      .strict()
+      .optional(),
     aspectRatio: z.enum(['16:9', '9:16']).optional(),
     subtitleVariants: z
       .partialRecord(z.enum(['16:9', '9:16']), SubtitleSettingsSchema)

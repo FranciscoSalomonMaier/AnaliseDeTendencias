@@ -105,16 +105,34 @@ export class OpenAiLlmProvider extends LlmProvider {
     const openai = this.createClient(request.disableRetries ? 0 : 1);
 
     try {
-      const response = await openai.responses.parse({
-        model: request.model,
-        input: [
-          { role: 'system', content: request.systemPrompt },
-          { role: 'user', content: request.userPrompt },
-        ],
-        text: {
-          format: zodTextFormat(request.schema, request.schemaName),
+      const response = await openai.responses.parse(
+        {
+          model: request.model,
+          ...(request.maxOutputTokens
+            ? { max_output_tokens: request.maxOutputTokens }
+            : {}),
+          input: [
+            { role: 'system', content: request.systemPrompt },
+            {
+              role: 'user',
+              content: request.images?.length
+                ? [
+                    { type: 'input_text' as const, text: request.userPrompt },
+                    ...request.images.map((image) => ({
+                      type: 'input_image' as const,
+                      image_url: image.dataUrl,
+                      detail: image.detail,
+                    })),
+                  ]
+                : request.userPrompt,
+            },
+          ],
+          text: {
+            format: zodTextFormat(request.schema, request.schemaName),
+          },
         },
-      });
+        { signal: request.signal },
+      );
       const data = response.output_parsed;
       if (!data) {
         throw new BadGatewayException('A IA não retornou uma resposta válida');
@@ -189,11 +207,12 @@ export class OpenAiLlmProvider extends LlmProvider {
   private logProviderError(error: unknown): void {
     if (error instanceof APIError) {
       this.logger.error(
-        `OpenAI request failed: type=${error.constructor.name} status=${error.status ?? 'network'} code=${error.code ?? 'unknown'} requestId=${error.requestID ?? 'unknown'} message=${error.message}`,
+        `OpenAI request failed: type=${error.constructor.name} status=${error.status ?? 'network'} code=${error.code ?? 'unknown'} requestId=${error.requestID ?? 'unknown'}`,
       );
       return;
     }
-    const message = error instanceof Error ? error.message : String(error);
+    const message =
+      error instanceof Error ? error.constructor.name : 'UnknownError';
     this.logger.error(`Unexpected AI analysis error: ${message}`);
   }
 }

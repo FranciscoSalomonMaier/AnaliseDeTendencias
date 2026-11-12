@@ -50,7 +50,10 @@
     "test:vertical:integration": "node test/content/vertical.integration.cjs",
     "migrate:youtube-publishing": "node scripts/migrate-assets.cjs",
     "test:youtube-publishing": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=youtube-publishing",
-    "test:youtube-publishing:integration": "node test/content/youtube-publishing.integration.cjs"
+    "test:youtube-publishing:integration": "node test/content/youtube-publishing.integration.cjs",
+    "migrate:intelligent-editing": "node scripts/migrate-assets.cjs",
+    "test:intelligent-editing": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=content-intelligent-editing",
+    "test:intelligent-editing:integration": "node test/content/intelligent-editing.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

@@ -28,7 +28,11 @@ export class ContentAccessGuard implements CanActivate {
     if (!path.startsWith('/content-projects') && !youtube) return true;
     const configured = this.config.get<string>('CONTENT_ACCESS_KEY');
     if (!configured) {
-      if (path.includes('/publication') || youtube)
+      if (
+        path.includes('/publication') ||
+        path.includes('/intelligent-editing') ||
+        youtube
+      )
         throw new ServiceUnavailableException(
           'Configure CONTENT_ACCESS_KEY no servidor para habilitar a preparação de publicação.',
         );
@@ -57,7 +61,7 @@ export class ContentAccessGuard implements CanActivate {
         'Entre com a chave de acesso do estúdio.',
       );
     if (
-      youtube &&
+      (youtube || path.includes('/intelligent-editing')) &&
       !['GET', 'HEAD'].includes(req.method) &&
       req.headers.origin
     ) {

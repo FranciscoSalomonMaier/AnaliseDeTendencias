@@ -8,6 +8,9 @@ export interface LlmUsage {
 
 export interface StructuredOutputRequest<T> {
   disableRetries?: boolean;
+  signal?: AbortSignal;
+  maxOutputTokens?: number;
+  images?: Array<{ dataUrl: string; detail: 'low' | 'high' }>;
   model: string;
   schemaName: string;
   schema: z.ZodType<T>;

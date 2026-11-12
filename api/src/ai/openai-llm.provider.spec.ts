@@ -87,6 +87,41 @@ describe('OpenAiLlmProvider', () => {
     });
   });
 
+  it('sends resized image data with structured outputs and a bounded output budget', async () => {
+    mockParse.mockResolvedValue({ output_parsed: { answer: 'ok' } });
+    const provider = new OpenAiLlmProvider({ get: () => 'test-key' } as never);
+    await provider.generateStructuredOutput({
+      model: 'test-vision',
+      schemaName: 'visual',
+      schema: z.object({ answer: z.string() }),
+      systemPrompt: 'trusted',
+      userPrompt: 'untrusted context',
+      disableRetries: true,
+      maxOutputTokens: 1800,
+      images: [{ dataUrl: 'data:image/jpeg;base64,fixture', detail: 'high' }],
+    });
+    expect(mockParse).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        model: 'test-vision',
+        max_output_tokens: 1800,
+        input: [
+          { role: 'system', content: 'trusted' },
+          {
+            role: 'user',
+            content: [
+              { type: 'input_text', text: 'untrusted context' },
+              {
+                type: 'input_image',
+                image_url: 'data:image/jpeg;base64,fixture',
+                detail: 'high',
+              },
+            ],
+          },
+        ],
+      }),
+    );
+  });
+
   it('allows publication calls to disable SDK retries while preserving the default', async () => {
     mockParse.mockResolvedValue({ output_parsed: { answer: 'ok' } });
     const provider = new OpenAiLlmProvider({ get: () => 'test-key' } as never);

@@ -1,3 +1,7 @@
+import { IntelligentEditingController } from '../content-intelligent-editing/intelligent-editing.controller';
+import { IntelligentEditingService } from '../content-intelligent-editing/intelligent-editing.service';
+import { EditingPlanRepository } from '../content-intelligent-editing/editing-plan.repository';
+import { EditingAnalysisWorker } from '../content-intelligent-editing/editing-analysis.worker';
 import { YoutubePublishingSettings } from './../youtube-publishing/youtube-settings';
 import { YoutubeSecretBox } from './../youtube-publishing/youtube-crypto';
 import {
@@ -62,6 +66,7 @@ import { ImageFileValidator } from './image-file.validator';
 @Module({
   imports: [AiModule, ContentProjectModule],
   controllers: [
+    IntelligentEditingController,
     YoutubePublishingController,
     ContentAccessController,
     PublicationController,
@@ -72,6 +77,9 @@ import { ImageFileValidator } from './image-file.validator';
     ProjectAudioController,
   ],
   providers: [
+    IntelligentEditingService,
+    EditingPlanRepository,
+    EditingAnalysisWorker,
     YoutubePublishingSettings,
     YoutubeSecretBox,
     YoutubeApiClient,

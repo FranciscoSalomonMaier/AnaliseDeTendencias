@@ -185,6 +185,11 @@ export class TimelineBuilder {
         focalY: choice?.focalY ?? 0.5,
         zoom: choice?.zoom ?? 1,
         easing: true,
+        interpolation: choice?.interpolation,
+        origin:
+          choice?.origin ??
+          (choice && choice.motion !== 'AUTO' ? 'MANUAL' : 'AUTO'),
+        planId: choice?.planId,
         fallbackReason,
       });
     });
@@ -196,27 +201,29 @@ export class TimelineBuilder {
         0,
         scene.frames - Math.ceil(scene.audioDurationSeconds * fps),
       );
+      const choice =
+        (aspectRatio && editing.variants?.[aspectRatio]?.[scene.sceneId]) ??
+        editing.scenes[scene.sceneId];
+      const transition = choice?.transition ?? editing.transition;
+      const seconds = choice?.transitionSeconds ?? editing.transitionSeconds;
       const frames =
-        editing.transition === 'CUT'
+        transition === 'CUT'
           ? 0
           : Math.min(
-              Math.floor(editing.transitionSeconds * fps),
+              Math.floor(seconds * fps),
               available,
               Math.floor(scene.frames / 2),
               Math.floor(next.frames / 2),
             );
       const durationSeconds = frames >= 2 ? frames / fps : 0;
       scene.transition = {
-        type: durationSeconds ? editing.transition : 'CUT',
+        type: durationSeconds ? transition : 'CUT',
         durationSeconds,
         startSeconds:
           scene.endSeconds -
-          (editing.transition === 'FADE'
-            ? durationSeconds / 2
-            : durationSeconds),
+          (transition === 'FADE' ? durationSeconds / 2 : durationSeconds),
         endSeconds:
-          scene.endSeconds +
-          (editing.transition === 'FADE' ? durationSeconds / 2 : 0),
+          scene.endSeconds + (transition === 'FADE' ? durationSeconds / 2 : 0),
       };
     }
     const totalDurationSeconds = frameOffset / config.fps;

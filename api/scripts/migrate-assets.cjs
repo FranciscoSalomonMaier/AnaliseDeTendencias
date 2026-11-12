@@ -31,6 +31,7 @@ const { Client } = require('pg');
       '011_content_publication.sql',
       '012_content_vertical.sql',
       '013_youtube_publishing.sql',
+      '014_intelligent_editing.sql',
     ]) {
       const applied = await client.query(
         'SELECT 1 FROM content_schema_migrations WHERE name=$1',

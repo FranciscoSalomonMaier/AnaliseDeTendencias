@@ -1,3 +1,4 @@
+import { IntelligentEditing } from "./IntelligentEditing";
 import { motionNames } from "../../../utils/videoEditing";
 import { VideoEditingControls } from "./VideoEditingControls";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -59,6 +60,6 @@ export function VideoProduction({ project, audioDraftDirty = false, subtitleDraf
     catch (e) { setError(e.message); if (e.issues?.length) setPreview(current => ({ ...current, ready: false, issues: e.issues })); }
     finally { inFlight.current = false; setBusy(false); }
   }
-  return <VideoProductionView editingDirty={editingDirty} editingControls={<VideoEditingControls project={project} preview={preview} busy={Boolean(busy) || jobs.some(activeRender)} onDirty={setEditingDirty} onSaved={() => run(async () => {})} onPreview={sceneId => void run(() => videoRenders.preview(project, preview?.timeline?.editing?.revision, sceneId))} />} audioDraftDirty={audioDraftDirty} subtitleDraftDirty={subtitleDraftDirty} project={project} preview={preview} jobs={jobs} error={error} busy={busy} loading={loading}
+  return <VideoProductionView editingDirty={editingDirty} editingControls={<><IntelligentEditing project={project} blocked={editingDirty || audioDraftDirty || subtitleDraftDirty || Boolean(busy) || jobs.some(activeRender)} onApplied={() => run(async () => {})}/><VideoEditingControls project={project} preview={preview} busy={Boolean(busy) || jobs.some(activeRender)} onDirty={setEditingDirty} onSaved={() => run(async () => {})} onPreview={sceneId => void run(() => videoRenders.preview(project, preview?.timeline?.editing?.revision, sceneId))} /></>} audioDraftDirty={audioDraftDirty} subtitleDraftDirty={subtitleDraftDirty} project={project} preview={preview} jobs={jobs} error={error} busy={busy} loading={loading}
     onGenerate={() => void run(() => videoRenders.create(project, preview?.timeline?.editing?.revision))} onCancel={id => void run(() => videoRenders.cancel(project.id, id))} onRefresh={() => void run(async () => {})} />;
 }

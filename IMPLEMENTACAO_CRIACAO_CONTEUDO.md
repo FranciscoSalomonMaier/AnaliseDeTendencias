@@ -206,3 +206,7 @@ Suporte a saídas 16:9/9:16 na pipeline existente, enquadramento por cena, legen
 ## Etapa 9 — Publicação oficial no YouTube
 
 OAuth, canais, fila persistente, upload retomável, privacidade/agendamento e automação explícita. Relatório: [IMPLEMENTACAO_PUBLICACAO_AUTOMATICA_YOUTUBE.md](IMPLEMENTACAO_PUBLICACAO_AUTOMATICA_YOUTUBE.md). Configuração e operação: [docs/youtube-integration.md](docs/youtube-integration.md).
+
+## Etapa 10 — Edição inteligente avançada com IA
+
+Planejamento narrativo e visual opcional, planos versionados, revisão humana, proteção manual, cache, aplicação em EditingSettings e prévia no FFmpeg existente. Diagnóstico, configuração, endpoints, testes e limitações: [IMPLEMENTACAO_EDICAO_INTELIGENTE.md](IMPLEMENTACAO_EDICAO_INTELIGENTE.md).
