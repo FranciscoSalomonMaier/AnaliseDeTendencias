@@ -210,3 +210,7 @@ OAuth, canais, fila persistente, upload retomável, privacidade/agendamento e au
 ## Etapa 10 — Edição inteligente avançada com IA
 
 Planejamento narrativo e visual opcional, planos versionados, revisão humana, proteção manual, cache, aplicação em EditingSettings e prévia no FFmpeg existente. Diagnóstico, configuração, endpoints, testes e limitações: [IMPLEMENTACAO_EDICAO_INTELIGENTE.md](IMPLEMENTACAO_EDICAO_INTELIGENTE.md).
+
+## Video Remix — Etapa 1
+
+Estrutura independente de projetos Single Source/Multi Source e cadastro de referências externas ou vídeos locais existentes. CRUD, sessão/proprietário, validações e interface integrados sem alterar o pipeline de criação. Relatório, migration 015, comandos, testes e pendências: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA1.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA1.md).

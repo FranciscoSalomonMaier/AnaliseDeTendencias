@@ -25,16 +25,21 @@ export class ContentAccessGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<Request>();
     const path = req.originalUrl.split('?')[0];
     const youtube = path.startsWith('/youtube-publishing');
-    if (!path.startsWith('/content-projects') && !youtube) return true;
+    const remix = path === '/video-remix' || path.startsWith('/video-remix/');
+    if (!path.startsWith('/content-projects') && !youtube && !remix)
+      return true;
     const configured = this.config.get<string>('CONTENT_ACCESS_KEY');
     if (!configured) {
       if (
         path.includes('/publication') ||
         path.includes('/intelligent-editing') ||
-        youtube
+        youtube ||
+        remix
       )
         throw new ServiceUnavailableException(
-          'Configure CONTENT_ACCESS_KEY no servidor para habilitar a preparação de publicação.',
+          remix
+            ? 'Configure CONTENT_ACCESS_KEY no servidor para habilitar o Video Remix.'
+            : 'Configure CONTENT_ACCESS_KEY no servidor para habilitar a preparação de publicação.',
         );
       return true;
     }
@@ -61,7 +66,7 @@ export class ContentAccessGuard implements CanActivate {
         'Entre com a chave de acesso do estúdio.',
       );
     if (
-      (youtube || path.includes('/intelligent-editing')) &&
+      (youtube || remix || path.includes('/intelligent-editing')) &&
       !['GET', 'HEAD'].includes(req.method) &&
       req.headers.origin
     ) {
@@ -71,7 +76,7 @@ export class ContentAccessGuard implements CanActivate {
       if (req.headers.origin !== allowed)
         throw new ForbiddenException('Origem não autorizada.');
     }
-    if (youtube) return true;
+    if (youtube || remix) return true;
     const projectId =
       typeof req.params.projectId === 'string'
         ? req.params.projectId

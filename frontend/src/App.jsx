@@ -1,3 +1,4 @@
+import {VideoRemix} from './pages/VideoRemix/VideoRemix';
 import {YoutubeIntegration} from './pages/YoutubeIntegration/YoutubeIntegration';
 import { useEffect, useState } from 'react';
 import './App.css';
@@ -10,11 +11,12 @@ import { ContentCreation } from './pages/ContentCreation/ContentCreation';
 import { ContentLibrary } from './pages/ContentLibrary/ContentLibrary';
 
 function App() {
+  const [remixKey, setRemixKey] = useState(0);
   const [creationKey, setCreationKey] = useState(0);
   const [page, setPage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const route = params.get('page');
-    return route === 'youtube-integration' || route === 'content-creation' || route === 'youtube-list' || route === 'content-library' || route === 'trending-topics' ? route : 'home';
+    return route === 'video-remix' || route === 'youtube-integration' || route === 'content-creation' || route === 'youtube-list' || route === 'content-library' || route === 'trending-topics' ? route : 'home';
   });
   const [creationSeed, setCreationSeed] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -40,6 +42,7 @@ function App() {
     const event = new Event('content:before-navigate', { cancelable: true });
     if (!window.dispatchEvent(event)) return;
 
+    if (nextPage === 'video-remix') setRemixKey(value => value + 1);
     if (nextPage === 'content-creation') {
       setCreationKey(value => value + 1);
       setCreationSeed(payload);
@@ -60,7 +63,7 @@ function App() {
       });
       (payload?.tags ?? []).forEach((tag) => params.append('tag', tag));
       window.history.pushState({}, '', `${window.location.pathname}?${params}`);
-    } else if (nextPage === 'youtube-integration' || nextPage === 'youtube-list' || nextPage === 'content-library' || nextPage === 'trending-topics') {
+    } else if (nextPage === 'video-remix' || nextPage === 'youtube-integration' || nextPage === 'youtube-list' || nextPage === 'content-library' || nextPage === 'trending-topics') {
       window.history.pushState({}, '', `${window.location.pathname}?page=${nextPage}`);
     } else {
       window.history.pushState({}, '', window.location.pathname);
@@ -91,6 +94,7 @@ function App() {
             {page === 'content-creation' && <ContentCreation key={`${creationKey}:${JSON.stringify(creationSeed)}`} onNavigate={navigate} analysis={creationSeed}/>}
             {page === 'content-library' && <ContentLibrary onNavigate={navigate}/>}
             {page === 'youtube-integration' && <YoutubeIntegration/>}
+            {page === 'video-remix' && <VideoRemix key={remixKey}/>}
             {page === 'home' && <Home onNavigate={navigate}/>}
         </main>
     </div>
