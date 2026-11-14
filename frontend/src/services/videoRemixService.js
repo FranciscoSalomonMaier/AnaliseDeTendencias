@@ -50,3 +50,83 @@ export const videoRemix = {
     }),
   localAssets: () => request("/local-assets"),
 };
+
+export const remixImport = {
+  settings: (id) => request(`/projects/${id}/import-settings`),
+  search: (id, filters) =>
+    request(`/projects/${id}/discovery/search`, "POST", filters),
+  details: (id, video) =>
+    request(`/projects/${id}/discovery/videos/${encodeURIComponent(video)}`),
+  candidate: (project, externalId, replacement = {}) =>
+    request(`/projects/${project.id}/candidates`, "POST", {
+      revision: project.revision,
+      externalId,
+      ...replacement,
+    }),
+  attach: (project, sourceId, fileId, rights) =>
+    request(`/projects/${project.id}/sources/${sourceId}/file`, "POST", {
+      revision: project.revision,
+      fileId,
+      rights,
+    }),
+  unlink: (project, sourceId) =>
+    request(`/projects/${project.id}/sources/${sourceId}/file`, "DELETE", {
+      revision: project.revision,
+      confirm: true,
+    }),
+  remove: (project, fileId) =>
+    request(`/projects/${project.id}/files/${fileId}`, "DELETE", {
+      revision: project.revision,
+      confirm: true,
+    }),
+  withdraw: (project, sourceId) =>
+    request(
+      `/projects/${project.id}/sources/${sourceId}/authorization`,
+      "PATCH",
+      { revision: project.revision, rights: null },
+    ),
+  upload: (project, file, sourceId, rights, onProgress) => {
+    const form = new FormData();
+    form.append("revision", String(project.revision));
+    if (sourceId) form.append("sourceId", sourceId);
+    form.append("rights", JSON.stringify(rights));
+    form.append("file", file);
+    const xhr = new XMLHttpRequest();
+    const promise = new Promise((resolve, reject) => {
+      xhr.open("POST", `${API}/video-remix/projects/${project.id}/files`);
+      xhr.withCredentials = true;
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable)
+          onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        let data = {};
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch {
+          /* controlled fallback */
+        }
+        if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+        else {
+          const error = new Error(
+            typeof data.message === "string"
+              ? data.message
+              : xhr.status === 413
+                ? "Arquivo acima do limite permitido."
+                : "Não foi possível importar o arquivo.",
+          );
+          error.status = xhr.status;
+          reject(error);
+        }
+      };
+      xhr.onerror = () =>
+        reject(
+          new Error("Falha de conexão durante o upload. Tente novamente."),
+        );
+      xhr.onabort = () => reject(new Error("Upload cancelado."));
+      xhr.send(form);
+    });
+    return { promise, abort: () => xhr.abort() };
+  },
+};
+export const remixFileUrl = (path) => `${API}${path}`;

@@ -23,7 +23,7 @@ export class LocalStorageProvider extends StorageProvider {
     );
   }
   private path(key: string) {
-    if (!/^[a-zA-Z0-9/-]+\.(png|jpg|webp|mp3|wav|mp4)$/.test(key))
+    if (!/^[a-zA-Z0-9/-]+\.(png|jpg|webp|mp3|wav|mp4|mov|webm|mkv)$/.test(key))
       throw new Error('Storage key inválida');
     const path = resolve(this.root, key);
     if (!path.startsWith(this.root + sep))

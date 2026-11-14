@@ -1,7 +1,10 @@
+import { sourceUrl } from './remix-url';
+import { RemixFilesService } from './remix-files.service';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -30,8 +33,9 @@ export class VideoRemixService {
     private readonly config: ConfigService,
     private readonly repository: VideoRemixRepository,
     private readonly storage: StorageProvider,
+    @Optional() private readonly files?: RemixFilesService,
   ) {}
-  private owner() {
+  owner() {
     if (!this.config.get('CONTENT_ACCESS_KEY'))
       throw new ServiceUnavailableException(
         'Configure CONTENT_ACCESS_KEY para usar o Video Remix.',
@@ -63,11 +67,23 @@ export class VideoRemixService {
   }
   async get(id: string) {
     const owner = this.owner();
+    const project = await this.repository.get(id, owner);
+    const files = this.files ? await this.files.list(id) : [];
+    const sources = await this.repository.sources(id);
     return {
-      ...(await this.repository.get(id, owner)),
-      sources: await this.repository.sources(id),
+      ...project,
+      files,
+      sources: sources.map((source) =>
+        source.importedFileId &&
+        !files.some(
+          (file) => file.id === source.importedFileId && file.available,
+        )
+          ? { ...source, status: 'UNAVAILABLE' as const }
+          : source,
+      ),
     };
   }
+
   async update(id: string, body: unknown) {
     const p = remixUpdateSchema.safeParse(body);
     if (!p.success)
@@ -98,6 +114,7 @@ export class VideoRemixService {
       this.owner(),
       p.data.revision,
       async (_project, c) => {
+        if (this.files) await this.files.cleanupProject(id, c);
         await c.query('DELETE FROM video_remix_projects WHERE id=$1', [id]);
         return { deleted: true };
       },
@@ -149,6 +166,20 @@ export class VideoRemixService {
           );
         if (project.sourceCount >= 100)
           throw new ConflictException('Limite de 100 fontes por projeto.');
+        const originalUrl = p.data.originalUrl
+          ? sourceUrl(p.data.originalUrl)
+          : null;
+        if (
+          originalUrl &&
+          (await this.repository.sources(id, c)).some(
+            (source) =>
+              source.originalUrl &&
+              sourceUrl(source.originalUrl) === originalUrl,
+          )
+        )
+          throw new ConflictException(
+            'Esta referência já está associada ao projeto.',
+          );
         let duration = p.data.durationSeconds ?? null;
         let status = 'METADATA_ONLY';
         if (p.data.originType === 'LOCAL_ASSET') {
@@ -177,7 +208,7 @@ export class VideoRemixService {
             id,
             p.data.title,
             p.data.originType,
-            p.data.originalUrl ?? null,
+            originalUrl,
             p.data.localAssetId ?? null,
             duration,
             status,

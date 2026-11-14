@@ -1,3 +1,4 @@
+import { RemixImportPanel } from "./RemixImportPanel";
 import {
   remixStatusLabels,
   remixAuthorizationLabels,
@@ -273,6 +274,12 @@ export function VideoRemix() {
               </button>
             </div>
           </article>
+          <RemixImportPanel
+            project={project}
+            disabled={busy || project.status !== "DRAFT"}
+            onBusy={setBusy}
+            onChanged={refresh}
+          />
           <h2 className="text-xl font-semibold">Fontes do projeto</h2>
           {!project.sources.length && <p>Nenhuma fonte cadastrada.</p>}
           {project.sources.map((source) => (
@@ -282,15 +289,21 @@ export function VideoRemix() {
             >
               <h3 className="break-words font-semibold">{source.title}</h3>
               <p className="text-sm">
-                {source.originType === "LOCAL_ASSET"
-                  ? "Vídeo local"
-                  : "Referência externa"}{" "}
+                {source.originType === "LOCAL_UPLOAD"
+                  ? "Vídeo local importado"
+                  : source.originType === "LOCAL_ASSET"
+                    ? "Vídeo local"
+                    : "Referência externa"}{" "}
                 ·{" "}
-                {source.status === "LOCAL_AVAILABLE"
-                  ? "Arquivo referenciado"
-                  : source.status === "METADATA_ONLY"
-                    ? "Somente metadados"
-                    : "Indisponível"}{" "}
+                {source.status === "IMPORTED"
+                  ? "Arquivo importado com declaração de direitos"
+                  : source.status === "SELECTED"
+                    ? "Candidato selecionado; arquivo pendente"
+                    : source.status === "LOCAL_AVAILABLE"
+                      ? "Arquivo referenciado"
+                      : source.status === "METADATA_ONLY"
+                        ? "Somente metadados"
+                        : "Indisponível"}{" "}
                 ·{" "}
                 {source.durationSeconds
                   ? `${source.durationSeconds}s`

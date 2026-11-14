@@ -1,7 +1,10 @@
+import { z } from 'zod';
 import {
   BadGatewayException,
   BadRequestException,
   Injectable,
+  HttpException,
+  ServiceUnavailableException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -40,6 +43,78 @@ export class YoutubeService {
 
     if (!this.apiKey) {
       throw new Error('YOUTUBE_V3_API_KEY não está configurada');
+    }
+  }
+
+  /** Shared official API access for Video Remix discovery; never retrieves media. */
+  async discoveryRequest(
+    resource: 'search' | 'videos',
+    parameters: Record<string, string>,
+  ): Promise<unknown> {
+    const params = new URLSearchParams({ ...parameters, key: this.apiKey });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/${resource}?${params}`, {
+        signal: AbortSignal.timeout(20000),
+        redirect: 'error',
+      });
+    } catch {
+      throw new ServiceUnavailableException(
+        'Não foi possível comunicar com o YouTube. Tente novamente.',
+      );
+    }
+    if (!response.ok) {
+      const failure = z
+        .object({
+          error: z.object({
+            errors: z.array(z.object({ reason: z.string() })).optional(),
+          }),
+        })
+        .safeParse(await response.json().catch(() => null));
+      if (
+        failure.success &&
+        failure.data.error.errors?.some((e) =>
+          [
+            'quotaExceeded',
+            'dailyLimitExceeded',
+            'dailyLimitExceededUnreg',
+          ].includes(e.reason),
+        )
+      )
+        throw new HttpException(
+          'Quota da YouTube Data API esgotada. Consulte o Google Cloud e aguarde a renovação da quota.',
+          429,
+        );
+      if (response.status === 400)
+        throw new BadRequestException(
+          'O YouTube recusou os filtros ou a página da pesquisa. Inicie uma nova pesquisa.',
+        );
+      if (response.status === 429)
+        throw new HttpException(
+          'Limite de requisições do YouTube atingido. Aguarde.',
+          429,
+        );
+      if (response.status === 403)
+        throw new HttpException(
+          'O YouTube recusou a consulta. Verifique a quota e as permissões da chave no Google Cloud.',
+          403,
+        );
+      if (response.status === 401)
+        throw new ServiceUnavailableException(
+          'A chave do YouTube foi rejeitada. Verifique a configuração do servidor.',
+        );
+      throw new BadGatewayException(
+        'O YouTube não conseguiu concluir a consulta.',
+      );
+    }
+    try {
+      const text = await response.text();
+      if (text.length > 2_000_000) throw new Error('large');
+      return JSON.parse(text) as unknown;
+    } catch {
+      throw new BadGatewayException(
+        'O YouTube retornou uma resposta inválida.',
+      );
     }
   }
 

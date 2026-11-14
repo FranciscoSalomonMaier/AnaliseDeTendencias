@@ -214,3 +214,7 @@ Planejamento narrativo e visual opcional, planos versionados, revisão humana, p
 ## Video Remix — Etapa 1
 
 Estrutura independente de projetos Single Source/Multi Source e cadastro de referências externas ou vídeos locais existentes. CRUD, sessão/proprietário, validações e interface integrados sem alterar o pipeline de criação. Relatório, migration 015, comandos, testes e pendências: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA1.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA1.md).
+
+## Video Remix — Etapa 2
+
+Pesquisa oficial no YouTube, candidatos, uploads autorizados com FFprobe, associação e limpeza de arquivos privados. Relatório, migration 016, configuração, testes e limitações: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA2.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA2.md).

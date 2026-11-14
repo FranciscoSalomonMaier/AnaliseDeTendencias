@@ -178,6 +178,7 @@ const { PostgresDatabaseService } = load(
     r = await request(`/projects/${single.id}/sources`, 'POST', {
       ...source,
       title: 'Segunda fonte',
+      originalUrl: 'https://example.invalid/second-video',
       revision: single.revision,
     });
     single = r.data.project;

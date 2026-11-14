@@ -109,11 +109,20 @@ export interface RemixSource {
   id: string;
   projectId: string;
   title: string;
-  originType: 'EXTERNAL_URL' | 'LOCAL_ASSET';
+  originType: 'EXTERNAL_URL' | 'LOCAL_ASSET' | 'LOCAL_UPLOAD';
   originalUrl: string | null;
   localAssetId: string | null;
   durationSeconds: number | null;
-  status: 'METADATA_ONLY' | 'LOCAL_AVAILABLE' | 'UNAVAILABLE';
+  status:
+    | 'METADATA_ONLY'
+    | 'LOCAL_AVAILABLE'
+    | 'UNAVAILABLE'
+    | 'SELECTED'
+    | 'IMPORTED';
+  platform?: string | null;
+  externalId?: string | null;
+  platformMetadata?: Record<string, unknown>;
+  importedFileId?: string | null;
   licensing: z.infer<typeof remixSourceSchema>['licensing'];
   createdAt: string;
 }

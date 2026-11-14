@@ -23,6 +23,10 @@ interface Row extends QueryResultRow {
   updated_at: Date;
 }
 interface SourceRow extends QueryResultRow {
+  platform?: string;
+  external_id?: string;
+  platform_metadata?: Record<string, unknown>;
+  imported_file_id?: string;
   id: string;
   project_id: string;
   title: string;
@@ -160,6 +164,10 @@ export class VideoRemixRepository {
       durationSeconds: r.duration_seconds,
       status: r.status,
       licensing: r.licensing,
+      platform: r.platform ?? null,
+      externalId: r.external_id ?? null,
+      platformMetadata: r.platform_metadata ?? {},
+      importedFileId: r.imported_file_id ?? null,
       createdAt: r.created_at.toISOString(),
     }));
   }
