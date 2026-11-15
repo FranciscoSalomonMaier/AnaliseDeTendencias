@@ -89,3 +89,28 @@ export interface DiscoveredRemixVideo {
   eligibility: "REFERENCE_ONLY" | "UNAVAILABLE";
   importNote: string;
 }
+
+export interface RemixAnalysisSummary {
+  id: string;
+  source_id: string;
+  file_id: string;
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  config: { profile: 'ECONOMIC' | 'DETAILED'; model: string; version: string };
+  progress: { stage?: string; completed?: number; total?: number };
+  usage: { inputTokens: number; outputTokens: number; totalTokens: number };
+  error_message: string | null;
+}
+export interface RemixSegmentCandidate {
+  id: string;
+  analysis_id: string;
+  scene_ids: string[];
+  start_seconds: number;
+  end_seconds: number;
+  relevance: number;
+  confidence: number;
+  evidence_type: 'OBSERVED' | 'INFERRED' | 'UNCONFIRMED';
+  description: string;
+  justification: string;
+  selected: boolean;
+  revision: number;
+}

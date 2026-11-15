@@ -1,3 +1,4 @@
+import { RemixAnalysisPanel } from "./RemixAnalysisPanel";
 import { RemixImportPanel } from "./RemixImportPanel";
 import {
   remixStatusLabels,
@@ -279,6 +280,11 @@ export function VideoRemix() {
             disabled={busy || project.status !== "DRAFT"}
             onBusy={setBusy}
             onChanged={refresh}
+          />
+          <RemixAnalysisPanel
+            key={project.id}
+            project={project}
+            disabled={busy || project.status !== "DRAFT"}
           />
           <h2 className="text-xl font-semibold">Fontes do projeto</h2>
           {!project.sources.length && <p>Nenhuma fonte cadastrada.</p>}

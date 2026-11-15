@@ -14,3 +14,9 @@ export const remixAuthorizationLabels = {
   AUTHORIZED: "Uso autorizado",
   PUBLIC_DOMAIN: "Domínio público",
 };
+
+export function remixTimestamp(seconds) {
+  return `${Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, "0")}:${(seconds % 60).toFixed(2).padStart(5, "0")}`;
+}

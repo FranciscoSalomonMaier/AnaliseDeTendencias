@@ -218,3 +218,7 @@ Estrutura independente de projetos Single Source/Multi Source e cadastro de refe
 ## Video Remix — Etapa 2
 
 Pesquisa oficial no YouTube, candidatos, uploads autorizados com FFprobe, associação e limpeza de arquivos privados. Relatório, migration 016, configuração, testes e limitações: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA2.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA2.md).
+
+## Video Remix — Etapa 3
+
+Análise visual assíncrona de arquivos importados e autorizados, cortes e segmentos temporais, frames, descrições estruturadas, relevância, sequências e seleção de trechos. Configuração do modelo, migration 017, operação, testes, limitações e cenário GTA: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA3.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA3.md).

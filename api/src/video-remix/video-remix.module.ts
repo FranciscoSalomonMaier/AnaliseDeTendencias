@@ -1,3 +1,9 @@
+import { RemixAnalysisController } from './remix-analysis.controller';
+import { RemixAnalysisSettings } from './remix-analysis.settings';
+import { RemixAnalysisService } from './remix-analysis.service';
+import { RemixAnalysisWorker } from './remix-analysis.worker';
+import { RemixAnalysisMedia } from './remix-analysis.media';
+import { VideoSceneAnalysisService } from './video-scene-analysis.service';
 import { ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -54,8 +60,17 @@ import { VideoRemixService } from './video-remix.service';
       },
     }),
   ],
-  controllers: [VideoRemixController, RemixImportController],
+  controllers: [
+    VideoRemixController,
+    RemixImportController,
+    RemixAnalysisController,
+  ],
   providers: [
+    RemixAnalysisSettings,
+    RemixAnalysisService,
+    RemixAnalysisWorker,
+    RemixAnalysisMedia,
+    VideoSceneAnalysisService,
     VideoRemixRepository,
     VideoRemixService,
     RemixImportSettings,

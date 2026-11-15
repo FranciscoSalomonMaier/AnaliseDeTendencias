@@ -29,7 +29,7 @@ export interface RemixFile {
   createdAt: string;
   url: string;
 }
-interface FileRow {
+export interface FileRow {
   id: string;
   project_id: string;
   original_name: string;

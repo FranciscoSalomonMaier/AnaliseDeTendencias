@@ -130,3 +130,27 @@ export const remixImport = {
   },
 };
 export const remixFileUrl = (path) => `${API}${path}`;
+
+export const remixAnalysis = {
+  list: (project) => request(`/projects/${project}/analysis`),
+  estimate: (project, data) =>
+    request(`/projects/${project}/analysis/estimate`, "POST", data),
+  start: (project, data) =>
+    request(`/projects/${project}/analysis`, "POST", {
+      ...data,
+      confirm: true,
+    }),
+  results: (project, id) => request(`/projects/${project}/analysis/${id}`),
+  cancel: (project, id) =>
+    request(`/projects/${project}/analysis/${id}/cancel`, "POST", {}),
+  retry: (project, id) =>
+    request(`/projects/${project}/analysis/${id}/retry`, "POST", {}),
+  select: (project, id, candidate, data) =>
+    request(
+      `/projects/${project}/analysis/${id}/candidates/${candidate}`,
+      "PATCH",
+      data,
+    ),
+  frameUrl: (project, id, frame) =>
+    `${API}/video-remix/projects/${project}/analysis/${id}/frames/${frame}`,
+};

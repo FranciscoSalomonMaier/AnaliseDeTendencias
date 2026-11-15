@@ -58,7 +58,10 @@
     "test:video-remix": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=video-remix",
     "test:video-remix:integration": "node test/video-remix/video-remix.integration.cjs",
     "test:remix-import": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=\"(remix-discovery|video-remix)\"",
-    "test:remix-import:integration": "node test/video-remix/remix-import.integration.cjs"
+    "test:remix-import:integration": "node test/video-remix/remix-import.integration.cjs",
+    "migrate:remix-analysis": "node scripts/migrate-assets.cjs",
+    "test:remix-analysis": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=remix-analysis",
+    "test:remix-analysis:integration": "node test/video-remix/remix-analysis.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
