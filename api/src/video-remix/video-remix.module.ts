@@ -1,3 +1,10 @@
+import { RemixStoryController } from './remix-story.controller';
+import { RemixStorySettings } from './remix-story.settings';
+import { RemixStoryService } from './remix-story.service';
+import { RemixStoryWorker } from './remix-story.worker';
+import { RemixNarrativePlanner } from './remix-narrative-planner';
+import { RemixScriptAiService } from './remix-script-ai.service';
+import { RemixVoiceService } from './remix-voice.service';
 import { RemixAnalysisController } from './remix-analysis.controller';
 import { RemixAnalysisSettings } from './remix-analysis.settings';
 import { RemixAnalysisService } from './remix-analysis.service';
@@ -61,11 +68,18 @@ import { VideoRemixService } from './video-remix.service';
     }),
   ],
   controllers: [
+    RemixStoryController,
     VideoRemixController,
     RemixImportController,
     RemixAnalysisController,
   ],
   providers: [
+    RemixStorySettings,
+    RemixStoryService,
+    RemixStoryWorker,
+    RemixNarrativePlanner,
+    RemixScriptAiService,
+    RemixVoiceService,
     RemixAnalysisSettings,
     RemixAnalysisService,
     RemixAnalysisWorker,

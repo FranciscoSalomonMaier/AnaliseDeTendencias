@@ -65,7 +65,7 @@ import { SceneImagePromptBuilder } from './scene-image-prompt.builder';
 import { ImageFileValidator } from './image-file.validator';
 @Module({
   imports: [AiModule, ContentProjectModule],
-  exports: [StorageProvider],
+  exports: [StorageProvider, TtsProvider, TtsSettings, AudioFileValidator],
   controllers: [
     IntelligentEditingController,
     YoutubePublishingController,

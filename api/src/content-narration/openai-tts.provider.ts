@@ -30,14 +30,17 @@ export class OpenAiTtsProvider extends TtsProvider {
     });
     const startedAt = Date.now();
     try {
-      const response = await client.audio.speech.create({
+      const params = {
         model: request.settings.model,
         input: request.text,
         voice: request.settings.voice,
         instructions: request.instructions,
         response_format: request.settings.format,
         speed: request.settings.speed,
-      });
+      };
+      const response = request.signal
+        ? await client.audio.speech.create(params, { signal: request.signal })
+        : await client.audio.speech.create(params);
       const declared = Number(response.headers.get('content-length'));
       if (declared > this.defaults.uploadMaxBytes)
         throw new BadGatewayException('Áudio do provider acima do limite.');

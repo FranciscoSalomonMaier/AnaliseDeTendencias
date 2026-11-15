@@ -154,3 +154,31 @@ export const remixAnalysis = {
   frameUrl: (project, id, frame) =>
     `${API}/video-remix/projects/${project}/analysis/${id}/frames/${frame}`,
 };
+
+export const remixStory = {
+  options: (project) => request(`/projects/${project}/story/options`),
+  evidence: (project) => request(`/projects/${project}/story/evidence`),
+  jobs: (project) => request(`/projects/${project}/story/jobs`),
+  history: (project) => request(`/projects/${project}/story/scripts`),
+  get: (project, id) => request(`/projects/${project}/story/scripts/${id}`),
+  generate: (project, config) =>
+    request(`/projects/${project}/story/scripts`, "POST", {
+      confirm: true,
+      config,
+    }),
+  save: (project, script, data) =>
+    request(`/projects/${project}/story/scripts/${script.id}`, "PATCH", {
+      revision: script.revision,
+      ...data,
+    }),
+  run: (project, script, operation, data = {}) =>
+    request(
+      `/projects/${project}/story/scripts/${script.id}/${operation}`,
+      "POST",
+      { confirm: true, revision: script.revision, ...data },
+    ),
+  cancel: (project, id) =>
+    request(`/projects/${project}/story/jobs/${id}/cancel`, "POST", {}),
+  audioUrl: (project, script, audio) =>
+    `${API}/video-remix/projects/${project}/story/scripts/${script}/audio/${audio}`,
+};

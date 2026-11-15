@@ -222,3 +222,7 @@ Pesquisa oficial no YouTube, candidatos, uploads autorizados com FFprobe, associ
 ## Video Remix — Etapa 3
 
 Análise visual assíncrona de arquivos importados e autorizados, cortes e segmentos temporais, frames, descrições estruturadas, relevância, sequências e seleção de trechos. Configuração do modelo, migration 017, operação, testes, limitações e cenário GTA: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA3.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA3.md).
+
+## Video Remix — Etapa 4
+
+Roteiro estruturado a partir dos trechos selecionados, revisão de suporte visual, editor versionado, TTS completo/segmentado, cache e sincronização preliminar. Migration 018, configuração, operação, testes e limitações: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA4.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA4.md).

@@ -1,5 +1,6 @@
 import type { NarrationSettings } from '../content-projects/content-project.schema';
 export interface SpeechGenerationRequest {
+  signal?: AbortSignal;
   text: string;
   settings: NarrationSettings;
   instructions: string;

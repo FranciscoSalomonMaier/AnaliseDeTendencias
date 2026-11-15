@@ -114,3 +114,21 @@ export interface RemixSegmentCandidate {
   selected: boolean;
   revision: number;
 }
+
+export interface RemixStoryConfig {
+  language: 'pt-BR';
+  style: 'CURIOSIDADE' | 'NARRATIVO' | 'DINAMICO' | 'EXPLICATIVO';
+  targetDuration: number;
+  voice: string;
+  speed: number;
+}
+export interface RemixScriptSegment {
+  id: string;
+  kind: 'HOOK' | 'DEVELOPMENT' | 'REVEAL' | 'ENDING';
+  text: string;
+  candidate_ids: string[];
+  estimated_seconds: number;
+  validation: { status: 'PENDING' | 'SUPPORTED' | 'PARTIALLY_SUPPORTED' | 'UNSUPPORTED'; reason?: string; suggestedRewrite?: string };
+  narration: { id: string; duration_seconds: number; format: 'mp3' | 'wav'; provider: string; model: string; character_count: number } | null;
+  sync: { visualSeconds: number; audioSeconds: number | null; differenceSeconds: number | null; status: 'PENDING' | 'READY' | 'AUDIO_LONGER'; suggestions: string[] };
+}

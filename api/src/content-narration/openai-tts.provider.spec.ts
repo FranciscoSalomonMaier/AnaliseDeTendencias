@@ -117,4 +117,18 @@ describe('OpenAI TTS adapter', () => {
       jest.useRealTimers();
     }
   });
+  test('forwards cancellation signal without changing legacy callers', async () => {
+    mockSpeech.mockResolvedValue(new Response(new Uint8Array([1, 2, 3])));
+    const provider = new OpenAiTtsProvider(
+      { get: () => 'test-key' } as unknown as ConfigService,
+      settings,
+    );
+    const controller = new AbortController();
+    await provider.generateSpeech({ ...request, signal: controller.signal });
+    expect(mockSpeech).toHaveBeenCalledWith(
+      expect.objectContaining({ input: request.text }),
+      { signal: controller.signal },
+    );
+    expect(mockSpeech).toHaveBeenCalledTimes(1);
+  });
 });

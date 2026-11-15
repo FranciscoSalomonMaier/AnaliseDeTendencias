@@ -149,6 +149,11 @@ export class RemixFilesService
         );
         if (!l.rows[0].ok) return;
         try {
+          const tables = (
+            await c.query<{ frames: string | null; audio: string | null }>(
+              "SELECT to_regclass('video_remix_scene_frames')::text frames,to_regclass('video_remix_narrations')::text audio",
+            )
+          ).rows[0];
           for (const r of (
             await c.query<{ storage_key: string }>(
               'SELECT storage_key FROM video_remix_storage_cleanup WHERE not_before<=NOW() ORDER BY created_at LIMIT 100',
@@ -156,7 +161,7 @@ export class RemixFilesService
           ).rows) {
             try {
               const reference = await c.query(
-                'SELECT 1 FROM video_remix_files WHERE storage_key=$1',
+                `SELECT 1 FROM video_remix_files WHERE storage_key=$1 ${tables.frames ? 'UNION ALL SELECT 1 FROM video_remix_scene_frames WHERE storage_key=$1' : ''} ${tables.audio ? 'UNION ALL SELECT 1 FROM video_remix_narrations WHERE storage_key=$1' : ''}`,
                 [r.storage_key],
               );
               if (reference.rowCount) {

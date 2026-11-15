@@ -1,0 +1,23 @@
+{
+  "projectFixture": "remix-gta-scenario.json",
+  "scriptConfiguration": {
+    "language": "pt-BR",
+    "style": "CURIOSIDADE",
+    "targetDuration": 35,
+    "voice": "cedar",
+    "speed": 1
+  },
+  "prerequisites": [
+    "Gameplay obtido legitimamente, importado e autorizado pelo titular.",
+    "Análises da Etapa 3 concluídas e atuais.",
+    "Trechos relevantes selecionados explicitamente na Análise Inteligente."
+  ],
+  "review": [
+    "Não confirmar ovo, passagem secreta, personagem ou localização apenas pelo tema.",
+    "Conferir cada afirmação com os frames e o vídeo original.",
+    "Reformular ou trocar cenas de segmentos PARTIALLY_SUPPORTED ou UNSUPPORTED.",
+    "Comparar duração medida da narração com 35 segundos e com cada trecho visual.",
+    "Repetir em MULTI_SOURCE e verificar a origem de cada associação."
+  ],
+  "note": "Este arquivo prepara uma validação manual; não contém gameplay, roteiro pronto nem narração de produção."
+}
