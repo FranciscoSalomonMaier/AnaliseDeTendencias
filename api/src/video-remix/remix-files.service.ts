@@ -154,8 +154,9 @@ export class RemixFilesService
               frames: string | null;
               audio: string | null;
               exports: string | null;
+              deliveries: string | null;
             }>(
-              "SELECT to_regclass('video_remix_scene_frames')::text frames,to_regclass('video_remix_narrations')::text audio,to_regclass('video_remix_exports')::text exports",
+              "SELECT to_regclass('video_remix_scene_frames')::text frames,to_regclass('video_remix_narrations')::text audio,to_regclass('video_remix_exports')::text exports,to_regclass('video_remix_deliveries')::text deliveries",
             )
           ).rows[0];
           for (const r of (
@@ -165,7 +166,7 @@ export class RemixFilesService
           ).rows) {
             try {
               const reference = await c.query(
-                `SELECT 1 FROM video_remix_files WHERE storage_key=$1 ${tables.frames ? 'UNION ALL SELECT 1 FROM video_remix_scene_frames WHERE storage_key=$1' : ''} ${tables.audio ? 'UNION ALL SELECT 1 FROM video_remix_narrations WHERE storage_key=$1' : ''} ${tables.exports ? 'UNION ALL SELECT 1 FROM video_remix_exports WHERE storage_key=$1' : ''}`,
+                `SELECT 1 FROM video_remix_files WHERE storage_key=$1 ${tables.frames ? 'UNION ALL SELECT 1 FROM video_remix_scene_frames WHERE storage_key=$1' : ''} ${tables.audio ? 'UNION ALL SELECT 1 FROM video_remix_narrations WHERE storage_key=$1' : ''} ${tables.exports ? 'UNION ALL SELECT 1 FROM video_remix_exports WHERE storage_key=$1' : ''} ${tables.deliveries ? 'UNION ALL SELECT 1 FROM video_remix_deliveries WHERE storage_key=$1' : ''}`,
                 [r.storage_key],
               );
               if (reference.rowCount) {

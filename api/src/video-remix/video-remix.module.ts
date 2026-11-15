@@ -1,3 +1,7 @@
+import { RemixReviewService } from './remix-review.service';
+import { RemixReviewMedia } from './remix-review.media';
+import { RemixReviewWorker } from './remix-review.worker';
+import { RemixReviewController } from './remix-review.controller';
 import { RemixAssemblyController } from './remix-assembly.controller';
 import { RemixAssemblyService } from './remix-assembly.service';
 import { RemixAssemblyRenderer } from './remix-assembly.renderer';
@@ -72,6 +76,7 @@ import { VideoRemixService } from './video-remix.service';
     }),
   ],
   controllers: [
+    RemixReviewController,
     RemixAssemblyController,
     RemixStoryController,
     VideoRemixController,
@@ -79,6 +84,9 @@ import { VideoRemixService } from './video-remix.service';
     RemixAnalysisController,
   ],
   providers: [
+    RemixReviewService,
+    RemixReviewMedia,
+    RemixReviewWorker,
     RemixAssemblyService,
     RemixAssemblyRenderer,
     RemixAssemblyWorker,

@@ -205,3 +205,36 @@ export const remixAssembly = {
   fileUrl: (p, id, download = false) =>
     `${API}/video-remix/projects/${p}/assembly/renders/${id}/file${download ? "?download=1" : ""}`,
 };
+
+export const remixReview = {
+  list: (p) => request(`/projects/${p}/review/renders`),
+  detail: (p, id) => request(`/projects/${p}/review/renders/${id}`),
+  presets: (p) => request(`/projects/${p}/review/presets`),
+  compare: (p, id, otherProject, otherId) =>
+    request(
+      `/projects/${p}/review/renders/${id}/compare?projectId=${encodeURIComponent(otherProject)}&renderId=${encodeURIComponent(otherId)}`,
+    ),
+  rate: (p, id, data) =>
+    request(`/projects/${p}/review/renders/${id}/rating`, "PATCH", data),
+  enqueue: (p, id, kind, data = {}) =>
+    request(`/projects/${p}/review/renders/${id}/jobs`, "POST", {
+      kind,
+      confirm: true,
+      ...data,
+    }),
+  jobs: (p) => request(`/projects/${p}/review/jobs`),
+  cancel: (p, id) =>
+    request(`/projects/${p}/review/jobs/${id}/cancel`, "POST", {}),
+  deliveries: (p) => request(`/projects/${p}/review/deliveries`),
+  metadata: (p, id, revision, metadata) =>
+    request(`/projects/${p}/review/deliveries/${id}/metadata`, "PATCH", {
+      revision,
+      metadata,
+    }),
+  removeRender: (p, id) =>
+    request(`/projects/${p}/review/renders/${id}`, "DELETE"),
+  removeDelivery: (p, id) =>
+    request(`/projects/${p}/review/deliveries/${id}`, "DELETE"),
+  fileUrl: (p, id, download = false) =>
+    `${API}/video-remix/projects/${p}/review/deliveries/${id}/file${download ? "?download=1" : ""}`,
+};

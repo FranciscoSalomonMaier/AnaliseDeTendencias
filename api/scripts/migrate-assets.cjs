@@ -37,6 +37,7 @@ const { Client } = require('pg');
       '017_video_remix_analysis.sql',
       '018_video_remix_script.sql',
       '019_video_remix_assembly.sql',
+      '020_video_remix_review.sql',
     ]) {
       const applied = await client.query(
         'SELECT 1 FROM content_schema_migrations WHERE name=$1',

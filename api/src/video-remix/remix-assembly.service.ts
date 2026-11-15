@@ -136,6 +136,46 @@ export class RemixAssemblyService {
       );
     return current;
   }
+  async historical(t: TimelineRow) {
+    await this.story.analyses.authorize(t.project_id);
+    try {
+      for (const sourceId of new Set(t.data.items.map((i) => i.sourceId))) {
+        const { f } = await this.story.analyses.source(t.project_id, sourceId);
+        if (
+          t.data.items.some(
+            (i) =>
+              i.sourceId === sourceId &&
+              (i.fileId !== f.id ||
+                i.sourceStart < 0 ||
+                i.sourceEnd > f.duration_seconds + 0.01),
+          )
+        )
+          throw new Error('Fonte alterada');
+      }
+      for (const audio of t.data.segments) {
+        const r = await this.db.query<{
+          storage_key: string;
+          byte_size: number;
+        }>(
+          'SELECT storage_key,byte_size FROM video_remix_narrations WHERE id=$1 AND project_id=$2',
+          [audio.audioId, t.project_id],
+        );
+        if (
+          r.rows[0]?.storage_key !== audio.audioKey ||
+          (
+            await this.story.analyses.files.storage
+              .stat?.(audio.audioKey)
+              .catch(() => null)
+          )?.size !== audio.audioBytes
+        )
+          throw new Error('Áudio ausente');
+      }
+    } catch {
+      throw new ConflictException(
+        'Fontes ou áudios desta versão estão indisponíveis ou sem autorização atual.',
+      );
+    }
+  }
   dto(t: TimelineRow, stale = false) {
     return {
       id: t.id,
@@ -273,6 +313,10 @@ export class RemixAssemblyService {
     const previous = await this.row(project, id),
       input = await this.fresh(previous);
     const data = buildRemixTimeline(input, r.data.config, r.data.items);
+    data.manualAdjustments =
+      previous.data.manualAdjustments === undefined
+        ? undefined
+        : previous.data.manualAdjustments + 1;
     if (r.data.subtitles?.length) {
       try {
         validateSegments(r.data.subtitles, data.duration);
@@ -339,13 +383,32 @@ export class RemixAssemblyService {
           return prior.rows[0];
         }
         const q = await db.query<{ count: string }>(
-          "SELECT count(*) FROM video_remix_exports WHERE status IN ('QUEUED','RUNNING')",
+          "SELECT (SELECT count(*) FROM video_remix_exports WHERE status IN ('QUEUED','RUNNING'))+(SELECT count(*) FROM video_remix_finalization_jobs WHERE status IN ('QUEUED','RUNNING')) count",
         );
         if (Number(q.rows[0].count) >= this.settings.maxQueued)
           throw new ConflictException('Fila de renderização cheia.');
         const result = randomUUID();
         await db.query(
-          "INSERT INTO video_remix_exports(id,project_id,timeline_id,kind,status,fingerprint,options) VALUES($1,$2,$3,$4,'QUEUED',$5,$6)",
+          'SELECT id FROM video_remix_projects WHERE id=$1 FOR UPDATE',
+          [project],
+        );
+        const version = (
+          await db.query<{ version: number }>(
+            'UPDATE video_remix_projects SET render_sequence=render_sequence+1 WHERE id=$1 RETURNING render_sequence version',
+            [project],
+          )
+        ).rows[0].version;
+        const context = await this.story.analyses.authorize(project);
+        const origin = (await this.story.analyses.repo.sources(project))
+          .filter((s) => t.data.items.some((i) => i.sourceId === s.id))
+          .map((s) => ({
+            id: s.id,
+            title: s.title,
+            originalUrl: s.originalUrl,
+            licensing: s.licensing,
+          }));
+        await db.query(
+          "INSERT INTO video_remix_exports(id,project_id,timeline_id,kind,status,fingerprint,options,version,metadata) VALUES($1,$2,$3,$4,'QUEUED',$5,$6,$7,$8)",
           [
             result,
             project,
@@ -355,6 +418,14 @@ export class RemixAssemblyService {
             {
               confirmApproximateSubtitles:
                 parsed.data.confirmApproximateSubtitles,
+            },
+            version,
+            {
+              mode: context.mode,
+              title: context.title,
+              topic: context.topic,
+              language: context.narrationLanguage,
+              origins: origin,
             },
           ],
         );
@@ -371,7 +442,7 @@ export class RemixAssemblyService {
     return {
       items: (
         await this.db.query(
-          'SELECT id,timeline_id,kind,status,progress,byte_size,duration_seconds,width,height,metadata,error_message,attempts,created_at,started_at,completed_at FROM video_remix_exports WHERE project_id=$1 ORDER BY created_at DESC LIMIT 100',
+          'SELECT id,version,timeline_id,kind,status,progress,byte_size,duration_seconds,width,height,metadata,error_message,attempts,created_at,started_at,completed_at FROM video_remix_exports WHERE project_id=$1 ORDER BY created_at DESC LIMIT 100',
           [project],
         )
       ).rows,
@@ -398,11 +469,12 @@ export class RemixAssemblyService {
     if (!r.rows[0])
       throw new NotFoundException('Vídeo renderizado indisponível.');
     const f = r.rows[0];
-    await this.fresh(await this.row(project, f.timeline_id));
+    await this.historical(await this.row(project, f.timeline_id));
     const storage = this.story.analyses.files.storage;
     if (
       !storage.openRead ||
-      (await storage.stat?.(f.storage_key))?.size !== Number(f.byte_size)
+      (await storage.stat?.(f.storage_key).catch(() => null))?.size !==
+        Number(f.byte_size)
     )
       throw new NotFoundException('Vídeo não encontrado no storage.');
     return {

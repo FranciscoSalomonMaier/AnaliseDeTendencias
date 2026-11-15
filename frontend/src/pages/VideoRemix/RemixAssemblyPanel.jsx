@@ -38,7 +38,7 @@ const cutFields = [
   "transitionSeconds",
   "zoom",
 ];
-export function RemixAssemblyPanel({ project, disabled }) {
+export function RemixAssemblyPanel({ project, disabled, requestedTimeline }) {
   const [scripts, setScripts] = useState([]),
     [scriptId, setScriptId] = useState(""),
     [versions, setVersions] = useState([]),
@@ -49,9 +49,45 @@ export function RemixAssemblyPanel({ project, disabled }) {
     [dirty, setDirty] = useState(false),
     [review, setReview] = useState(false),
     [editCaptions, setEditCaptions] = useState(false);
+  const panel = useRef(null);
   const current = useRef(null),
     dirtyRef = useRef(false),
     seen = useRef(new Set());
+  useEffect(() => {
+    if (!requestedTimeline?.id) return;
+    if (dirtyRef.current) {
+      if (panel.current) {
+        panel.current.open = true;
+        panel.current.scrollIntoView({ block: "start", behavior: "smooth" });
+      }
+      setError(
+        "Salve ou descarte a edição atual antes de abrir outra timeline.",
+      );
+      return;
+    }
+    let live = true;
+    remixAssembly
+      .get(project.id, requestedTimeline.id)
+      .then((t) => {
+        if (!live) return;
+        setTimeline(t);
+        current.current = t.id;
+        setDirty(false);
+        dirtyRef.current = false;
+        setReview(false);
+        setEditCaptions(false);
+        if (panel.current) {
+          panel.current.open = true;
+          panel.current.scrollIntoView({ block: "start", behavior: "smooth" });
+        }
+      })
+      .catch((e) => {
+        if (live) setError(e.message);
+      });
+    return () => {
+      live = false;
+    };
+  }, [project.id, requestedTimeline]);
   async function refresh() {
     const [h, v, j] = await Promise.all([
       remixStory.history(project.id),
@@ -215,7 +251,11 @@ export function RemixAssemblyPanel({ project, disabled }) {
     player = completed[0],
     hasPreview = completed.some((j) => j.kind === "PREVIEW");
   return (
-    <details className="min-w-0 rounded-xl border border-border p-4" open>
+    <details
+      ref={panel}
+      className="min-w-0 rounded-xl border border-border p-4"
+      open
+    >
       <summary className="cursor-pointer text-xl font-semibold">
         Montagem e Edição
       </summary>

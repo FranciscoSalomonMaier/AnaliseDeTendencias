@@ -1,3 +1,4 @@
+import { RemixReviewPanel } from "./RemixReviewPanel";
 import { RemixAssemblyPanel } from "./RemixAssemblyPanel";
 import { RemixStoryPanel } from "./RemixStoryPanel";
 import { RemixAnalysisPanel } from "./RemixAnalysisPanel";
@@ -30,6 +31,7 @@ function readRoute() {
   };
 }
 export function VideoRemix() {
+  const [assemblySelection, setAssemblySelection] = useState(null);
   const [route, setRoute] = useState(readRoute),
     [projects, setProjects] = useState({ items: [], total: 0 }),
     [project, setProject] = useState(null),
@@ -288,15 +290,26 @@ export function VideoRemix() {
             project={project}
             disabled={busy || project.status !== "DRAFT"}
           />
-          <RemixStoryPanel
-            key={`story-${project.id}`}
-            project={project}
-            disabled={busy || project.status !== "DRAFT"}
-          />
+          <div id="remix-story-editor">
+            <RemixStoryPanel
+              key={`story-${project.id}`}
+              project={project}
+              disabled={busy || project.status !== "DRAFT"}
+            />
+          </div>
           <RemixAssemblyPanel
+            requestedTimeline={assemblySelection}
             key={`assembly-${project.id}`}
             project={project}
             disabled={busy || project.status !== "DRAFT"}
+          />
+          <RemixReviewPanel
+            key={`review-${project.id}`}
+            project={project}
+            disabled={busy}
+            onEditTimeline={(id) =>
+              setAssemblySelection({ id, nonce: Date.now() })
+            }
           />
           <h2 className="text-xl font-semibold">Fontes do projeto</h2>
           {!project.sources.length && <p>Nenhuma fonte cadastrada.</p>}

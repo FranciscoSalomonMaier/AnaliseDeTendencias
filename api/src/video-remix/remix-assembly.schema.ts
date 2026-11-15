@@ -81,6 +81,7 @@ export interface AssemblySegment {
   timelineEnd: number;
 }
 export interface AssemblyData {
+  manualAdjustments?: number;
   scriptId: string;
   scriptVersion: number;
   scriptRevision: number;

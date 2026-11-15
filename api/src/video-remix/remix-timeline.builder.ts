@@ -220,6 +220,7 @@ export function buildRemixTimeline(
   if (items.some((i) => i.freeze > 0))
     warnings.push('Há congelamento breve de frame explicitamente configurado.');
   return {
+    manualAdjustments: 0,
     scriptId: input.scriptId,
     scriptVersion: input.scriptVersion,
     scriptRevision: input.scriptRevision,

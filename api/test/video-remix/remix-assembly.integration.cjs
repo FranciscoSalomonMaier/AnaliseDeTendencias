@@ -98,7 +98,7 @@ const video = (id) => ({
     db.pool.on('error', (e) => console.error('Test database pool:', e.code));
     for (const name of fs
       .readdirSync(resolve('migrations'))
-      .filter((f) => /^0(0[4-9]|1[0-9])_.*\.sql$/.test(f))
+      .filter((f) => /^0(0[4-9]|1[0-9]|20)_.*\.sql$/.test(f))
       .sort()) {
       const sql = fs.readFileSync(resolve('migrations', name), 'utf8');
       await db.query(sql);

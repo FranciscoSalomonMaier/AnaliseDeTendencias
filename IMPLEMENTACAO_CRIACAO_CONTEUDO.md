@@ -230,3 +230,7 @@ Roteiro estruturado a partir dos trechos selecionados, revisão de suporte visua
 ## Video Remix — Etapa 5
 
 Timeline versionada, montagem real de clipes com FFmpeg, enquadramento vertical, narração/mixagem, legendas revisáveis, prévia e MP4 final privados. Migration 019, operação, testes, limites e roteiro de validação GTA: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA5.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA5.md).
+
+## Video Remix — Etapa 6
+
+Revisão final, navegação pela timeline, histórico/comparação de versões e modos, avaliações manuais, validação técnica, exportação com reutilização/conversão e metadados de publicação. Migration 020, configuração, operação, testes e limitações: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA6.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA6.md).

@@ -136,7 +136,7 @@ export class RemixAssemblyWorker
                 result.duration,
                 result.width,
                 result.height,
-                result.metadata,
+                { ...job.metadata, ...result.metadata },
                 { stage: 'COMPLETED', completed: 1, total: 1 },
               ],
             );
