@@ -150,8 +150,12 @@ export class RemixFilesService
         if (!l.rows[0].ok) return;
         try {
           const tables = (
-            await c.query<{ frames: string | null; audio: string | null }>(
-              "SELECT to_regclass('video_remix_scene_frames')::text frames,to_regclass('video_remix_narrations')::text audio",
+            await c.query<{
+              frames: string | null;
+              audio: string | null;
+              exports: string | null;
+            }>(
+              "SELECT to_regclass('video_remix_scene_frames')::text frames,to_regclass('video_remix_narrations')::text audio,to_regclass('video_remix_exports')::text exports",
             )
           ).rows[0];
           for (const r of (
@@ -161,7 +165,7 @@ export class RemixFilesService
           ).rows) {
             try {
               const reference = await c.query(
-                `SELECT 1 FROM video_remix_files WHERE storage_key=$1 ${tables.frames ? 'UNION ALL SELECT 1 FROM video_remix_scene_frames WHERE storage_key=$1' : ''} ${tables.audio ? 'UNION ALL SELECT 1 FROM video_remix_narrations WHERE storage_key=$1' : ''}`,
+                `SELECT 1 FROM video_remix_files WHERE storage_key=$1 ${tables.frames ? 'UNION ALL SELECT 1 FROM video_remix_scene_frames WHERE storage_key=$1' : ''} ${tables.audio ? 'UNION ALL SELECT 1 FROM video_remix_narrations WHERE storage_key=$1' : ''} ${tables.exports ? 'UNION ALL SELECT 1 FROM video_remix_exports WHERE storage_key=$1' : ''}`,
                 [r.storage_key],
               );
               if (reference.rowCount) {

@@ -226,3 +226,7 @@ Análise visual assíncrona de arquivos importados e autorizados, cortes e segme
 ## Video Remix — Etapa 4
 
 Roteiro estruturado a partir dos trechos selecionados, revisão de suporte visual, editor versionado, TTS completo/segmentado, cache e sincronização preliminar. Migration 018, configuração, operação, testes e limitações: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA4.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA4.md).
+
+## Video Remix — Etapa 5
+
+Timeline versionada, montagem real de clipes com FFmpeg, enquadramento vertical, narração/mixagem, legendas revisáveis, prévia e MP4 final privados. Migration 019, operação, testes, limites e roteiro de validação GTA: [IMPLEMENTACAO_VIDEO_REMIX_ETAPA5.md](IMPLEMENTACAO_VIDEO_REMIX_ETAPA5.md).

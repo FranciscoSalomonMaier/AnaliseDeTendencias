@@ -182,3 +182,26 @@ export const remixStory = {
   audioUrl: (project, script, audio) =>
     `${API}/video-remix/projects/${project}/story/scripts/${script}/audio/${audio}`,
 };
+
+export const remixAssembly = {
+  list: (p) => request(`/projects/${p}/assembly/timelines`),
+  create: (p, scriptId) =>
+    request(`/projects/${p}/assembly/timelines`, "POST", {
+      scriptId,
+      config: {},
+    }),
+  get: (p, id) => request(`/projects/${p}/assembly/timelines/${id}`),
+  save: (p, id, data) =>
+    request(`/projects/${p}/assembly/timelines/${id}`, "PATCH", data),
+  render: (p, id, kind, confirmApproximateSubtitles = false) =>
+    request(`/projects/${p}/assembly/timelines/${id}/render`, "POST", {
+      kind,
+      confirm: true,
+      confirmApproximateSubtitles,
+    }),
+  renders: (p) => request(`/projects/${p}/assembly/renders`),
+  cancel: (p, id) =>
+    request(`/projects/${p}/assembly/renders/${id}/cancel`, "POST", {}),
+  fileUrl: (p, id, download = false) =>
+    `${API}/video-remix/projects/${p}/assembly/renders/${id}/file${download ? "?download=1" : ""}`,
+};

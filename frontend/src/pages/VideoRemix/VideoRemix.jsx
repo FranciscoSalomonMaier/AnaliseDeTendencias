@@ -1,3 +1,4 @@
+import { RemixAssemblyPanel } from "./RemixAssemblyPanel";
 import { RemixStoryPanel } from "./RemixStoryPanel";
 import { RemixAnalysisPanel } from "./RemixAnalysisPanel";
 import { RemixImportPanel } from "./RemixImportPanel";
@@ -289,6 +290,11 @@ export function VideoRemix() {
           />
           <RemixStoryPanel
             key={`story-${project.id}`}
+            project={project}
+            disabled={busy || project.status !== "DRAFT"}
+          />
+          <RemixAssemblyPanel
+            key={`assembly-${project.id}`}
             project={project}
             disabled={busy || project.status !== "DRAFT"}
           />

@@ -1,3 +1,7 @@
+import { RemixAssemblyController } from './remix-assembly.controller';
+import { RemixAssemblyService } from './remix-assembly.service';
+import { RemixAssemblyRenderer } from './remix-assembly.renderer';
+import { RemixAssemblyWorker } from './remix-assembly.worker';
 import { RemixStoryController } from './remix-story.controller';
 import { RemixStorySettings } from './remix-story.settings';
 import { RemixStoryService } from './remix-story.service';
@@ -68,12 +72,16 @@ import { VideoRemixService } from './video-remix.service';
     }),
   ],
   controllers: [
+    RemixAssemblyController,
     RemixStoryController,
     VideoRemixController,
     RemixImportController,
     RemixAnalysisController,
   ],
   providers: [
+    RemixAssemblyService,
+    RemixAssemblyRenderer,
+    RemixAssemblyWorker,
     RemixStorySettings,
     RemixStoryService,
     RemixStoryWorker,

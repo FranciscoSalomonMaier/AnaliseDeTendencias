@@ -64,7 +64,9 @@
     "test:remix-analysis:integration": "node test/video-remix/remix-analysis.integration.cjs",
     "migrate:remix-story": "node scripts/migrate-assets.cjs",
     "test:remix-story": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=remix-story",
-    "test:remix-story:integration": "node test/video-remix/remix-story.integration.cjs"
+    "test:remix-story:integration": "node test/video-remix/remix-story.integration.cjs",
+    "migrate:remix-assembly": "node scripts/migrate-assets.cjs",
+    "test:remix-assembly:integration": "node test/video-remix/remix-assembly.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
