@@ -54,7 +54,7 @@ export class VideoSceneAnalysisService {
       schema: sequenceResult,
       systemPrompt:
         system +
-        ' Agrupe apenas cenas consecutivas fornecidas, em ordem, sem ultrapassar intervalos. Sugira sequências complementares quando houver evidência. Não agrupe apenas por palavras-chave. Uma continuidade não diretamente observada deve ser INFERRED ou UNCONFIRMED. Pode retornar lista vazia.',
+        ' Em sceneIds, copie EXATAMENTE os UUIDs do campo id das cenas fornecidas; nunca use índices ou invente IDs. Agrupe apenas cenas consecutivas fornecidas, em ordem, sem ultrapassar intervalos. Sugira sequências complementares quando houver evidência. Não agrupe apenas por palavras-chave. Uma continuidade não diretamente observada deve ser INFERRED ou UNCONFIRMED. Pode retornar lista vazia.',
       userPrompt: JSON.stringify({ topic, scenes }),
       maxOutputTokens: c.maxOutputTokens,
       disableRetries: true,

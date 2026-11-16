@@ -24,6 +24,9 @@ export function RemixAnalysisPanel({ project, disabled }) {
     [order, setOrder] = useState("relevance"),
     [preview, setPreview] = useState(null),
     [comparison, setComparison] = useState([]);
+  const resultAnchor = useRef(null),
+    candidatesAnchor = useRef(null),
+    pendingNavigation = useRef(false);
   const player = useRef(null),
     inflight = useRef(false);
   const load = useCallback(async () => {
@@ -42,6 +45,22 @@ export function RemixAnalysisPanel({ project, disabled }) {
       clearInterval(timer);
     };
   }, [load]);
+  useEffect(() => {
+    const latest = jobs.find((job) => job.id === result?.analysis.id);
+    if (!latest || latest.status === result.analysis.status) return;
+    let active = true;
+    remixAnalysis.results(project.id, latest.id)
+      .then((fresh) => { if (active) setResult(fresh); })
+      .catch((e) => { if (active) setError(e.message); });
+    return () => { active = false; };
+  }, [jobs, project.id, result]);
+  useEffect(() => {
+    if (!result || !pendingNavigation.current) return;
+    pendingNavigation.current = false;
+    const target = candidatesAnchor.current ?? resultAnchor.current;
+    target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    target?.focus?.({ preventScroll: true });
+  }, [result]);
   async function act(fn) {
     if (inflight.current) return;
     inflight.current = true;
@@ -64,7 +83,9 @@ export function RemixAnalysisPanel({ project, disabled }) {
   const sourceName = (id) =>
     project.sources.find((s) => s.id === id)?.title ?? "Fonte removida";
   const show = async (id) => {
-    setResult(await remixAnalysis.results(project.id, id));
+    const fresh = await remixAnalysis.results(project.id, id);
+    pendingNavigation.current = true;
+    setResult(fresh);
     setComparison([]);
     setPreview(null);
   };
@@ -308,6 +329,15 @@ export function RemixAnalysisPanel({ project, disabled }) {
                       Cancelar
                     </button>
                   )}
+                  {j.status === "FAILED" && j.progress?.stage === "RELEVANCE" && (
+                    <button className={button} disabled={busy || disabled}
+                      onClick={() => void act(async () => {
+                        await remixAnalysis.recover(project.id, j.id);
+                        await show(j.id);
+                      })}>
+                      Recuperar trechos sem usar IA
+                    </button>
+                  )}
                   {["FAILED", "CANCELLED"].includes(j.status) && (
                     <button
                       className={button}
@@ -333,7 +363,16 @@ export function RemixAnalysisPanel({ project, disabled }) {
         </details>
       )}
       {result && (
-        <div className="space-y-3">
+        <div className="space-y-3" ref={resultAnchor} tabIndex={-1}>
+          <p role="status">
+            Análise aberta: {phases[result.analysis.status] ?? result.analysis.status}
+            {" · "}{result.scenes.length} cenas · {result.candidates.length} trechos.
+          </p>
+          {result.candidates.length === 0 && (
+            <p>Esta análise ainda não possui trechos selecionáveis. Consulte o status no histórico; se houver falha na finalização, use a recuperação sem IA.</p>
+          )}
+          <details>
+          <summary className="cursor-pointer font-semibold">Cenas identificadas ({result.scenes.length}) — expandir detalhes</summary>
           <h3 className="font-semibold">
             Cenas identificadas — {sourceName(result.analysis.source_id)}
           </h3>
@@ -385,6 +424,7 @@ export function RemixAnalysisPanel({ project, disabled }) {
               </details>
             </article>
           ))}
+          </details>
         </div>
       )}
       {complementary.length > 0 && (
@@ -403,8 +443,8 @@ export function RemixAnalysisPanel({ project, disabled }) {
         </div>
       )}
       {candidates.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-semibold">Trechos sugeridos</h3>
+        <div className="space-y-3" ref={candidatesAnchor} tabIndex={-1}>
+          <h3 className="font-semibold">Trechos sugeridos ({candidates.length})</h3>
           <label>
             Ordenação
             <select

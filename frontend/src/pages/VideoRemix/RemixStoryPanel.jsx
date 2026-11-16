@@ -456,11 +456,24 @@ export function RemixStoryPanel({ project, disabled }) {
               Gerar narração completa
             </button>
           </div>
-          {!allSupported && (
-            <p>
-              Revise os avisos, reformule o texto ou associe outra cena.
-              Segmentos sem suporte suficiente não serão narrados.
-            </p>
+          {(locked || dirty || !allSupported) && (
+            <div role="status" className="space-y-2 rounded-lg border border-amber-400/40 p-3">
+              <p className="font-semibold">Por que a narração está bloqueada?</p>
+              {disabled && <p>O projeto está indisponível para edição.</p>}
+              {busy && <p>Aguarde a operação em andamento.</p>}
+              {running && <p>Há uma operação na fila ou em processamento. Consulte o histórico.</p>}
+              {dirty && <p>Salve as alterações do roteiro e valide novamente.</p>}
+              {script.stale && <p>As fontes ou os trechos mudaram. Revise as associações e valide novamente.</p>}
+              {script.segments.map((segment, index) => segment.validation.status !== "SUPPORTED" && (
+                <div key={segment.id} className="space-y-1">
+                  <a className="underline" href={`#remix-segment-${segment.id}`}>
+                    Segmento {index + 1}: {supportLabels[segment.validation.status] ?? segment.validation.status}
+                  </a>
+                  <p>{segment.validation.reason || "A correspondência visual ainda precisa ser validada."}</p>
+                </div>
+              ))}
+              {!allSupported && <p>Edite os segmentos indicados ou associe cenas que sustentem suas afirmações. Salve e valide novamente. A narração de todo o roteiro exige todos os segmentos sustentados pelas evidências.</p>}
+            </div>
           )}
           {script.fullNarration && !script.stale && (
             <div>
@@ -558,6 +571,7 @@ function StoryEditor({
           <article
             className="space-y-3 rounded-lg border border-border p-3"
             key={draft.id}
+            id={`remix-segment-${draft.id}`}
           >
             <div className="flex flex-wrap gap-2">
               <label>

@@ -14,6 +14,7 @@ import { RemixAnalysisSettings } from './remix-analysis.settings';
 import {
   analysisRequest,
   relevanceBand,
+  sceneResult,
   type AnalysisJob,
 } from './remix-analysis.schema';
 const profileSchema = z.enum(['ECONOMIC', 'DETAILED']);
@@ -231,6 +232,89 @@ export class RemixAnalysisService {
       [id],
     );
     return { ok: true };
+  }
+  async recover(project: string, id: string) {
+    const job = await this.job(project, id);
+    const { p, s, f } = await this.source(project, job.source_id);
+    if (
+      f.id !== job.file_id ||
+      p.topic !== job.context.topic ||
+      JSON.stringify(s.licensing) !== JSON.stringify(job.context.licensing)
+    )
+      throw new ConflictException('Fonte, tema ou autorização alterados.');
+    await this.repo.db.withClient(async (db) => {
+      await db.query('BEGIN');
+      try {
+        const locked = await db.query<
+          AnalysisJob & { progress: { stage: string; total: number } }
+        >('SELECT * FROM video_remix_analyses WHERE id=$1 FOR UPDATE', [id]);
+        const current = locked.rows[0];
+        if (
+          current?.status !== 'FAILED' ||
+          current.cancel_requested ||
+          current.progress?.stage !== 'RELEVANCE'
+        )
+          throw new ConflictException(
+            'A recuperação exige falha na finalização, com todas as cenas analisadas.',
+          );
+        const scenes = await db.query<{
+          id: string;
+          start_seconds: number;
+          end_seconds: number;
+          result: unknown;
+        }>(
+          'SELECT * FROM video_remix_scenes WHERE analysis_id=$1 ORDER BY ordinal',
+          [id],
+        );
+        if (
+          !scenes.rows.length ||
+          scenes.rows.length !== current.progress.total
+        )
+          throw new ConflictException(
+            'A análise não possui todas as cenas necessárias.',
+          );
+        for (const scene of scenes.rows) {
+          const r = sceneResult.parse(scene.result);
+          const evidence = r.events.some((e) => e.evidence === 'INFERRED')
+            ? 'INFERRED'
+            : r.events.some((e) => e.evidence === 'UNCONFIRMED')
+              ? 'UNCONFIRMED'
+              : 'OBSERVED';
+          await db.query(
+            'INSERT INTO video_remix_segment_candidates(id,analysis_id,scene_ids,start_seconds,end_seconds,description,justification,relevance,confidence,evidence_type) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+            [
+              randomUUID(),
+              id,
+              [scene.id],
+              scene.start_seconds,
+              scene.end_seconds,
+              r.description,
+              r.justification,
+              r.relevance,
+              r.confidence,
+              evidence,
+            ],
+          );
+        }
+        await db.query(
+          "UPDATE video_remix_analyses SET status='COMPLETED',error_message=NULL,completed_at=NOW(),progress=$2 WHERE id=$1",
+          [
+            id,
+            {
+              stage: 'COMPLETED',
+              completed: scenes.rows.length,
+              total: scenes.rows.length,
+              recovered: true,
+            },
+          ],
+        );
+        await db.query('COMMIT');
+      } catch (error) {
+        await db.query('ROLLBACK');
+        throw error;
+      }
+    });
+    return this.results(project, id);
   }
   async retry(project: string, id: string) {
     const j = await this.job(project, id);

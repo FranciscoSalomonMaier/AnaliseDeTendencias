@@ -143,6 +143,7 @@ export const remixAnalysis = {
   results: (project, id) => request(`/projects/${project}/analysis/${id}`),
   cancel: (project, id) =>
     request(`/projects/${project}/analysis/${id}/cancel`, "POST", {}),
+  recover: (project, id) => request(`/projects/${project}/analysis/${id}/recover`, 'POST', {}),
   retry: (project, id) =>
     request(`/projects/${project}/analysis/${id}/retry`, "POST", {}),
   select: (project, id, candidate, data) =>

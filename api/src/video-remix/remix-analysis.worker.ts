@@ -389,8 +389,12 @@ export class RemixAnalysisWorker
           );
           if (
             indices.some((n, i) => n < 0 || (i > 0 && n !== indices[i - 1] + 1))
-          )
-            throw new Error('A IA retornou sequência sem continuidade válida.');
+          ) {
+            this.logger.warn(
+              `Análise ${job.id}: agrupamento sem continuidade ignorado; cenas individuais preservadas.`,
+            );
+            continue;
+          }
           const first = completed[indices[0]],
             last = completed[indices.at(-1)!];
           await this.candidate(
@@ -441,13 +445,28 @@ export class RemixAnalysisWorker
           ? 'Processamento interrompido ou tempo limite atingido. Revise o consumo antes de reprocessar.'
           : error instanceof HttpException
             ? 'Falha no provedor de IA. Verifique modelo, chave, saldo e disponibilidade.'
-            : 'Não foi possível concluir a análise. Verifique o arquivo e as configurações; os resultados parciais e o consumo foram preservados.';
+            : error instanceof Error &&
+                [
+                  'A IA retornou timestamps sem evidência nos frames.',
+                  'Consumo reportado atingiu o limite configurado.',
+                  'Fonte ou autorização alteradas.',
+                  'Fonte, autorização ou tema alterados durante a análise.',
+                ].includes(error.message)
+              ? error.message
+              : 'Não foi possível concluir a análise. Os resultados parciais e o consumo foram preservados. Código: ' +
+                (error instanceof Error
+                  ? error.name.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 60)
+                  : 'UnknownError');
       await db.query(
         'UPDATE video_remix_analyses SET status=$2,error_message=$3,completed_at=NOW(),usage=$4 WHERE id=$1',
         [job.id, cancelled ? 'CANCELLED' : 'FAILED', message, usage],
       );
+      // Keep the failure location without logging prompts, frames, provider bodies or credentials.
+      const location = error instanceof Error
+        ? error.stack?.split('\n').filter(line => /^\s+at /.test(line)).slice(0, 8).join('\n')
+        : undefined;
       this.logger.warn(
-        `Análise ${job.id}: ${cancelled ? 'cancelada' : 'falhou'}`,
+        `Análise ${job.id}: ${cancelled ? 'cancelada' : 'falhou'} (${error instanceof Error ? error.name : 'UnknownError'}). ${message}\n${location ?? ''}`,
       );
     } finally {
       clearInterval(pulse);

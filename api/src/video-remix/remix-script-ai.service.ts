@@ -79,7 +79,13 @@ export class RemixScriptAiService {
     return { ...r, data: storyResponseSchema.parse(r.data) };
   }
   async validate(segment: StoryDraft, refs: Evidence[], signal: AbortSignal) {
-    const frames = refs.flatMap((r) => r.frames.slice(0, 2));
+    // The planner bounds evidence to six frames per candidate. Keep that complete
+    // selection: the last frame may be the only image supporting a narrated detail.
+    const visualRefs = refs.map((r) => ({
+      ...r,
+      frames: r.frames.slice(0, 6),
+    }));
+    const frames = visualRefs.flatMap((r) => r.frames);
     if (!frames.length || refs.some((r) => !r.frames.length))
       return {
         data: guardSupport(
@@ -111,10 +117,10 @@ export class RemixScriptAiService {
       schema: supportSchema,
       systemPrompt:
         safety +
-        ' Você é o revisor independente de correspondência entre narração e evidências. Confira cada afirmação no texto com os frames e eventos. SUPPORTED somente se todo conteúdo factual tiver suporte visível suficiente. Uma cena de direção não sustenta atravessar uma parede; um tema com easter egg não comprova sua aparição. PARTIALLY_SUPPORTED se parte for sustentada ou houver inferência; UNSUPPORTED se faltar evidência. Identidades específicas e transições fora dos frames exigem cautela. Uma pergunta também pode pressupor um fato falso. Sugira uma reformulação fiel às imagens. Não declare suporte apenas porque o roteiro ou análise anterior disseram que existe.',
+        ' Você é o revisor independente de correspondência entre narração e evidências. Confira cada afirmação no texto com os frames e eventos. SUPPORTED somente se todo conteúdo factual tiver suporte visível suficiente. Uma cena de direção não sustenta atravessar uma parede; um tema com easter egg não comprova sua aparição. PARTIALLY_SUPPORTED se parte for sustentada ou houver inferência; UNSUPPORTED se faltar evidência. Identidades específicas e transições fora dos frames exigem cautela. Uma pergunta também pode pressupor um fato falso. Avalie somente as afirmações presentes em segment.text; descrições das evidências são contexto e podem conter erros, não são afirmações adicionais do narrador. Não exija que o segmento descreva todos os elementos da cena. A quantidade de frames, isoladamente, não justifica suporte parcial: indique a afirmação específica sem suporte. Um detalhe pode ser sustentado por um único frame nítido; não é necessário aparecer em todos. Confira imageOrder e use somente imagens efetivamente enviadas para confirmar detalhes. Sugira uma reformulação fiel às imagens. Não declare suporte apenas porque o roteiro ou análise anterior disseram que existe.',
       userPrompt: JSON.stringify({
         segment,
-        evidence: this.evidence(refs),
+        evidence: this.evidence(visualRefs),
         imageOrder: frames.map((f) => ({ id: f.id, timestamp: f.timestamp })),
       }),
       images,

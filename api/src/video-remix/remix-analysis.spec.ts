@@ -18,6 +18,7 @@ import {
 } from './remix-analysis.schema';
 import { RemixAnalysisSettings } from './remix-analysis.settings';
 import { VideoSceneAnalysisService } from './video-scene-analysis.service';
+import { RemixAnalysisService } from './remix-analysis.service';
 import { LlmProvider } from '../ai/llm.provider';
 const data = {
   description: 'Um personagem está diante de um prédio.',
@@ -199,5 +200,85 @@ describe('Remix analysis', () => {
         ],
       }).sequences[0].evidence,
     ).toBe('INFERRED');
+  });
+});
+
+describe('recover saved analysis without paid calls', () => {
+  function fixture(stage = 'RELEVANCE', changed = false) {
+    const job = {
+      id: 'analysis',
+      source_id: 'source',
+      file_id: 'file',
+      status: 'FAILED',
+      cancel_requested: false,
+      progress: { stage, total: 1 },
+      context: { topic: 'topic', licensing: { userDeclaredRights: true } },
+    };
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes('FOR UPDATE')) return { rows: [job] };
+      if (sql.includes('SELECT * FROM video_remix_scenes'))
+        return {
+          rows: [
+            {
+              id: randomUUID(),
+              start_seconds: 0,
+              end_seconds: 10,
+              result: data,
+            },
+          ],
+        };
+      return { rows: [] };
+    });
+    const service = new RemixAnalysisService(
+      {} as never,
+      {
+        db: {
+          withClient: async (fn: (db: unknown) => Promise<unknown>) =>
+            fn({ query }),
+        },
+      } as never,
+      {} as never,
+      {} as never,
+    );
+    jest.spyOn(service, 'job').mockResolvedValue(job as never);
+    jest.spyOn(service, 'source').mockResolvedValue({
+      p: { topic: changed ? 'changed' : 'topic' },
+      s: { licensing: job.context.licensing },
+      f: { id: 'file' },
+    } as never);
+    jest
+      .spyOn(service, 'results')
+      .mockResolvedValue({ recovered: true } as never);
+    return { service, query };
+  }
+  test('builds selectable candidates from saved scenes and commits completion', async () => {
+    const { service, query } = fixture();
+    await service.recover('project', 'analysis');
+    expect(
+      query.mock.calls.some(([sql]) =>
+        sql.includes('INSERT INTO video_remix_segment_candidates'),
+      ),
+    ).toBe(true);
+    expect(
+      query.mock.calls.some(([sql]) => sql.includes("status='COMPLETED'")),
+    ).toBe(true);
+    expect(query).toHaveBeenCalledWith('COMMIT');
+  });
+  test('rejects incomplete analysis and rolls back', async () => {
+    const { service, query } = fixture('ANALYZING');
+    await expect(service.recover('project', 'analysis')).rejects.toThrow(
+      'recuperação exige',
+    );
+    expect(query).toHaveBeenCalledWith('ROLLBACK');
+    expect(query.mock.calls.some(([sql]) => sql.includes('INSERT INTO'))).toBe(
+      false,
+    );
+  });
+  test('rejects changes to topic or authorization before recovery', async () => {
+    const { service, query } = fixture('RELEVANCE', true);
+    await expect(service.recover('project', 'analysis')).rejects.toThrow(
+      'alterados',
+    );
+    expect(query).not.toHaveBeenCalled();
   });
 });

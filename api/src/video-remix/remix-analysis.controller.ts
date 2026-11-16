@@ -51,6 +51,12 @@ export class RemixAnalysisController {
   ) {
     return this.service.cancel(p, id);
   }
+  @Post(':id/recover') recover(
+    @Param('projectId', ParseUUIDPipe) p: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.recover(p, id);
+  }
   @Post(':id/retry') retry(
     @Param('projectId', ParseUUIDPipe) p: string,
     @Param('id', ParseUUIDPipe) id: string,
