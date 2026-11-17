@@ -25,7 +25,9 @@ export class ContentAccessGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<Request>();
     const path = req.originalUrl.split('?')[0];
     const youtube = path.startsWith('/youtube-publishing');
-    const remix = path === '/video-remix' || path.startsWith('/video-remix/');
+    const shorts = path === '/shorts' || path.startsWith('/shorts/');
+    const remix =
+      shorts || path === '/video-remix' || path.startsWith('/video-remix/');
     if (!path.startsWith('/content-projects') && !youtube && !remix)
       return true;
     const configured = this.config.get<string>('CONTENT_ACCESS_KEY');
@@ -38,7 +40,7 @@ export class ContentAccessGuard implements CanActivate {
       )
         throw new ServiceUnavailableException(
           remix
-            ? 'Configure CONTENT_ACCESS_KEY no servidor para habilitar o Video Remix.'
+            ? `Configure CONTENT_ACCESS_KEY no servidor para habilitar ${shorts ? 'Criar Short' : 'o Video Remix'}.`
             : 'Configure CONTENT_ACCESS_KEY no servidor para habilitar a preparação de publicação.',
         );
       return true;

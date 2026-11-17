@@ -1,3 +1,4 @@
+import { ShortModule } from './short-creation/short.module';
 import { VideoRemixModule } from './video-remix/video-remix.module';
 import { ContentProjectModule } from './content-projects/content-project.module';
 import { ContentAssetsModule } from './content-assets/content-assets.module';
@@ -20,6 +21,7 @@ import { TrendsModule } from 'trends/trends.module';
     ContentProjectModule,
     ContentAssetsModule,
     VideoRemixModule,
+    ShortModule,
   ],
   controllers: [AppController],
   providers: [AppService],

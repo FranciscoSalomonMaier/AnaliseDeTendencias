@@ -95,6 +95,7 @@ export const AsideBody = ({ currentPage, onNavigate }) => {
                     <AsideOption name="Conteúdos" icon={DocumentChartBarIcon} active={currentPage === 'content-library'} onClick={() => onNavigate('content-library')}/>
                     <AsideOption name="Criação" icon={SparklesIcon} active={currentPage === 'content-creation'} onClick={() => onNavigate('content-creation')}/>
                 </div>}
+                <AsideOption name="Criar Short" icon={SparklesIcon} active={currentPage === 'create-short'} onClick={() => onNavigate('create-short')}/>
                 <AsideOption name="Video Remix" icon={PlayCircleIcon} active={currentPage === 'video-remix'} onClick={() => onNavigate('video-remix')}/>
                 <AsideOption name="Integrações → YouTube" icon={Cog6ToothIcon} active={currentPage === 'youtube-integration'} onClick={() => onNavigate('youtube-integration')}/>
                 <AsideOption name="TikTok" icon={MusicalNoteIcon}/>

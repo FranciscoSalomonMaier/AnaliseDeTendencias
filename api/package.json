@@ -68,7 +68,10 @@
     "migrate:remix-assembly": "node scripts/migrate-assets.cjs",
     "test:remix-assembly:integration": "node test/video-remix/remix-assembly.integration.cjs",
     "migrate:remix-review": "node scripts/migrate-assets.cjs",
-    "test:remix-review:integration": "node test/video-remix/remix-review.integration.cjs"
+    "test:remix-review:integration": "node test/video-remix/remix-review.integration.cjs",
+    "migrate:shorts": "node scripts/migrate-shorts.cjs",
+    "test:shorts": "jest --config jest.ai-cache.config.cjs --runInBand --runTestsByPath src/short-creation/short.spec.ts src/short-creation/short-media.spec.ts",
+    "test:shorts:integration": "node test/shorts/shorts.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
