@@ -1,3 +1,6 @@
+import { activeEditing, applyCutRhythm } from './short-editing.schema';
+import { editingAss } from './short-editing-effects.service';
+import { filterPath } from '../video-render/ffmpeg.renderer';
 import { Injectable } from '@nestjs/common';
 import { mkdtemp, mkdir, rm, stat, statfs, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -133,7 +136,23 @@ export class ShortMedia {
           for (let i = 0; i < perFile; i++)
             for (const group of groups) if (group[i]) candidates.push(group[i]);
         }
-        const clips = buildShortPlan(candidates, p.data.audio!.duration);
+        let clips = applyCutRhythm(
+          buildShortPlan(candidates, p.data.audio!.duration),
+          activeEditing(p.data)?.shotSeconds ?? null,
+          p.data.decorations?.segments.map((s) => s.endSeconds),
+          !semantic,
+        );
+        // Basic assembly has no semantic ordering: alternate montage sources at the
+        // new cadence, retaining each source's chronological order. Splitting a
+        // continuous interval alone would not produce visible cuts.
+        if (!semantic && activeEditing(p.data)?.shotSeconds) {
+          const queues = files.map((file) =>
+            clips.filter((clip) => clip.fileId === file.id),
+          );
+          clips = [];
+          for (let i = 0; queues.some((queue) => queue[i]); i++)
+            for (const queue of queues) if (queue[i]) clips.push(queue[i]);
+        }
         return {
           clips,
           semantic,
@@ -161,7 +180,7 @@ export class ShortMedia {
         const duration = data.audio!.duration;
         if (
           !clips.length ||
-          clips.length > 60 ||
+          clips.length > 120 ||
           Math.abs(clips.reduce((n, c) => n + c.end - c.start, 0) - duration) >
             0.02
         )
@@ -184,6 +203,34 @@ export class ShortMedia {
             throw Error('Corte fora dos limites do vídeo enviado.');
           const name = `clip-${index}.mp4`;
           names.push(name);
+          const style = activeEditing(data);
+          const timelineStart = clips
+            .slice(0, index)
+            .reduce((n, c) => n + c.end - c.start, 0);
+          const length = clip.end - clip.start;
+          const emphasized =
+            data.decorations?.overlays.some(
+              (o) =>
+                o.start >= timelineStart && o.start < timelineStart + length,
+            ) ?? false;
+          const zoom =
+            style?.zoom &&
+            style.zoom !== 'NONE' &&
+            length >= 1.5 &&
+            (emphasized || index === Math.floor(clips.length / 2))
+              ? ",zoompan=z='" +
+                (style.zoom === 'IN'
+                  ? 'min(zoom+0.0003,1.06)'
+                  : 'if(eq(on,0),1.06,max(1,zoom-0.0003))') +
+                "':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=1080x1920:fps=30"
+              : '';
+          const fade =
+            style?.transition === 'FADE'
+              ? (index === 0 ? ',fade=t=in:st=0:d=0.15' : '') +
+                (index === clips.length - 1
+                  ? `,fade=t=out:st=${Math.max(0, length - 0.15).toFixed(4)}:d=0.15`
+                  : '')
+              : '';
           const crop =
             'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1,fps=30,format=yuv420p';
           const blur =
@@ -213,8 +260,8 @@ export class ShortMedia {
               '-sn',
               '-dn',
               ...(data.framing === 'BLUR'
-                ? ['-filter_complex', blur]
-                : ['-vf', crop]),
+                ? ['-filter_complex', blur + zoom + fade]
+                : ['-vf', crop + zoom + fade]),
               '-c:v',
               'libx264',
               '-preset',
@@ -240,6 +287,9 @@ export class ShortMedia {
         await writeFile(concat, names.map((n) => `file '${n}'`).join('\n'), {
           mode: 0o600,
         });
+        const ass = editingAss(data);
+        if (ass)
+          await writeFile(join(dir, 'editing.ass'), ass, { mode: 0o600 });
         const output = join(dir, 'final.mp4');
         await this.process.run(
           this.renders.ffmpegPath,
@@ -266,8 +316,20 @@ export class ShortMedia {
             '0:v:0',
             '-map',
             '1:a:0',
-            '-c:v',
-            'copy',
+            ...(ass
+              ? [
+                  '-vf',
+                  `ass=filename='${filterPath(join(dir, 'editing.ass'))}'`,
+                  '-c:v',
+                  'libx264',
+                  '-preset',
+                  'veryfast',
+                  '-crf',
+                  '23',
+                  '-threads',
+                  '1',
+                ]
+              : ['-c:v', 'copy']),
             '-c:a',
             'aac',
             '-b:a',

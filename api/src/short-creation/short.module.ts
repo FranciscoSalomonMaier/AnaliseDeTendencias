@@ -1,3 +1,5 @@
+import { ShortEditingReferenceAnalysisService } from './short-reference-analysis.service';
+import { ShortEditingEffectsService } from './short-editing-effects.service';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
@@ -60,6 +62,8 @@ export async function shortUploadOptions(config: ConfigService) {
     ShortService,
     ShortMedia,
     ShortWorker,
+    ShortEditingReferenceAnalysisService,
+    ShortEditingEffectsService,
     ShortUploadGuard,
     MediaProcess,
     RemixVideoValidator,

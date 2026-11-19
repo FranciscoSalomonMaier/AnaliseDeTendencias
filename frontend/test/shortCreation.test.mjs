@@ -15,6 +15,67 @@ test("Criar Short minimal workflow and API contracts", async (t) => {
     const { shorts } = await vite.ssrLoadModule(
       "/src/services/shortCreationService.js",
     );
+    const { EditingReferences } = await vite.ssrLoadModule(
+      "/src/pages/CreateShort/EditingReferences.jsx",
+    );
+    await t.test(
+      "optional references are separate, selectable, bounded and skippable without analysis",
+      () => {
+        const html = renderToStaticMarkup(
+          createElement(EditingReferences, {
+            project: {
+              data: {},
+              references: [
+                {
+                  id: "ref",
+                  original_name: "example.mp4",
+                  duration: 8,
+                  bytes: 1024,
+                },
+              ],
+            },
+            options: { aiEnabled: true },
+            locked: false,
+            dirty: false,
+          }),
+        );
+        for (const value of [
+          "Referências de Edição",
+          "Pular etapa",
+          "Analisar referências",
+          "Somente referência",
+          "example.mp4",
+          "Música de fundo",
+          "Ritmo dos cortes",
+        ])
+          assert.ok(html.includes(value), value);
+        assert.equal((html.match(/checked=""/g) ?? []).length, 9);
+        assert.ok(!html.includes("storage_key"));
+      },
+    );
+    await t.test(
+      "reference upload has its own endpoint and rights declaration",
+      async () => {
+        const old = globalThis.fetch;
+        let captured;
+        globalThis.fetch = async (url, options) => {
+          captured = { url, options };
+          return { ok: true, json: async () => ({}) };
+        };
+        try {
+          await shorts.uploadReference(
+            "project",
+            new File(["video"], "ref.mov", { type: "video/quicktime" }),
+          );
+          assert.ok(captured.url.endsWith("/shorts/project/references"));
+          assert.equal(captured.options.body.get("rights"), "true");
+          assert.equal(captured.options.body.get("file").name, "ref.mov");
+          assert.equal(captured.options.credentials, "include");
+        } finally {
+          globalThis.fetch = old;
+        }
+      },
+    );
     await t.test(
       "initial page has description and durations without triggering paid calls",
       () => {
@@ -31,7 +92,7 @@ test("Criar Short minimal workflow and API contracts", async (t) => {
             "45 segundos",
             "60 segundos",
             "Gerar roteiro",
-            "Etapa 1 de 7",
+            "Etapa 1 de 8",
           ])
             assert.ok(html.includes(value), value);
           assert.ok(!html.includes("YouTube"));

@@ -1,3 +1,13 @@
+import {
+  featureSelection,
+  editingConfigSchema,
+  type EditingState,
+  type TextOverlay,
+} from './short-editing.schema';
+import type {
+  SubtitleSegment,
+  TimedText,
+} from '../content-subtitles/subtitle.schema';
 import { z } from 'zod';
 import { TTS_VOICES } from '../content-narration/tts-settings';
 export const scriptSchema = z
@@ -20,14 +30,17 @@ export const patchShortSchema = z
     narrationText: z.string().trim().min(1).max(4096).optional(),
     voice: z.enum(TTS_VOICES).optional(),
     framing: z.enum(['CROP', 'BLUR']).optional(),
-    approve: z.enum(['SCRIPT', 'TEXT', 'PLAN']).optional(),
-    step: z.number().int().min(1).max(7).optional(),
+    approve: z.enum(['SCRIPT', 'EDITING', 'TEXT', 'PLAN']).optional(),
+    step: z.number().int().min(1).max(8).optional(),
+    referenceFeatures: featureSelection.optional(),
+    editingConfig: editingConfigSchema.optional(),
+    skipReferences: z.literal(true).optional(),
   })
   .strict();
 export const jobShortSchema = z
   .object({
     revision: z.number().int().nonnegative(),
-    kind: z.enum(['SCRIPT', 'TEXT', 'AUDIO', 'PLAN', 'RENDER']),
+    kind: z.enum(['SCRIPT', 'REFERENCES', 'TEXT', 'AUDIO', 'PLAN', 'RENDER']),
     confirm: z.literal(true),
     semantic: z.boolean().default(false),
   })
@@ -55,6 +68,14 @@ export interface ShortClip {
   description: string;
 }
 export interface ShortData {
+  editing?: EditingState;
+  decorations?: {
+    segments: SubtitleSegment[];
+    words?: TimedText[];
+    granularity: 'WORD' | 'SEGMENT';
+    overlays: TextOverlay[];
+    warnings: string[];
+  };
   script?: z.infer<typeof scriptSchema>;
   scriptApproved?: boolean;
   narrationText?: string;
@@ -81,6 +102,7 @@ export interface ShortProject {
   updated_at: Date;
 }
 export interface ShortFile {
+  role?: 'SOURCE' | 'REFERENCE';
   id: string;
   project_id: string;
   original_name: string;
@@ -95,9 +117,14 @@ export interface ShortFile {
 export interface ShortJob {
   id: string;
   project_id: string;
-  kind: 'SCRIPT' | 'TEXT' | 'AUDIO' | 'PLAN' | 'RENDER';
+  kind: 'SCRIPT' | 'REFERENCES' | 'TEXT' | 'AUDIO' | 'PLAN' | 'RENDER';
   status: string;
-  input: { project: ShortProject; files: ShortFile[]; semantic: boolean };
+  input: {
+    project: ShortProject;
+    files: ShortFile[];
+    references?: ShortFile[];
+    semantic: boolean;
+  };
   progress: number;
 }
 export interface CutCandidate {
@@ -168,9 +195,10 @@ export function shortStepAllowed(
     step === 1 ||
     (step === 2 && d.scriptApproved) ||
     (step === 3 && d.scriptApproved && files.length > 0) ||
-    (step === 4 && d.textApproved && files.length > 0) ||
-    (step === 5 && d.textApproved && d.audio && files.length > 0) ||
-    (step === 6 && d.audio && d.planApproved) ||
-    (step === 7 && d.output)
+    (step === 4 && d.scriptApproved && files.length > 0) ||
+    (step === 5 && d.textApproved && files.length > 0) ||
+    (step === 6 && d.textApproved && d.audio && files.length > 0) ||
+    (step === 7 && d.audio && d.planApproved) ||
+    (step === 8 && d.output)
   );
 }

@@ -42,6 +42,18 @@ export class ShortSettings {
   get scanSeconds() {
     return this.number('SHORT_CREATION_SCAN_SECONDS', 600, 10, 1200);
   }
+  get referenceFiles() {
+    return this.number('SHORT_REFERENCE_MAX_FILES', 3, 1, 5);
+  }
+  get referenceSeconds() {
+    return this.number('SHORT_REFERENCE_MAX_SECONDS', 90, 10, 180);
+  }
+  get referenceFrames() {
+    return this.number('SHORT_REFERENCE_MAX_FRAMES', 12, 3, 18);
+  }
+  get referenceMaxTokens() {
+    return this.number('SHORT_REFERENCE_MAX_TOKENS', 12000, 2000, 50000);
+  }
   get tempDir() {
     return resolve(
       this.config.get<string>('SHORT_CREATION_TEMP_DIR') || 'storage/short-tmp',

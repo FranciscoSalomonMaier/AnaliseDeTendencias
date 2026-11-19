@@ -66,6 +66,7 @@ import { ImageFileValidator } from './image-file.validator';
 @Module({
   imports: [AiModule, ContentProjectModule],
   exports: [
+    SpeechAlignmentProvider,
     RenderSettings,
     StorageProvider,
     TtsProvider,

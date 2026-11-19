@@ -52,6 +52,13 @@ export const shorts = {
     data.append("file", file);
     return request(`/${id}/files`, "POST", data);
   },
+  uploadReference: (id, file) => {
+    const data = new FormData();
+    data.append("rights", "true");
+    data.append("file", file);
+    return request(`/${id}/references`, "POST", data);
+  },
+  removeReference: (id, file) => request(`/${id}/references/${file}`, "DELETE"),
   removeFile: (id, file) => request(`/${id}/files/${file}`, "DELETE"),
   remove: (id) => request(`/${id}`, "DELETE"),
 };

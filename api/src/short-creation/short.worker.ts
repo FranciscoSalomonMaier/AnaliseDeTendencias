@@ -1,3 +1,9 @@
+import { ShortEditingReferenceAnalysisService } from './short-reference-analysis.service';
+import {
+  ShortEditingEffectsService,
+  narrationEditing,
+} from './short-editing-effects.service';
+import { activeEditing } from './short-editing.schema';
 import {
   Injectable,
   Logger,
@@ -30,6 +36,8 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
     readonly media: ShortMedia,
     readonly llm: LlmProvider,
     readonly voice: RemixVoiceService,
+    readonly references: ShortEditingReferenceAnalysisService,
+    readonly effects: ShortEditingEffectsService,
   ) {}
   onApplicationBootstrap() {
     this.timer = setInterval(() => void this.tick(), 1500);
@@ -47,7 +55,7 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
     this.running = this.work()
       .catch(() =>
         this.logger.warn(
-          'Fila Criar Short indisponível. Verifique o banco e a migration 021.',
+          'Fila Criar Short indisponível. Verifique o banco e a migrations 021/022.',
         ),
       )
       .finally(() => {
@@ -165,13 +173,35 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
         });
         await consume(result.usage);
         data = {
+          editing: data.editing,
           voice: data.voice,
           framing: data.framing,
           script: scriptSchema.parse(result.data),
           scriptApproved: false,
         };
         step = 1;
+      } else if (job.kind === 'REFERENCES') {
+        const editing = await this.references.analyze(
+          p,
+          job.input.references ?? [],
+          abort.signal,
+          progress,
+          consume,
+        );
+        data = {
+          ...data,
+          editing,
+          narrationText: undefined,
+          textApproved: false,
+          audio: undefined,
+          plan: undefined,
+          decorations: undefined,
+          planApproved: false,
+          output: undefined,
+        };
+        step = 3;
       } else if (job.kind === 'TEXT') {
+        const style = activeEditing(data);
         const result = await this.llm.generateStructuredOutput({
           model: s.settings.model,
           schemaName: 'short_narration_text',
@@ -182,7 +212,16 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
           userPrompt: JSON.stringify({
             script: data.script,
             targetSeconds: p.target_seconds,
-            approximateWords: Math.round(p.target_seconds * 2.2),
+            approximateWords: Math.round(
+              (p.target_seconds * (style?.wordsPerMinute ?? 132)) / 60,
+            ),
+            editing: style
+              ? {
+                  wordsPerMinute: style.wordsPerMinute,
+                  narrationStyle: style.narrationStyle,
+                  pauseSeconds: style.pauseSeconds,
+                }
+              : undefined,
           }),
           maxOutputTokens: 2000,
           disableRetries: true,
@@ -192,13 +231,15 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
         data = {
           script: data.script,
           scriptApproved: true,
+          editing: data.editing,
           voice: data.voice,
           framing: data.framing,
           narrationText: result.data.text,
           textApproved: false,
         };
-        step = 3;
+        step = 4;
       } else if (job.kind === 'AUDIO') {
+        const applied = narrationEditing(activeEditing(data));
         const result = await this.voice.generate(
           data.narrationText!,
           {
@@ -206,9 +247,10 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
             style: 'NARRATIVO',
             targetDuration: p.target_seconds,
             voice: data.voice ?? 'cedar',
-            speed: 1,
+            speed: applied.speed,
           },
           abort.signal,
+          applied.instructions,
         );
         await consume(result.usage);
         if (result.durationSeconds > 90)
@@ -227,21 +269,33 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
             usage: result.usage,
           },
           plan: undefined,
+          decorations: undefined,
           planApproved: false,
           output: undefined,
         };
-        step = 4;
+        step = 5;
       } else if (job.kind === 'PLAN') {
-        const plan = await this.media.plan(
+        const decorations = await this.effects.prepare(
           p,
+          consume,
+          abort.signal,
+        );
+        const plan = await this.media.plan(
+          { ...p, data: { ...p.data, decorations } },
           job.input.files,
           job.input.semantic,
           abort.signal,
           progress,
           consume,
         );
-        data = { ...data, plan, planApproved: false, output: undefined };
-        step = 5;
+        data = {
+          ...data,
+          plan,
+          decorations,
+          planApproved: false,
+          output: undefined,
+        };
+        step = 6;
       } else {
         const key = await register('mp4');
         const output = await this.media.render(
@@ -252,7 +306,7 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
           progress,
         );
         data = { ...data, output };
-        step = 7;
+        step = 8;
       }
       await progress(99);
       await s.db.withClient(async (db) => {
@@ -288,7 +342,7 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
         await s.storage.delete(key).catch(() => {});
       const known =
         error instanceof Error &&
-        /^(Material insuficiente|A narração|Vídeo original|O arquivo final|Espaço em disco|Corte fora|Plano de cortes)/.test(
+        /^(Material insuficiente|A narração|Vídeo original|O arquivo final|Espaço em disco|Corte fora|Plano de cortes|A transcrição|Legenda excede|Palavra excede|Texto informativo)/.test(
           error.message,
         );
       const message = abort.signal.aborted

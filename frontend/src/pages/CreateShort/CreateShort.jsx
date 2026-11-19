@@ -1,12 +1,14 @@
+import { EditingReferences } from "./EditingReferences";
 import { useEffect, useRef, useState } from "react";
 import { shorts, shortMediaUrl } from "../../services/shortCreationService";
 import { publications } from "../../services/publicationService";
 const steps = [
   "Criar roteiro",
-  "Enviar vídeos",
+  "Vídeos para montagem",
+  "Referências de Edição",
   "Texto da narração",
   "Gerar narração",
-  "Selecionar trechos",
+  "Editar vídeo",
   "Renderizar Short",
   "Resultado",
 ];
@@ -190,8 +192,14 @@ export function CreateShort() {
     const step = project.step;
     if (step === 1) await save({ script: draft, approve: "SCRIPT" });
     else if (step === 2) await save({ step: 3 });
-    else if (step === 3) await save({ narrationText: text, approve: "TEXT" });
-    else if (step === 5) await save({ approve: "PLAN" });
+    else if (step === 3)
+      await save(
+        project.data.editing?.config && project.data.editing?.profiles?.length
+          ? { approve: "EDITING" }
+          : { skipReferences: true },
+      );
+    else if (step === 4) await save({ narrationText: text, approve: "TEXT" });
+    else if (step === 6) await save({ approve: "PLAN" });
     else await save({ step: step + 1 });
   }
   function reset() {
@@ -216,14 +224,16 @@ export function CreateShort() {
       : step === 2
         ? project.files.length > 0
         : step === 3
-          ? Boolean(text.trim())
+          ? !dirty
           : step === 4
-            ? Boolean(project.data.audio)
+            ? Boolean(text.trim())
             : step === 5
-              ? Boolean(project.data.plan?.clips.length)
+              ? Boolean(project.data.audio)
               : step === 6
-                ? Boolean(project.data.output)
-                : false;
+                ? Boolean(project.data.plan?.clips.length)
+                : step === 7
+                  ? Boolean(project.data.output)
+                  : false;
   return (
     <div className="min-h-screen bg-theme p-4 text-white md:p-8">
       <div className="mx-auto max-w-3xl space-y-6">
@@ -264,7 +274,7 @@ export function CreateShort() {
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              Etapa {step} de 7 · {steps[step - 1]}
+              Etapa {step} de 8 · {steps[step - 1]}
             </p>
             {error && (
               <p
@@ -479,6 +489,45 @@ export function CreateShort() {
                 </>
               )}
               {step === 3 && (
+                <EditingReferences
+                  key={`${project.id}:${project.revision}`}
+                  project={project}
+                  options={options}
+                  locked={locked}
+                  dirty={dirty}
+                  onDirty={edit}
+                  onSave={(data) => void act(() => save(data))}
+                  onRemove={(file) =>
+                    void act(async () =>
+                      accept(await shorts.removeReference(project.id, file)),
+                    )
+                  }
+                  onAnalyze={() => void act(() => run("REFERENCES"))}
+                  onSkip={() => void act(() => save({ skipReferences: true }))}
+                  onUpload={(files) =>
+                    void act(async () => {
+                      if (
+                        files.length + (project.references?.length ?? 0) >
+                        (options?.referenceMaxFiles ?? 3)
+                      )
+                        throw Error(
+                          "Quantidade de referências acima do limite.",
+                        );
+                      try {
+                        for (const file of files) {
+                          setUploading(file.name);
+                          accept(
+                            await shorts.uploadReference(project.id, file),
+                          );
+                        }
+                      } finally {
+                        setUploading("");
+                      }
+                    })
+                  }
+                />
+              )}
+              {step === 4 && (
                 <>
                   <p>
                     Transforme o roteiro aprovado em um texto natural para
@@ -517,7 +566,7 @@ export function CreateShort() {
                   </button>
                 </>
               )}
-              {step === 4 && (
+              {step === 5 && (
                 <>
                   <p>
                     O áudio será gerado somente a partir do texto aprovado. A
@@ -572,7 +621,7 @@ export function CreateShort() {
                   )}
                 </>
               )}
-              {step === 5 && (
+              {step === 6 && (
                 <>
                   <p>
                     Selecione automaticamente os cortes dos seus vídeos para
@@ -592,6 +641,14 @@ export function CreateShort() {
                     sem compreensão semântica. A seleção examina até{" "}
                     {time(options?.scanSeconds ?? 600)} de cada vídeo.
                   </p>
+                  {project.data.editing?.enabled &&
+                    project.data.editing.approved && (
+                      <p className="text-sm text-muted-foreground">
+                        A edição aplicará o perfil aprovado. Legendas e textos
+                        na tela podem consumir transcrição e IA ao selecionar os
+                        trechos.
+                      </p>
+                    )}
                   <button
                     className={primary}
                     disabled={locked}
@@ -604,6 +661,26 @@ export function CreateShort() {
                   {project.data.plan && (
                     <>
                       <p role="status">{project.data.plan.notice}</p>
+                      {project.data.decorations?.warnings.map((warning, i) => (
+                        <p role="status" key={i}>
+                          {warning}
+                        </p>
+                      ))}
+                      {project.data.decorations && (
+                        <p>
+                          Legendas:{" "}
+                          {project.data.decorations.granularity === "WORD"
+                            ? "timestamps reais de palavras"
+                            : "timestamps reais de segmentos"}
+                          .
+                        </p>
+                      )}
+                      {project.data.decorations?.overlays.map((overlay, i) => (
+                        <p key={i}>
+                          Texto na tela: {overlay.text} ·{" "}
+                          {overlay.start.toFixed(1)}–{overlay.end.toFixed(1)}s
+                        </p>
+                      ))}
                       <ol className="divide-y divide-border">
                         {project.data.plan.clips.map((clip, i) => {
                           const f = project.files.find(
@@ -635,7 +712,7 @@ export function CreateShort() {
                   )}
                 </>
               )}
-              {step === 6 && (
+              {step === 7 && (
                 <>
                   <p>
                     Seu Short será montado em formato vertical, usando os cortes
@@ -668,7 +745,7 @@ export function CreateShort() {
                   </button>
                 </>
               )}
-              {step === 7 && project.data.output && (
+              {step === 8 && project.data.output && (
                 <>
                   <video
                     className="mx-auto max-h-[65vh] w-full rounded bg-black"
@@ -718,13 +795,13 @@ export function CreateShort() {
                 >
                   Voltar
                 </button>
-                {step < 7 && (
+                {step < 8 && (
                   <button
                     className={primary}
                     disabled={locked || !canNext}
                     onClick={() => void act(next)}
                   >
-                    {[1, 3, 5].includes(step)
+                    {[1, 4, 6].includes(step)
                       ? "Aprovar e continuar"
                       : "Continuar"}
                   </button>
@@ -751,7 +828,7 @@ export function CreateShort() {
                             ? "Falhou"
                             : ["QUEUED", "RUNNING"].includes(item.status)
                               ? "Processando"
-                              : `Etapa ${item.step} de 7`}
+                              : `Etapa ${item.step} de 8`}
                         {item.duration
                           ? ` · ${Number(item.duration).toFixed(1)}s`
                           : ""}

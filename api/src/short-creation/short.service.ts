@@ -1,4 +1,9 @@
 import {
+  activeEditing,
+  editingFeatures,
+  featureSelection,
+} from './short-editing.schema';
+import {
   Injectable,
   BadRequestException,
   ConflictException,
@@ -57,17 +62,19 @@ export class ShortService {
         values?: unknown[],
       ): Promise<QueryResult<T>>;
     } = this.db,
+    role: 'SOURCE' | 'REFERENCE' = 'SOURCE',
   ) {
     return (
       await db.query<ShortFile>(
-        'SELECT * FROM short_files WHERE project_id=$1 ORDER BY created_at,id',
-        [id],
+        'SELECT * FROM short_files WHERE project_id=$1 AND role=$2 ORDER BY created_at,id',
+        [id, role],
       )
     ).rows;
   }
   async get(id: string) {
     const p = await this.project(id);
     const files = await this.files(id);
+    const references = await this.files(id, this.db, 'REFERENCE');
     const job =
       (
         await this.db.query(
@@ -98,6 +105,11 @@ export class ShortService {
         bytes: Number(f.bytes),
         url: `/shorts/${id}/files/${f.id}`,
       })),
+      references: references.map(({ storage_key, ...f }) => ({
+        ...f,
+        bytes: Number(f.bytes),
+        url: `/shorts/${id}/references/${f.id}`,
+      })),
       job,
     };
   }
@@ -119,6 +131,10 @@ export class ShortService {
       maxFiles: this.settings.maxFiles,
       maxDuration: this.settings.maxDuration,
       scanSeconds: this.settings.scanSeconds,
+      referenceMaxFiles: this.settings.referenceFiles,
+      referenceMaxSeconds: this.settings.referenceSeconds,
+      referenceMaxFrames: this.settings.referenceFrames,
+      editingFeatures,
     };
   }
   async create(raw: unknown) {
@@ -191,6 +207,7 @@ export class ShortService {
         data.textApproved = false;
         delete data.audio;
         delete data.plan;
+        delete data.decorations;
         data.planApproved = false;
         delete data.output;
         step = 1;
@@ -205,20 +222,80 @@ export class ShortService {
         data.textApproved = false;
         delete data.audio;
         delete data.plan;
+        delete data.decorations;
         data.planApproved = false;
         delete data.output;
-        step = 3;
+        step = 4;
       }
       if (input.voice && input.voice !== data.voice) {
         data.voice = input.voice;
         delete data.audio;
         delete data.plan;
+        delete data.decorations;
         data.planApproved = false;
         delete data.output;
-        step = Math.min(step, 4);
+        step = Math.min(step, 5);
       }
       if (input.framing && input.framing !== data.framing) {
         data.framing = input.framing;
+        delete data.output;
+      }
+      if (
+        input.referenceFeatures !== undefined ||
+        input.editingConfig !== undefined ||
+        input.skipReferences
+      ) {
+        if (!data.scriptApproved)
+          throw new BadRequestException('Aprove o roteiro primeiro.');
+        if (input.skipReferences)
+          data.editing = {
+            ...(data.editing ?? { features: [...editingFeatures] }),
+            enabled: false,
+            approved: false,
+          };
+        if (
+          input.referenceFeatures !== undefined &&
+          JSON.stringify(input.referenceFeatures) !==
+            JSON.stringify(data.editing?.features)
+        )
+          data.editing = {
+            enabled: false,
+            features: input.referenceFeatures,
+            approved: false,
+          };
+        if (input.editingConfig) {
+          if (!data.editing?.profiles?.length)
+            throw new BadRequestException(
+              'Analise as referências antes de ajustar a edição.',
+            );
+          data.editing = {
+            ...data.editing,
+            config: input.editingConfig,
+            enabled: true,
+            approved: false,
+          };
+        }
+        if (!input.skipReferences) step = 3;
+        if (input.skipReferences) step = 4;
+      }
+      if (input.approve === 'EDITING') {
+        if (!data.editing?.config || !data.editing.profiles?.length)
+          throw new BadRequestException(
+            'Analise e revise as referências ou pule esta etapa.',
+          );
+        data.editing = { ...data.editing, enabled: true, approved: true };
+        step = 4;
+      }
+      if (
+        JSON.stringify(activeEditing(p.data)) !==
+        JSON.stringify(activeEditing(data))
+      ) {
+        delete data.narrationText;
+        data.textApproved = false;
+        delete data.audio;
+        delete data.plan;
+        delete data.decorations;
+        data.planApproved = false;
         delete data.output;
       }
       if (input.approve === 'SCRIPT') {
@@ -231,13 +308,13 @@ export class ShortService {
         if (!data.scriptApproved || !data.narrationText)
           throw new BadRequestException('Crie o texto da narração.');
         data.textApproved = true;
-        step = 4;
+        step = 5;
       }
       if (input.approve === 'PLAN') {
         if (!data.audio || !data.plan?.clips.length)
           throw new BadRequestException('Selecione os trechos primeiro.');
         data.planApproved = true;
-        step = 6;
+        step = 7;
       }
       if (input.step !== undefined) step = input.step;
       if (!shortStepAllowed({ ...p, data }, await this.files(id, c), step))
@@ -252,7 +329,12 @@ export class ShortService {
     });
     return this.get(id);
   }
-  async upload(id: string, file: RemixUpload | undefined, rights: unknown) {
+  async upload(
+    id: string,
+    file: RemixUpload | undefined,
+    rights: unknown,
+    role: 'SOURCE' | 'REFERENCE' = 'SOURCE',
+  ) {
     if (!file) throw new BadRequestException('Selecione um vídeo.');
     let key: string | undefined;
     try {
@@ -271,31 +353,39 @@ export class ShortService {
         );
       const meta = await this.validator.validate(file);
       if (
-        meta.durationSeconds > this.settings.maxDuration ||
+        meta.durationSeconds >
+          (role === 'REFERENCE'
+            ? this.settings.referenceSeconds
+            : this.settings.maxDuration) ||
         meta.width * meta.height > 3840 * 2160
       )
         throw new BadRequestException(
           'Vídeo acima do limite de duração ou de resolução (4K).',
         );
       const fileId = randomUUID();
-      key = `shorts/${id}/sources/${fileId}.${meta.extension}`;
+      key = `shorts/${id}/${role === 'REFERENCE' ? 'references' : 'sources'}/${fileId}.${meta.extension}`;
       await this.db.query(
         'INSERT INTO short_storage_cleanup(storage_key) VALUES($1)',
         [key],
       );
       await this.locked(id, async (p, c) => {
-        if (!p.data.scriptApproved || p.step !== 2)
+        if (!p.data.scriptApproved || p.step !== (role === 'REFERENCE' ? 3 : 2))
           throw new BadRequestException(
             'Aprove o roteiro e abra a etapa Enviar vídeos.',
           );
-        const files = await this.files(id, c);
-        if (files.length >= this.settings.maxFiles)
+        const files = await this.files(id, c, role);
+        if (
+          files.length >=
+          (role === 'REFERENCE'
+            ? this.settings.referenceFiles
+            : this.settings.maxFiles)
+        )
           throw new BadRequestException('Limite de vídeos atingido.');
         if (!this.storage.saveFile)
           throw new ServiceUnavailableException('Storage incompatível.');
         await this.storage.saveFile(key!, file.path);
         await c.query(
-          'INSERT INTO short_files(id,project_id,original_name,storage_key,bytes,duration,width,height,fps,mime) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+          'INSERT INTO short_files(id,project_id,original_name,storage_key,bytes,duration,width,height,fps,mime,role) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
           [
             fileId,
             id,
@@ -307,6 +397,7 @@ export class ShortService {
             meta.height,
             meta.fps,
             meta.mimeType,
+            role,
           ],
         );
         await c.query(
@@ -314,7 +405,18 @@ export class ShortService {
           [key],
         );
         const data = { ...p.data };
+        if (role === 'REFERENCE') {
+          data.editing = {
+            enabled: false,
+            features: data.editing?.features ?? [...editingFeatures],
+            approved: false,
+          };
+          delete data.narrationText;
+          data.textApproved = false;
+          delete data.audio;
+        }
         delete data.plan;
+        delete data.decorations;
         data.planApproved = false;
         delete data.output;
         await this.cleanupData(c, p.data, data);
@@ -331,13 +433,17 @@ export class ShortService {
       await unlink(file.path).catch(() => {});
     }
   }
-  async removeFile(id: string, fileId: string) {
+  async removeFile(
+    id: string,
+    fileId: string,
+    role: 'SOURCE' | 'REFERENCE' = 'SOURCE',
+  ) {
     await this.locked(id, async (p, c) => {
-      if (p.step !== 2)
+      if (p.step !== (role === 'REFERENCE' ? 3 : 2))
         throw new BadRequestException(
           'Volte à etapa de envio para remover vídeos.',
         );
-      const f = (await this.files(id, c)).find((f) => f.id === fileId);
+      const f = (await this.files(id, c, role)).find((f) => f.id === fileId);
       if (!f) throw new NotFoundException('Vídeo não encontrado.');
       await c.query(
         'INSERT INTO short_storage_cleanup(storage_key) VALUES($1) ON CONFLICT DO NOTHING',
@@ -348,7 +454,18 @@ export class ShortService {
         id,
       ]);
       const data = { ...p.data };
+      if (role === 'REFERENCE') {
+        data.editing = {
+          enabled: false,
+          features: data.editing?.features ?? [...editingFeatures],
+          approved: false,
+        };
+        delete data.narrationText;
+        data.textApproved = false;
+        delete data.audio;
+      }
       delete data.plan;
+      delete data.decorations;
       data.planApproved = false;
       delete data.output;
       await this.cleanupData(c, p.data, data);
@@ -368,7 +485,21 @@ export class ShortService {
       this.checkRevision(p, input.revision);
       const files = await this.files(id, c);
       const d = p.data;
-      if (['SCRIPT', 'TEXT'].includes(input.kind) && !this.settings.enabled)
+      const references = await this.files(id, c, 'REFERENCE');
+      if (
+        input.kind === 'REFERENCES' &&
+        (!d.scriptApproved ||
+          p.step !== 3 ||
+          !references.length ||
+          !(d.editing?.features ?? editingFeatures).length)
+      )
+        throw new BadRequestException(
+          'Envie referências na etapa Referências de Edição.',
+        );
+      if (
+        ['SCRIPT', 'REFERENCES', 'TEXT'].includes(input.kind) &&
+        !this.settings.enabled
+      )
         throw new ServiceUnavailableException(
           'Configure a chave e o modelo de IA no servidor.',
         );
@@ -423,7 +554,7 @@ export class ShortService {
           randomUUID(),
           id,
           input.kind,
-          { project: p, files, semantic: input.semantic },
+          { project: p, files, references, semantic: input.semantic },
         ],
       );
       await c.query(
@@ -436,7 +567,9 @@ export class ShortService {
   async remove(id: string) {
     await this.locked(id, async (p, c) => {
       const keys = [
-        ...(await this.files(id, c)).map((f) => f.storage_key),
+        ...(await this.files(id, c))
+          .concat(await this.files(id, c, 'REFERENCE'))
+          .map((f) => f.storage_key),
         p.data.audio?.key,
         p.data.output?.key,
       ].filter(Boolean);
@@ -452,14 +585,24 @@ export class ShortService {
     });
     return { deleted: true };
   }
-  async media(id: string, type: 'audio' | 'video' | 'source', fileId?: string) {
+  async media(
+    id: string,
+    type: 'audio' | 'video' | 'source' | 'reference',
+    fileId?: string,
+  ) {
     const p = await this.project(id);
     const f =
-      type === 'source'
-        ? (await this.files(id)).find((f) => f.id === fileId)
+      type === 'source' || type === 'reference'
+        ? (
+            await this.files(
+              id,
+              this.db,
+              type === 'reference' ? 'REFERENCE' : 'SOURCE',
+            )
+          ).find((f) => f.id === fileId)
         : null;
     const asset =
-      type === 'source'
+      type === 'source' || type === 'reference'
         ? f
           ? { key: f.storage_key, bytes: Number(f.bytes), mime: f.mime }
           : null

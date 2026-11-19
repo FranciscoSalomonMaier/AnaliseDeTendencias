@@ -50,7 +50,7 @@ describe('Criar Short', () => {
       }).success,
     ).toBe(false);
   });
-  test('enforces approval and upload gates in the seven steps', () => {
+  test('enforces approval and upload gates in the eight steps', () => {
     expect(shortStepAllowed(project(), [], 2)).toBeFalsy();
     expect(
       shortStepAllowed(project({ scriptApproved: true }), [], 2),
@@ -62,10 +62,10 @@ describe('Criar Short', () => {
       shortStepAllowed(project({ scriptApproved: true }), [file], 3),
     ).toBeTruthy();
     expect(
-      shortStepAllowed(project({ textApproved: false }), [file], 4),
+      shortStepAllowed(project({ textApproved: false }), [file], 5),
     ).toBeFalsy();
     expect(
-      shortStepAllowed(project({ textApproved: true }), [file], 4),
+      shortStepAllowed(project({ textApproved: true }), [file], 5),
     ).toBeTruthy();
     expect(shortStepAllowed(project(), [file], 6)).toBeFalsy();
     expect(shortStepAllowed(project(), [file], 7)).toBeFalsy();
@@ -126,6 +126,39 @@ describe('Criar Short', () => {
     );
     await expect(service.project('id')).rejects.toThrow('não encontrado');
   });
+  test('skipping optional references preserves an existing baseline narration and output', async () => {
+    const p = project({
+      scriptApproved: true,
+      textApproved: true,
+      narrationText: 'Original',
+      audio: { key: 'audio.wav', duration: 3 } as never,
+      output: { key: 'video.mp4' } as never,
+    });
+    p.step = 3;
+    const query = jest.fn().mockResolvedValue({ rows: [] });
+    const service = new ShortService(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    jest
+      .spyOn(service, 'locked')
+      .mockImplementation(async (_id, fn) => fn(p, { query } as never));
+    jest.spyOn(service, 'files').mockResolvedValue([file]);
+    jest.spyOn(service, 'get').mockResolvedValue({} as never);
+    await service.patch('p', { revision: 2, skipReferences: true });
+    const update = query.mock.calls.find(([sql]) =>
+      sql.startsWith('UPDATE short_projects'),
+    );
+    expect(update?.[1][1].narrationText).toBe('Original');
+    expect(update?.[1][1].audio.key).toBe('audio.wav');
+    expect(update?.[1][1].output.key).toBe('video.mp4');
+    expect(update?.[1][2]).toBe(4);
+    expect(
+      query.mock.calls.some(([sql]) => sql.includes('short_storage_cleanup')),
+    ).toBe(false);
+  });
   test('editing narration invalidates approvals, audio, plan and final video atomically', async () => {
     const p = project({
       scriptApproved: true,
@@ -160,7 +193,7 @@ describe('Criar Short', () => {
     expect(update?.[1][1].audio).toBeUndefined();
     expect(update?.[1][1].plan).toBeUndefined();
     expect(update?.[1][1].output).toBeUndefined();
-    expect(update?.[1][2]).toBe(3);
+    expect(update?.[1][2]).toBe(4);
     expect(
       query.mock.calls.filter(([sql]) => sql.includes('short_storage_cleanup')),
     ).toHaveLength(2);

@@ -6,11 +6,12 @@ Módulo independente em `?page=create-short`. O Video Remix permanece disponíve
 
 1. Descrever o assunto, escolher 30/45/60 segundos, gerar/editar o roteiro e aprovar.
 2. Enviar um ou mais MP4, MOV ou WebM e declarar autorização de uso. Os arquivos enviados são o material real dos cortes, não referências de estilo.
-3. Gerar/editar o texto de narração e aprovar. Nenhum áudio é gerado automaticamente.
-4. Escolher uma voz, gerar e ouvir a narração. A duração real conduz a montagem.
-5. Solicitar cortes básicos ou ativar análise visual com IA, revisar os intervalos e as prévias dos originais, aprovar.
-6. Escolher recorte central ou fundo desfocado e renderizar em segundo plano.
-7. Reproduzir/baixar o MP4 validado. Meus Shorts permite continuar, visualizar, baixar e excluir projetos.
+3. **Opcional:** enviar e analisar referências de edição, revisar parâmetros ou pular. Veja [Referências de Edição](REFERENCIAS_EDICAO_SHORTS.md).
+4. Gerar/editar o texto de narração e aprovar. Nenhum áudio é gerado automaticamente.
+5. Escolher uma voz, gerar e ouvir a narração. A duração real conduz a montagem.
+6. Solicitar cortes básicos ou ativar análise visual com IA, revisar os intervalos e as prévias dos originais, aprovar.
+7. Escolher recorte central ou fundo desfocado e renderizar em segundo plano.
+8. Reproduzir/baixar o MP4 validado. Meus Shorts permite continuar, visualizar, baixar e excluir projetos.
 
 Todas as operações de IA/TTS são iniciadas por botões explícitos. Revisar a página, listar projetos e reproduzir arquivos não executa IA. Regenerar pode gerar nova cobrança. O MVP não publica no YouTube.
 
@@ -22,6 +23,7 @@ No diretório `api`:
 
 ```bash
 npm run migrate:shorts
+npm run migrate:short-references
 npm run start:dev
 ```
 
@@ -86,8 +88,8 @@ A integração usa vídeos sintéticos e mocks de todos os providers pagos. Cobr
 
 - A IA não pesquisa nem verifica fatos na web. O prompt exige cautela, mas o usuário deve revisar afirmações.
 - Análise semântica usa amostras limitadas do centro dos intervalos detectados, preservadas pelos cortes centralizados; não compreende o vídeo inteiro nem garante correspondência perfeita. O modo básico não avalia significado.
-- A narração é uma faixa única: cortes acompanham sua duração total, sem alinhamento palavra a palavra. Não há detecção de rostos para enquadramento.
-- Não há legendas nesta primeira entrega; o item de legendas é opcional no escopo. Não há música, efeitos, transições elaboradas ou editor avançado.
+- A narração é uma faixa única. Com referências aprovadas, transcrição com timestamps reais sincroniza legendas e textos. Não há detecção de rostos para enquadramento.
+- Legendas, overlays e efeitos simples estão disponíveis com referências de edição aprovadas. Não há música, efeitos sonoros, transições elaboradas ou editor avançado; limites e testes estão no documento da evolução.
 - Material insuficiente gera erro em vez de repetir automaticamente ou inventar cortes.
 - Saída fixa MP4 H.264/AAC, 1080×1920, 30 FPS. Renderizar requer CPU e espaço de disco local; progresso é por cortes e finalização.
 - Cada upload é enviado individualmente para limitar memória e permitir preservar os anteriores quando um arquivo falha. Um upload interrompido precisa ser reenviado.

@@ -36,7 +36,7 @@ export class ShortUploadGuard implements CanActivate {
       throw new BadRequestException('Projeto inválido.');
     const p = await this.service.project(id);
     if (
-      p.step !== 2 ||
+      p.step !== (req.url.split('?')[0].endsWith('/references') ? 3 : 2) ||
       !p.data.scriptApproved ||
       ['QUEUED', 'RUNNING'].includes(p.status)
     )
@@ -86,6 +86,32 @@ export class ShortController {
   ) {
     return this.service.upload(id, file, rights);
   }
+  @Post(':id/references')
+  @UseGuards(ShortUploadGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  uploadReference(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: RemixUpload | undefined,
+    @Body('rights') rights: unknown,
+  ) {
+    return this.service.upload(id, file, rights, 'REFERENCE');
+  }
+  @Delete(':id/references/:fileId')
+  removeReference(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('fileId', ParseUUIDPipe) fileId: string,
+  ) {
+    return this.service.removeFile(id, fileId, 'REFERENCE');
+  }
+  @Get(':id/references/:fileId')
+  reference(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('fileId', ParseUUIDPipe) file: string,
+    @Headers('range') range: string | undefined,
+    @Res() res: Response,
+  ) {
+    return this.stream(id, 'reference', range, res, file);
+  }
   @Delete(':id/files/:fileId') removeFile(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('fileId', ParseUUIDPipe) file: string,
@@ -117,7 +143,7 @@ export class ShortController {
   }
   async stream(
     id: string,
-    type: 'source' | 'audio' | 'video',
+    type: 'source' | 'reference' | 'audio' | 'video',
     range: string | undefined,
     res: Response,
     fileId?: string,

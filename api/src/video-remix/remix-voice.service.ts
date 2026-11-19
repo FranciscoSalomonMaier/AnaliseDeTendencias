@@ -38,13 +38,18 @@ export class RemixVoiceService {
   fingerprint(text: string, config: StoryConfig) {
     return storyHash({ text: text.trim(), ...this.configuration(config) });
   }
-  async generate(text: string, config: StoryConfig, signal: AbortSignal) {
+  async generate(
+    text: string,
+    config: StoryConfig,
+    signal: AbortSignal,
+    productionInstructions?: string,
+  ) {
     this.settings.tts.validateText(text);
     if (signal.aborted) throw new Error('Cancelado');
     const result = await this.tts.generateSpeech({
       text,
       settings: this.configuration(config),
-      instructions: `Leia exatamente o texto fornecido em português do Brasil, sem acrescentar palavras, descrições visuais ou instruções. Mantenha voz e volume consistentes. ${styleInstructions[config.style]}`,
+      instructions: `Leia exatamente o texto fornecido em português do Brasil, sem acrescentar palavras, descrições visuais ou instruções. Mantenha voz e volume consistentes. ${styleInstructions[config.style]}${productionInstructions ? ' ' + productionInstructions.slice(0, 1000) : ''}`,
       signal,
     });
     const audio = await this.validator.validate(result.audio, result.mimeType);
