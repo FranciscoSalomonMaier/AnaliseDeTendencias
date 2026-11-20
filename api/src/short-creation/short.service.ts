@@ -1,3 +1,4 @@
+import { shortClassificationCatalogs } from './classification/short-classification.catalog';
 import { defaultShortMusic } from './short-music.schema';
 import {
   activeEditing,
@@ -131,6 +132,7 @@ export class ShortService {
   options() {
     return {
       aiEnabled: this.settings.enabled,
+      classifications: shortClassificationCatalogs,
       voices: TTS_VOICES,
       maxBytes: this.settings.maxBytes,
       musicMaxBytes: this.settings.musicMaxBytes,
@@ -152,13 +154,14 @@ export class ShortService {
       );
     const id = randomUUID();
     await this.db.query(
-      'INSERT INTO short_projects(id,owner_id,title,description,target_seconds) VALUES($1,$2,$3,$4,$5)',
+      'INSERT INTO short_projects(id,owner_id,title,description,target_seconds,data) VALUES($1,$2,$3,$4,$5,$6)',
       [
         id,
         this.settings.owner,
         v.data.description.slice(0, 90),
         v.data.description,
         v.data.targetSeconds,
+        v.data.classification ? { classification: v.data.classification } : {},
       ],
     );
     return this.get(id);
@@ -209,6 +212,22 @@ export class ShortService {
       this.checkRevision(p, input.revision);
       const data = { ...p.data };
       let step = p.step;
+      // Editorial metadata only: no invalidation, inference or automatic execution.
+      if (input.classification !== undefined)
+        data.classification = input.classification;
+      if (
+        input.classification !== undefined &&
+        Object.keys(input).every((key) =>
+          ['revision', 'classification'].includes(key),
+        )
+      ) {
+        await c.query(
+          'UPDATE short_projects SET data=$2,revision=revision+1,updated_at=NOW() WHERE id=$1',
+          [id, data],
+        );
+        return;
+      }
+
       if (
         input.script &&
         JSON.stringify(input.script) !== JSON.stringify(data.script)

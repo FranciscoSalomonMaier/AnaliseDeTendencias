@@ -1,4 +1,8 @@
 import {
+  shortClassificationSchema,
+  type ShortClassification,
+} from './classification/short-classification.schema';
+import {
   shortMusicSettingsSchema,
   type ShortMusic,
   type ShortMusicSettings,
@@ -25,12 +29,14 @@ export const scriptSchema = z
 export const createShortSchema = z
   .object({
     description: z.string().trim().min(10).max(6000),
+    classification: shortClassificationSchema.optional(),
     targetSeconds: z.union([z.literal(30), z.literal(45), z.literal(60)]),
   })
   .strict();
 export const patchShortSchema = z
   .object({
     revision: z.number().int().nonnegative(),
+    classification: shortClassificationSchema.optional(),
     script: scriptSchema.optional(),
     narrationText: z.string().trim().min(1).max(4096).optional(),
     voice: z.enum(TTS_VOICES).optional(),
@@ -77,6 +83,7 @@ export interface ShortClip {
   description: string;
 }
 export interface ShortData {
+  classification?: ShortClassification;
   music?: ShortMusic;
   musicSettings?: ShortMusicSettings;
   musicEnabled?: boolean;
