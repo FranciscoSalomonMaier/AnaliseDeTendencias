@@ -82,7 +82,9 @@
     "test:short-classification:integration": "node test/shorts/short-classification.integration.cjs",
     "test:short-knowledge": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=editorial-knowledge",
     "test:short-editorial": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=short-editorial",
-    "test:short-editorial:integration": "node test/shorts/short-editorial.integration.cjs"
+    "test:short-editorial:integration": "node test/shorts/short-editorial.integration.cjs",
+    "test:short-resources": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=editing-resource",
+    "test:short-resources:integration": "node test/shorts/resources/resource-execution.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
