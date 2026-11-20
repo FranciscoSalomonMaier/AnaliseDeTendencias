@@ -79,7 +79,8 @@
     "test:short-music": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=short-music",
     "test:short-music:integration": "node test/shorts/short-music.integration.cjs",
     "test:short-classification": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=short-classification",
-    "test:short-classification:integration": "node test/shorts/short-classification.integration.cjs"
+    "test:short-classification:integration": "node test/shorts/short-classification.integration.cjs",
+    "test:short-knowledge": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=editorial-knowledge"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
