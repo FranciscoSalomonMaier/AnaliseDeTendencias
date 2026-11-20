@@ -1,3 +1,10 @@
+import {
+  effectiveEditingMode,
+  editorialConfigurationStatus,
+  editorialPreferenceOptions,
+  EDITORIAL_DEVELOPMENT_MESSAGE,
+} from './short-editorial.schema';
+import { isDeepStrictEqual } from 'node:util';
 import { shortClassificationCatalogs } from './classification/short-classification.catalog';
 import { defaultShortMusic } from './short-music.schema';
 import {
@@ -87,6 +94,7 @@ export class ShortService {
     const { audio, output, music, ...data } = p.data;
     return {
       ...p,
+      editorialStatus: editorialConfigurationStatus(p.data),
       owner_id: undefined,
       data: {
         ...data,
@@ -133,6 +141,7 @@ export class ShortService {
     return {
       aiEnabled: this.settings.enabled,
       classifications: shortClassificationCatalogs,
+      editorialPreferences: editorialPreferenceOptions,
       voices: TTS_VOICES,
       maxBytes: this.settings.maxBytes,
       musicMaxBytes: this.settings.musicMaxBytes,
@@ -161,7 +170,15 @@ export class ShortService {
         v.data.description.slice(0, 90),
         v.data.description,
         v.data.targetSeconds,
-        v.data.classification ? { classification: v.data.classification } : {},
+        {
+          ...(v.data.classification
+            ? { classification: v.data.classification }
+            : {}),
+          ...(v.data.editingMode ? { editingMode: v.data.editingMode } : {}),
+          ...(v.data.editorialPreferences
+            ? { editorialPreferences: v.data.editorialPreferences }
+            : {}),
+        },
       ],
     );
     return this.get(id);
@@ -212,21 +229,83 @@ export class ShortService {
       this.checkRevision(p, input.revision);
       const data = { ...p.data };
       let step = p.step;
-      // Editorial metadata only: no invalidation, inference or automatic execution.
+      // Intention edits and explicit mode switches preserve all production artifacts.
+      const metadataKeys = [
+        'revision',
+        'classification',
+        'editorialPreferences',
+        'editingMode',
+        'approve',
+      ];
+      const hasEditorialInput =
+        input.classification !== undefined ||
+        input.editorialPreferences !== undefined ||
+        input.editingMode !== undefined ||
+        input.approve === 'EDITORIAL';
+      const metadataOnly =
+        hasEditorialInput &&
+        Object.keys(input).every((key) => metadataKeys.includes(key)) &&
+        (!input.approve || input.approve === 'EDITORIAL');
+      if (
+        (input.editorialPreferences !== undefined ||
+          input.editingMode !== undefined ||
+          input.approve === 'EDITORIAL') &&
+        !metadataOnly
+      )
+        throw new BadRequestException(
+          'Salve a configuração editorial separadamente das alterações de conteúdo e de navegação.',
+        );
       if (input.classification !== undefined)
         data.classification = input.classification;
+      if (input.editorialPreferences !== undefined)
+        data.editorialPreferences = input.editorialPreferences;
+      if (input.editingMode !== undefined) data.editingMode = input.editingMode;
       if (
-        input.classification !== undefined &&
-        Object.keys(input).every((key) =>
-          ['revision', 'classification'].includes(key),
-        )
-      ) {
+        input.approve === 'EDITORIAL' &&
+        (effectiveEditingMode(data) !== 'EDITORIAL_CLASSIFICATION' ||
+          !editorialConfigurationStatus(data).complete)
+      )
+        throw new BadRequestException(
+          'Selecione o tipo de vídeo, o tema e o estilo na configuração editorial antes de aprovar.',
+        );
+      if (hasEditorialInput) {
+        const changed = [
+          'classification',
+          'editorialPreferences',
+          'editingMode',
+        ].some((key) => !isDeepStrictEqual(data[key], p.data[key]));
+        if (changed || input.approve === 'EDITORIAL') {
+          const configurationRevision =
+            (p.data.editorialReview?.configurationRevision ?? 0) +
+              (changed ? 1 : 0) || 1;
+          data.editorialReview = {
+            version: 1,
+            configurationRevision,
+            approvedRevision:
+              input.approve === 'EDITORIAL'
+                ? configurationRevision
+                : changed
+                  ? null
+                  : (p.data.editorialReview?.approvedRevision ?? null),
+          };
+        }
+      }
+      if (metadataOnly) {
         await c.query(
           'UPDATE short_projects SET data=$2,revision=revision+1,updated_at=NOW() WHERE id=$1',
           [id, data],
         );
         return;
       }
+      if (
+        effectiveEditingMode(data) === 'EDITORIAL_CLASSIFICATION' &&
+        ((input.step !== undefined && input.step >= 4 && input.step <= 8) ||
+          ['EDITING', 'TEXT', 'PLAN'].includes(input.approve ?? '') ||
+          input.skipReferences ||
+          input.editingConfig !== undefined ||
+          input.referenceFeatures !== undefined)
+      )
+        throw new BadRequestException(EDITORIAL_DEVELOPMENT_MESSAGE);
 
       if (
         input.script &&
@@ -424,6 +503,13 @@ export class ShortService {
         [key],
       );
       await this.locked(id, async (p, c) => {
+        if (
+          role === 'REFERENCE' &&
+          effectiveEditingMode(p.data) !== 'LEGACY_REFERENCE'
+        )
+          throw new BadRequestException(
+            'Escolha explicitamente o fluxo legado antes de enviar referências.',
+          );
         if (!p.data.scriptApproved || p.step !== (role === 'REFERENCE' ? 3 : 2))
           throw new BadRequestException(
             'Aprove o roteiro e abra a etapa Enviar vídeos.',
@@ -494,6 +580,13 @@ export class ShortService {
     role: 'SOURCE' | 'REFERENCE' = 'SOURCE',
   ) {
     await this.locked(id, async (p, c) => {
+      if (
+        role === 'REFERENCE' &&
+        effectiveEditingMode(p.data) !== 'LEGACY_REFERENCE'
+      )
+        throw new BadRequestException(
+          'Escolha explicitamente o fluxo legado antes de alterar referências.',
+        );
       if (p.step !== (role === 'REFERENCE' ? 3 : 2))
         throw new BadRequestException(
           'Volte à etapa de envio para remover vídeos.',
@@ -538,6 +631,11 @@ export class ShortService {
     const input = v.data;
     await this.locked(id, async (p, c) => {
       this.checkRevision(p, input.revision);
+      if (
+        effectiveEditingMode(p.data) === 'EDITORIAL_CLASSIFICATION' &&
+        input.kind !== 'SCRIPT'
+      )
+        throw new BadRequestException(EDITORIAL_DEVELOPMENT_MESSAGE);
       const files = await this.files(id, c);
       const d = p.data;
       const references = await this.files(id, c, 'REFERENCE');

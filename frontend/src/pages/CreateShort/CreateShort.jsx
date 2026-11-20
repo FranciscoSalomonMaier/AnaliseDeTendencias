@@ -1,3 +1,5 @@
+import { EditingConfiguration } from "./EditingConfiguration";
+import { editingMode } from "./editorialConfiguration";
 import { Soundtrack } from "./Soundtrack";
 import { EditingReferences } from "./EditingReferences";
 import { useEffect, useRef, useState } from "react";
@@ -6,7 +8,7 @@ import { publications } from "../../services/publicationService";
 const steps = [
   "Criar roteiro",
   "Vídeos para montagem",
-  "Referências de Edição",
+  "Configuração de edição",
   "Texto da narração",
   "Gerar narração",
   "Editar vídeo",
@@ -26,6 +28,9 @@ export function CreateShort() {
   const [project, setProject] = useState(null),
     [items, setItems] = useState([]),
     [options, setOptions] = useState(null),
+    [optionsLoading, setOptionsLoading] = useState(true),
+    [optionsError, setOptionsError] = useState(""),
+    [revisionConflict, setRevisionConflict] = useState(false),
     [description, setDescription] = useState(""),
     [duration, setDuration] = useState(45),
     [draft, setDraft] = useState(scriptEmpty),
@@ -44,6 +49,7 @@ export function CreateShort() {
   const accept = (p) => {
     projectRef.current = p;
     setProject(p);
+    setRevisionConflict(false);
     if (!dirtyRef.current) {
       setDraft(p.data.script ?? scriptEmpty);
       setText(p.data.narrationText ?? "");
@@ -60,6 +66,7 @@ export function CreateShort() {
   const fail = (e) => {
     setError(e.message);
     if (e.status === 401) setLogin(true);
+    if (e.status === 409) setRevisionConflict(true);
   };
   const updateUrl = (id) => {
     const params = new URLSearchParams({
@@ -87,13 +94,19 @@ export function CreateShort() {
     let active = true;
     async function init() {
       try {
-        const [config, list] = await Promise.all([
+        const [config, list] = await Promise.allSettled([
           shorts.options(),
           shorts.list(),
         ]);
         if (!active) return;
-        setOptions(config);
-        setItems(list.items);
+        if (config.status === "fulfilled") setOptions(config.value);
+        else {
+          setOptionsError(config.reason.message);
+          if (config.reason.status === 401) fail(config.reason);
+        }
+        setOptionsLoading(false);
+        if (list.status === "rejected") throw list.reason;
+        setItems(list.value.items);
         const id = new URLSearchParams(window.location.search).get(
           "shortProjectId",
         );
@@ -164,7 +177,7 @@ export function CreateShort() {
     setBusy(true);
     setError("");
     try {
-      await fn();
+      return await fn();
     } catch (e) {
       fail(e);
     } finally {
@@ -180,9 +193,21 @@ export function CreateShort() {
   }
   async function run(kind) {
     if (dirty) throw Error("Salve as alterações antes de gerar novamente.");
+    if (
+      kind !== "SCRIPT" &&
+      projectRef.current &&
+      editingMode(projectRef.current) === "EDITORIAL_CLASSIFICATION"
+    )
+      throw Error(
+        "A execução da nova configuração ainda está em desenvolvimento. Utilize o fluxo legado para produzir agora.",
+      );
     let p = projectRef.current;
     if (!p) {
-      p = await shorts.create({ description, targetSeconds: duration });
+      p = await shorts.create({
+        description,
+        targetSeconds: duration,
+        editingMode: "EDITORIAL_CLASSIFICATION",
+      });
       clean();
       accept(p);
       updateUrl(p.id);
@@ -194,13 +219,15 @@ export function CreateShort() {
     const step = project.step;
     if (step === 1) await save({ script: draft, approve: "SCRIPT" });
     else if (step === 2) await save({ step: 3 });
-    else if (step === 3)
+    else if (step === 3) {
+      if (editingMode(project) === "EDITORIAL_CLASSIFICATION")
+        throw Error("A execução editorial ainda está em desenvolvimento.");
       await save(
         project.data.editing?.config && project.data.editing?.profiles?.length
           ? { approve: "EDITING" }
           : { skipReferences: true },
       );
-    else if (step === 4) await save({ narrationText: text, approve: "TEXT" });
+    } else if (step === 4) await save({ narrationText: text, approve: "TEXT" });
     else if (step === 6) await save({ approve: "PLAN" });
     else await save({ step: step + 1 });
   }
@@ -226,7 +253,7 @@ export function CreateShort() {
       : step === 2
         ? project.files.length > 0
         : step === 3
-          ? !dirty
+          ? !dirty && editingMode(project) === "LEGACY_REFERENCE"
           : step === 4
             ? Boolean(text.trim())
             : step === 5
@@ -287,6 +314,46 @@ export function CreateShort() {
               >
                 {error}
               </p>
+            )}
+            {revisionConflict && (
+              <button
+                className={button}
+                disabled={locked}
+                onClick={() =>
+                  void act(async () => {
+                    if (
+                      dirty &&
+                      !window.confirm(
+                        "Recarregar o projeto e descartar suas alterações locais?",
+                      )
+                    )
+                      return;
+                    const fresh = await shorts.get(project.id);
+                    clean();
+                    accept(fresh);
+                    setError("");
+                  })
+                }
+              >
+                Recarregar projeto
+              </button>
+            )}
+            {project && step > 3 && (
+              <button
+                className={button}
+                disabled={locked}
+                onClick={() =>
+                  void act(async () => {
+                    if (dirty)
+                      throw Error(
+                        "Salve suas alterações antes de voltar à configuração.",
+                      );
+                    await save({ step: 3 });
+                  })
+                }
+              >
+                Revisar configuração de edição
+              </button>
             )}
             {project?.error_message && (
               <p role="alert" className="rounded border border-red-400/40 p-3">
@@ -493,43 +560,116 @@ export function CreateShort() {
                 </>
               )}
               {step === 3 && (
-                <EditingReferences
-                  key={`${project.id}:${project.revision}`}
-                  project={project}
-                  options={options}
-                  locked={locked}
-                  dirty={dirty}
-                  onDirty={edit}
-                  onSave={(data) => void act(() => save(data))}
-                  onRemove={(file) =>
-                    void act(async () =>
-                      accept(await shorts.removeReference(project.id, file)),
-                    )
-                  }
-                  onAnalyze={() => void act(() => run("REFERENCES"))}
-                  onSkip={() => void act(() => save({ skipReferences: true }))}
-                  onUpload={(files) =>
-                    void act(async () => {
-                      if (
-                        files.length + (project.references?.length ?? 0) >
-                        (options?.referenceMaxFiles ?? 3)
-                      )
-                        throw Error(
-                          "Quantidade de referências acima do limite.",
-                        );
-                      try {
-                        for (const file of files) {
-                          setUploading(file.name);
-                          accept(
-                            await shorts.uploadReference(project.id, file),
-                          );
-                        }
-                      } finally {
-                        setUploading("");
+                <div className="space-y-6">
+                  {editingMode(project) === "EDITORIAL_CLASSIFICATION" ? (
+                    <EditingConfiguration
+                      key={`${project.id}:${project.revision}`}
+                      project={project}
+                      options={options}
+                      loading={optionsLoading}
+                      error={optionsError}
+                      locked={locked}
+                      dirty={dirty}
+                      onDirty={edit}
+                      onSave={(data) => act(() => save(data))}
+                      onRetry={() =>
+                        void act(async () => {
+                          setOptionsLoading(true);
+                          setOptionsError("");
+                          try {
+                            setOptions(await shorts.options());
+                          } catch (e) {
+                            setOptionsError(e.message);
+                            throw e;
+                          } finally {
+                            setOptionsLoading(false);
+                          }
+                        })
                       }
-                    })
-                  }
-                />
+                    />
+                  ) : (
+                    <>
+                      <h2 className="text-xl font-semibold">
+                        Configuração de edição
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Fluxo legado de referências. As preferências da nova
+                        configuração não serão aplicadas aqui.
+                      </p>
+                      <EditingReferences
+                        key={`${project.id}:${project.revision}`}
+                        project={project}
+                        options={options}
+                        locked={locked}
+                        dirty={dirty}
+                        onDirty={edit}
+                        onSave={(data) => void act(() => save(data))}
+                        onRemove={(file) =>
+                          void act(async () =>
+                            accept(
+                              await shorts.removeReference(project.id, file),
+                            ),
+                          )
+                        }
+                        onAnalyze={() => void act(() => run("REFERENCES"))}
+                        onSkip={() =>
+                          void act(() => save({ skipReferences: true }))
+                        }
+                        onUpload={(files) =>
+                          void act(async () => {
+                            if (
+                              files.length + (project.references?.length ?? 0) >
+                              (options?.referenceMaxFiles ?? 3)
+                            )
+                              throw Error(
+                                "Quantidade de referências acima do limite.",
+                              );
+                            try {
+                              for (const file of files) {
+                                setUploading(file.name);
+                                accept(
+                                  await shorts.uploadReference(
+                                    project.id,
+                                    file,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              setUploading("");
+                            }
+                          })
+                        }
+                      />
+                    </>
+                  )}
+                  <details className="border-t border-border pt-4">
+                    <summary className="cursor-pointer text-sm text-muted-foreground">
+                      Outras opções de edição
+                    </summary>
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      A troca preserva referências, preferências e resultados
+                      existentes. Cada modalidade utiliza suas próprias
+                      configurações.
+                    </p>
+                    <button
+                      className={`${button} mt-3`}
+                      disabled={locked}
+                      onClick={() => {
+                        const target =
+                          editingMode(project) === "EDITORIAL_CLASSIFICATION"
+                            ? "LEGACY_REFERENCE"
+                            : "EDITORIAL_CLASSIFICATION";
+                        const message = `${dirty ? "Descartar as alterações não salvas e " : ""}${target === "LEGACY_REFERENCE" ? "usar o fluxo legado para produzir o Short? A nova configuração ficará guardada e não será aplicada." : "usar a nova configuração? Suas referências serão preservadas, mas a execução editorial ainda está em desenvolvimento."}`;
+                        if (window.confirm(message))
+                          void act(() => save({ editingMode: target }));
+                      }}
+                    >
+                      {editingMode(project) === "EDITORIAL_CLASSIFICATION"
+                        ? "Usar fluxo legado de referências"
+                        : "Usar nova configuração editorial"}
+                    </button>
+                  </details>
+                </div>
               )}
               {step === 4 && (
                 <>
@@ -828,17 +968,21 @@ export function CreateShort() {
                 >
                   Voltar
                 </button>
-                {step < 9 && (
-                  <button
-                    className={primary}
-                    disabled={locked || !canNext}
-                    onClick={() => void act(next)}
-                  >
-                    {[1, 4, 6].includes(step)
-                      ? "Aprovar e continuar"
-                      : "Continuar"}
-                  </button>
-                )}
+                {step < 9 &&
+                  !(
+                    step === 3 &&
+                    editingMode(project) === "EDITORIAL_CLASSIFICATION"
+                  ) && (
+                    <button
+                      className={primary}
+                      disabled={locked || !canNext}
+                      onClick={() => void act(next)}
+                    >
+                      {[1, 4, 6].includes(step)
+                        ? "Aprovar e continuar"
+                        : "Continuar"}
+                    </button>
+                  )}
               </nav>
             )}
             {!project && (

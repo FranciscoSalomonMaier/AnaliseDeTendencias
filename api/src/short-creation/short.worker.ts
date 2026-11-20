@@ -174,6 +174,9 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
         await consume(result.usage);
         data = {
           classification: data.classification,
+          editingMode: data.editingMode,
+          editorialPreferences: data.editorialPreferences,
+          editorialReview: data.editorialReview,
           music: data.music,
           musicSettings: data.musicSettings,
           musicEnabled: data.musicEnabled,
@@ -236,6 +239,9 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
           script: data.script,
           scriptApproved: true,
           classification: data.classification,
+          editingMode: data.editingMode,
+          editorialPreferences: data.editorialPreferences,
+          editorialReview: data.editorialReview,
           music: data.music,
           musicSettings: data.musicSettings,
           musicEnabled: data.musicEnabled,

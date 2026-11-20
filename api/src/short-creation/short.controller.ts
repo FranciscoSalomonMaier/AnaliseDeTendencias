@@ -1,3 +1,4 @@
+import { effectiveEditingMode } from './short-editorial.schema';
 import { ConfigService } from '@nestjs/config';
 import { MULTER_MODULE_OPTIONS } from '@nestjs/platform-express/multer/files.constants';
 import type { MulterModuleOptions } from '@nestjs/platform-express/multer/interfaces/files-upload-module.interface';
@@ -63,6 +64,13 @@ export class ShortUploadGuard implements CanActivate {
     )
       throw new BadRequestException('Projeto inválido.');
     const p = await this.service.project(id);
+    if (
+      req.url.split('?')[0].endsWith('/references') &&
+      effectiveEditingMode(p.data) !== 'LEGACY_REFERENCE'
+    )
+      throw new BadRequestException(
+        'Escolha explicitamente o fluxo legado antes de enviar referências.',
+      );
     if (
       p.step !==
         (req.url.split('?')[0].endsWith('/music')

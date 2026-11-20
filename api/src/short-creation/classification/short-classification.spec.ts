@@ -222,7 +222,15 @@ describe('Short classification metadata', () => {
       expect(sql).toBe(
         'UPDATE short_projects SET data=$2,revision=revision+1,updated_at=NOW() WHERE id=$1',
       );
-      expect(values[1]).toEqual({ ...data, classification });
+      expect(values[1]).toEqual({
+        ...data,
+        classification,
+        editorialReview: {
+          version: 1,
+          configurationRevision: 1,
+          approvedRevision: null,
+        },
+      });
       expect(data).not.toHaveProperty('classification');
       expect(service.files).not.toHaveBeenCalled();
       expect(db.query).not.toHaveBeenCalled();
@@ -258,6 +266,18 @@ describe('Short classification metadata', () => {
         description: 'Descrição do projeto',
         data: {
           classification,
+          editingMode: 'LEGACY_REFERENCE',
+          editorialPreferences: {
+            version: 1,
+            additionalInstructions: 'PRIVATE_EDITORIAL_INTENT',
+            cutRhythm: 'AUTO',
+            resources: {},
+          },
+          editorialReview: {
+            version: 1,
+            configurationRevision: 1,
+            approvedRevision: 1,
+          },
           script: { introduction: 'I', development: 'D', conclusion: 'C' },
           scriptApproved: true,
         },
@@ -271,15 +291,13 @@ describe('Short classification metadata', () => {
           storage: { delete: jest.fn() },
         };
       const llm = {
-        generateStructuredOutput: jest
-          .fn()
-          .mockResolvedValue({
-            data:
-              kind === 'SCRIPT'
-                ? { introduction: 'I', development: 'D', conclusion: 'C' }
-                : { text: 'Narração' },
-            usage: { totalTokens: 0 },
-          }),
+        generateStructuredOutput: jest.fn().mockResolvedValue({
+          data:
+            kind === 'SCRIPT'
+              ? { introduction: 'I', development: 'D', conclusion: 'C' }
+              : { text: 'Narração' },
+          usage: { totalTokens: 0 },
+        }),
       };
       const worker = new ShortWorker(
         service as never,
@@ -298,9 +316,15 @@ describe('Short classification metadata', () => {
         sql.startsWith('UPDATE short_projects SET data='),
       );
       expect(update?.[1][1].classification).toEqual(classification);
+      expect(update?.[1][1].editorialPreferences.additionalInstructions).toBe(
+        'PRIVATE_EDITORIAL_INTENT',
+      );
+      expect(update?.[1][1].editingMode).toBe('LEGACY_REFERENCE');
+      expect(update?.[1][1].editorialReview.approvedRevision).toBe(1);
       expect(llm.generateStructuredOutput).toHaveBeenCalledTimes(1);
       const prompt = llm.generateStructuredOutput.mock.calls[0][0] as any;
       expect(prompt.userPrompt).not.toContain('classification');
+      expect(prompt.userPrompt).not.toContain('PRIVATE_EDITORIAL_INTENT');
       expect(prompt.userPrompt).not.toContain('TOP_X');
     },
   );

@@ -1,4 +1,12 @@
 import {
+  editingModeSchema,
+  editorialPreferencesSchema,
+  effectiveEditingMode,
+  type EditingMode,
+  type EditorialPreferences,
+  type EditorialReview,
+} from './short-editorial.schema';
+import {
   shortClassificationSchema,
   type ShortClassification,
 } from './classification/short-classification.schema';
@@ -30,6 +38,8 @@ export const createShortSchema = z
   .object({
     description: z.string().trim().min(10).max(6000),
     classification: shortClassificationSchema.optional(),
+    editingMode: editingModeSchema.optional(),
+    editorialPreferences: editorialPreferencesSchema.optional(),
     targetSeconds: z.union([z.literal(30), z.literal(45), z.literal(60)]),
   })
   .strict();
@@ -37,11 +47,15 @@ export const patchShortSchema = z
   .object({
     revision: z.number().int().nonnegative(),
     classification: shortClassificationSchema.optional(),
+    editingMode: editingModeSchema.optional(),
+    editorialPreferences: editorialPreferencesSchema.optional(),
     script: scriptSchema.optional(),
     narrationText: z.string().trim().min(1).max(4096).optional(),
     voice: z.enum(TTS_VOICES).optional(),
     framing: z.enum(['CROP', 'BLUR']).optional(),
-    approve: z.enum(['SCRIPT', 'EDITING', 'TEXT', 'PLAN']).optional(),
+    approve: z
+      .enum(['SCRIPT', 'EDITING', 'EDITORIAL', 'TEXT', 'PLAN'])
+      .optional(),
     step: z.number().int().min(1).max(9).optional(),
     referenceFeatures: featureSelection.optional(),
     editingConfig: editingConfigSchema.optional(),
@@ -84,6 +98,9 @@ export interface ShortClip {
 }
 export interface ShortData {
   classification?: ShortClassification;
+  editingMode?: EditingMode;
+  editorialPreferences?: EditorialPreferences;
+  editorialReview?: EditorialReview;
   music?: ShortMusic;
   musicSettings?: ShortMusicSettings;
   musicEnabled?: boolean;
@@ -210,6 +227,12 @@ export function shortStepAllowed(
   step: number,
 ) {
   const d = p.data;
+  if (
+    effectiveEditingMode(d) === 'EDITORIAL_CLASSIFICATION' &&
+    step >= 4 &&
+    step <= 8
+  )
+    return false;
   return (
     step === 1 ||
     (step === 2 && d.scriptApproved) ||
