@@ -1,4 +1,9 @@
 import {
+  shortMusicSettingsSchema,
+  type ShortMusic,
+  type ShortMusicSettings,
+} from './short-music.schema';
+import {
   featureSelection,
   editingConfigSchema,
   type EditingState,
@@ -31,9 +36,13 @@ export const patchShortSchema = z
     voice: z.enum(TTS_VOICES).optional(),
     framing: z.enum(['CROP', 'BLUR']).optional(),
     approve: z.enum(['SCRIPT', 'EDITING', 'TEXT', 'PLAN']).optional(),
-    step: z.number().int().min(1).max(8).optional(),
+    step: z.number().int().min(1).max(9).optional(),
     referenceFeatures: featureSelection.optional(),
     editingConfig: editingConfigSchema.optional(),
+    musicSettings: shortMusicSettingsSchema.optional(),
+    musicEnabled: z.boolean().optional(),
+    removeMusic: z.literal(true).optional(),
+    skipMusic: z.literal(true).optional(),
     skipReferences: z.literal(true).optional(),
   })
   .strict();
@@ -68,6 +77,9 @@ export interface ShortClip {
   description: string;
 }
 export interface ShortData {
+  music?: ShortMusic;
+  musicSettings?: ShortMusicSettings;
+  musicEnabled?: boolean;
   editing?: EditingState;
   decorations?: {
     segments: SubtitleSegment[];
@@ -199,6 +211,7 @@ export function shortStepAllowed(
     (step === 5 && d.textApproved && files.length > 0) ||
     (step === 6 && d.textApproved && d.audio && files.length > 0) ||
     (step === 7 && d.audio && d.planApproved) ||
-    (step === 8 && d.output)
+    (step === 8 && d.audio && d.planApproved) ||
+    (step === 9 && d.output)
   );
 }

@@ -13,6 +13,7 @@ import {
   editingAss,
   captionSettings,
   fitCaptionGroups,
+  shortCaptionLayout,
   narrationEditing,
   ShortEditingEffectsService,
 } from './short-editing-effects.service';
@@ -214,6 +215,37 @@ describe('Referências de edição', () => {
     expect(
       narrationEditing({ ...config(), narrationStyle: 'DYNAMIC' }).instructions,
     ).toMatch(/dinâmico/);
+  });
+  test('fits saved whole-phrase captions without truncating or inventing timestamps', () => {
+    const d = data();
+    d.editing.config.captions.fontSize = 28;
+    d.editing.config.captions.wordsPerGroup = 1;
+    d.editing.config.captions.highlightWord = false;
+    const text =
+      'Uma frase longa com informações importantes que precisa aparecer inteira sem inventar novos tempos para palavras na narração.';
+    const segment = {
+      id: 'old',
+      order: 1,
+      text,
+      startSeconds: 0.2,
+      endSeconds: 2.8,
+    };
+    d.decorations = {
+      segments: [segment],
+      granularity: 'SEGMENT',
+      overlays: [],
+      warnings: [],
+    };
+    const layout = shortCaptionLayout(captionSettings(d.editing.config), [
+      segment,
+    ]);
+    expect(layout.maxLines).toBeGreaterThan(2);
+    expect(layout.maxLines).toBeLessThanOrEqual(6);
+    expect(layout.fontSize).toBeGreaterThanOrEqual(24);
+    const ass = editingAss(d)!;
+    expect(ass).toContain('0:00:00.20,0:00:02.80');
+    for (const word of text.split(' ')) expect(ass).toContain(word);
+    expect(d.decorations.segments).toEqual([segment]);
   });
   test('uses real segment timing without inventing word timing and discards ungrounded numbers', async () => {
     const d = data();

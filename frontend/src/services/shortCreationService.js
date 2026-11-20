@@ -58,6 +58,15 @@ export const shorts = {
     data.append("file", file);
     return request(`/${id}/references`, "POST", data);
   },
+  uploadMusic: (project, file) => {
+    const data = new FormData();
+    data.append("rights", "true");
+    data.append("revision", String(project.revision));
+    data.append("file", file);
+    return request(`/${project.id}/music`, "POST", data);
+  },
+  removeMusic: (project) =>
+    request(`/${project.id}/music`, "DELETE", { revision: project.revision }),
   removeReference: (id, file) => request(`/${id}/references/${file}`, "DELETE"),
   removeFile: (id, file) => request(`/${id}/files/${file}`, "DELETE"),
   remove: (id) => request(`/${id}`, "DELETE"),

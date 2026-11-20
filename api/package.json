@@ -74,7 +74,10 @@
     "test:shorts:integration": "node test/shorts/shorts.integration.cjs",
     "migrate:short-references": "node scripts/migrate-short-references.cjs",
     "test:short-editing": "jest --config jest.ai-cache.config.cjs --runInBand --runTestsByPath src/short-creation/short-editing.spec.ts",
-    "test:short-editing:integration": "node test/shorts/short-references.integration.cjs"
+    "test:short-editing:integration": "node test/shorts/short-references.integration.cjs",
+    "migrate:short-music": "node scripts/migrate-short-music.cjs",
+    "test:short-music": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=short-music",
+    "test:short-music:integration": "node test/shorts/short-music.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

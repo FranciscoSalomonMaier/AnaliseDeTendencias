@@ -48,14 +48,9 @@ export function EditingReferences({
         e amostras limitadas.
       </p>
       <p className="text-sm text-muted-foreground">
-        Música, efeitos sonoros e entonação permanecem desconhecidos nesta
-        versão. A voz pode ser ajustada manualmente. O áudio das referências
-        nunca é copiado.
-      </p>
-      <p className="text-sm text-muted-foreground">
-        Entonação exige revisão manual. Música e efeitos sonoros não são
-        identificados nem aplicados nesta versão; os áudios das referências não
-        são copiados.
+        Entonação exige revisão manual. Música e efeitos não são identificados
+        pelas referências; o áudio delas nunca é copiado. Para adicionar uma
+        música autorizada, use a etapa Trilha sonora.
       </p>
       <fieldset disabled={locked} className="space-y-2">
         <legend className="mb-2 font-medium">

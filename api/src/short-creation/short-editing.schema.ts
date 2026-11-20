@@ -273,7 +273,7 @@ export function consolidateReferences(
   );
   if (features.includes('soundEffects') || features.includes('music'))
     notes.push(
-      'Música e efeitos sonoros não são extraídos nem copiados das referências. Sem arquivos complementares autorizados neste módulo, o Short continua apenas com a narração.',
+      'Música e efeitos sonoros não são extraídos nem copiados das referências. Adicione uma música autorizada na etapa Trilha sonora, ou continue apenas com a narração.',
     );
   if (v.some((v) => v.transition === 'CROSSFADE'))
     notes.push(

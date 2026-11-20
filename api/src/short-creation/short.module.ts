@@ -1,3 +1,9 @@
+import { AudioMixService } from '../content-audio/audio-mix.service';
+import {
+  ShortMusicValidator,
+  ShortMusicRenderer,
+  ShortSoundtrackService,
+} from './short-music.service';
 import { ShortEditingReferenceAnalysisService } from './short-reference-analysis.service';
 import { ShortEditingEffectsService } from './short-editing-effects.service';
 import { Module } from '@nestjs/common';
@@ -21,7 +27,11 @@ import { ShortSettings } from './short.settings';
 import { ShortService } from './short.service';
 import { ShortMedia } from './short.media';
 import { ShortWorker } from './short.worker';
-import { ShortController, ShortUploadGuard } from './short.controller';
+import {
+  ShortController,
+  ShortUploadGuard,
+  ShortMusicUploadInterceptor,
+} from './short.controller';
 export async function shortUploadOptions(config: ConfigService) {
   const settings = new ShortSettings(config);
   await mkdir(settings.tempDir, { recursive: true, mode: 0o700 });
@@ -59,6 +69,11 @@ export async function shortUploadOptions(config: ConfigService) {
   controllers: [ShortController],
   providers: [
     ShortSettings,
+    AudioMixService,
+    ShortMusicValidator,
+    ShortMusicRenderer,
+    ShortSoundtrackService,
+    ShortMusicUploadInterceptor,
     ShortService,
     ShortMedia,
     ShortWorker,

@@ -1,3 +1,4 @@
+import { ShortMusicRenderer } from './short-music.service';
 import { activeEditing, applyCutRhythm } from './short-editing.schema';
 import { editingAss } from './short-editing-effects.service';
 import { filterPath } from '../video-render/ffmpeg.renderer';
@@ -31,6 +32,7 @@ export class ShortMedia {
     readonly analysisSettings: RemixAnalysisSettings,
     readonly vision: VideoSceneAnalysisService,
     readonly validator: RemixVideoValidator,
+    readonly soundtrack: ShortMusicRenderer,
   ) {}
   async workspace<T>(bytes: number, work: (dir: string) => Promise<T>) {
     await mkdir(this.settings.tempDir, { recursive: true, mode: 0o700 });
@@ -171,7 +173,8 @@ export class ShortMedia {
     progress: (n: number) => Promise<void>,
   ) {
     return this.workspace(
-      files.reduce((n, f) => n + Number(f.bytes), 0),
+      files.reduce((n, f) => n + Number(f.bytes), 0) +
+        (p.data.music?.bytes ?? 0),
       async (dir) => {
         if (!this.storage.copyTo || !this.storage.saveFile)
           throw Error('Storage incompatível.');
@@ -283,6 +286,12 @@ export class ShortMedia {
           'narration.' + data.audio!.key.split('.').at(-1),
         );
         await this.storage.copyTo(data.audio!.key, audio);
+        const finalAudio = await this.soundtrack.prepare(
+          data,
+          audio,
+          dir,
+          signal,
+        );
         const concat = join(dir, 'clips.txt');
         await writeFile(concat, names.map((n) => `file '${n}'`).join('\n'), {
           mode: 0o600,
@@ -311,7 +320,7 @@ export class ShortMedia {
             '-protocol_whitelist',
             'file,pipe',
             '-i',
-            audio,
+            finalAudio,
             '-map',
             '0:v:0',
             '-map',

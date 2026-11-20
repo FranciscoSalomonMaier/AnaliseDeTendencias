@@ -1,3 +1,5 @@
+> Evolução posterior: o fluxo agora tem nove etapas, com Trilha sonora antes de Renderizar. Música própria/autorizada pode ser enviada manualmente; isso não muda a análise acústica das referências. Veja [Trilha sonora](IMPLEMENTACAO_TRILHA_SONORA_SHORTS.md).
+
 # Referências de Edição — Criar Short
 
 Implementação opcional no fluxo existente `?page=create-short`. Não cria módulo independente, biblioteca global, pesquisa no YouTube ou publicação automática.
@@ -29,7 +31,7 @@ Os arquivos de referência têm papel `REFERENCE`, upload, listagem e streaming 
 | Textos informativos | Presença, posição, frequência e tipos estimados | Novos rótulos de até seis palavras gerados exclusivamente do roteiro/narração atuais; tempos ancorados em unidades reais, até três itens, posições separadas das legendas e fade |
 | Zoom | Aproximação/afastamento estimados somente com sequências do mesmo grupo | Zoom suave central limitado a 6%, ocasional, em momentos com overlay ou trecho central; não em todos os planos |
 | Transições | Corte/fade/crossfade estimados quando observáveis | Corte seco; fade inicial e final. Crossfade não aplicado neste motor de Shorts |
-| Música e efeitos sonoros | **Não identificados** nesta versão; não se presume sua presença | **Não aplicados**: Criar Short não possui recursos complementares autorizados associados. Continua com a narração, sem extrair áudio das referências |
+| Música e efeitos sonoros | **Não identificados** nesta versão; não se presume sua presença | Não são extraídos das referências. Música autorizada pode ser enviada manualmente na etapa Trilha sonora; efeitos sonoros continuam fora do fluxo |
 
 As métricas numéricas são calculadas. Características visuais são estimativas multimodais com confiança declarada e propriedades desconhecidas (`null`); não são medições exatas de fonte/movimento. Resultados visuais com confiança abaixo de 0,6 não ativam efeitos automaticamente. Defaults para propriedades desconhecidas são parâmetros de aplicação, explicitamente identificados na revisão, não resultados observados.
 

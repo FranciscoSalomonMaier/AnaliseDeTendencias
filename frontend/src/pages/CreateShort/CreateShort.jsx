@@ -1,3 +1,4 @@
+import { Soundtrack } from "./Soundtrack";
 import { EditingReferences } from "./EditingReferences";
 import { useEffect, useRef, useState } from "react";
 import { shorts, shortMediaUrl } from "../../services/shortCreationService";
@@ -9,6 +10,7 @@ const steps = [
   "Texto da narração",
   "Gerar narração",
   "Editar vídeo",
+  "Trilha sonora",
   "Renderizar Short",
   "Resultado",
 ];
@@ -232,8 +234,10 @@ export function CreateShort() {
               : step === 6
                 ? Boolean(project.data.plan?.clips.length)
                 : step === 7
-                  ? Boolean(project.data.output)
-                  : false;
+                  ? !dirty
+                  : step === 8
+                    ? Boolean(project.data.output)
+                    : false;
   return (
     <div className="min-h-screen bg-theme p-4 text-white md:p-8">
       <div className="mx-auto max-w-3xl space-y-6">
@@ -274,7 +278,7 @@ export function CreateShort() {
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              Etapa {step} de 8 · {steps[step - 1]}
+              Etapa {step} de 9 · {steps[step - 1]}
             </p>
             {error && (
               <p
@@ -713,10 +717,39 @@ export function CreateShort() {
                 </>
               )}
               {step === 7 && (
+                <Soundtrack
+                  key={`${project.id}:${project.revision}`}
+                  project={project}
+                  options={options}
+                  locked={locked}
+                  dirty={dirty}
+                  onDirty={edit}
+                  onSave={(data) => void act(() => save(data))}
+                  onUpload={(file) =>
+                    void act(async () => {
+                      try {
+                        setUploading(file.name);
+                        accept(await shorts.uploadMusic(project, file));
+                      } finally {
+                        setUploading("");
+                      }
+                    })
+                  }
+                  onRemove={() =>
+                    void act(async () =>
+                      accept(await shorts.removeMusic(project)),
+                    )
+                  }
+                  onSkip={() =>
+                    void act(() => save({ skipMusic: true, step: 8 }))
+                  }
+                />
+              )}
+              {step === 8 && (
                 <>
                   <p>
                     Seu Short será montado em formato vertical, usando os cortes
-                    aprovados e a narração.
+                    aprovados, a narração e a trilha sonora habilitada.
                   </p>
                   <label className="block">
                     Enquadramento
@@ -745,7 +778,7 @@ export function CreateShort() {
                   </button>
                 </>
               )}
-              {step === 8 && project.data.output && (
+              {step === 9 && project.data.output && (
                 <>
                   <video
                     className="mx-auto max-h-[65vh] w-full rounded bg-black"
@@ -795,7 +828,7 @@ export function CreateShort() {
                 >
                   Voltar
                 </button>
-                {step < 8 && (
+                {step < 9 && (
                   <button
                     className={primary}
                     disabled={locked || !canNext}
@@ -828,7 +861,7 @@ export function CreateShort() {
                             ? "Falhou"
                             : ["QUEUED", "RUNNING"].includes(item.status)
                               ? "Processando"
-                              : `Etapa ${item.step} de 8`}
+                              : `Etapa ${item.step} de 9`}
                         {item.duration
                           ? ` · ${Number(item.duration).toFixed(1)}s`
                           : ""}

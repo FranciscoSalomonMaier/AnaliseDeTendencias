@@ -55,7 +55,7 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
     this.running = this.work()
       .catch(() =>
         this.logger.warn(
-          'Fila Criar Short indisponível. Verifique o banco e a migrations 021/022.',
+          'Fila Criar Short indisponível. Verifique o banco e a migrations 021/022/023.',
         ),
       )
       .finally(() => {
@@ -173,6 +173,9 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
         });
         await consume(result.usage);
         data = {
+          music: data.music,
+          musicSettings: data.musicSettings,
+          musicEnabled: data.musicEnabled,
           editing: data.editing,
           voice: data.voice,
           framing: data.framing,
@@ -231,6 +234,9 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
         data = {
           script: data.script,
           scriptApproved: true,
+          music: data.music,
+          musicSettings: data.musicSettings,
+          musicEnabled: data.musicEnabled,
           editing: data.editing,
           voice: data.voice,
           framing: data.framing,
@@ -306,7 +312,7 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
           progress,
         );
         data = { ...data, output };
-        step = 8;
+        step = 9;
       }
       await progress(99);
       await s.db.withClient(async (db) => {
@@ -363,7 +369,7 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
         [p.id, message],
       );
       this.logger.warn(
-        `Short ${p.id}: ${job.kind} falhou (${error instanceof Error ? error.name : 'erro'}).`,
+        `Short ${p.id}: ${job.kind} falhou (${error instanceof Error ? error.name : 'erro'}): ${message}`,
       );
     } finally {
       clearTimeout(timer);

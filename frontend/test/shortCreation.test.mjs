@@ -92,7 +92,7 @@ test("Criar Short minimal workflow and API contracts", async (t) => {
             "45 segundos",
             "60 segundos",
             "Gerar roteiro",
-            "Etapa 1 de 8",
+            "Etapa 1 de 9",
           ])
             assert.ok(html.includes(value), value);
           assert.ok(!html.includes("YouTube"));

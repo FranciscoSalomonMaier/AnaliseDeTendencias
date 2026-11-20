@@ -50,7 +50,7 @@ describe('Criar Short', () => {
       }).success,
     ).toBe(false);
   });
-  test('enforces approval and upload gates in the eight steps', () => {
+  test('enforces approval and upload gates in the nine steps', () => {
     expect(shortStepAllowed(project(), [], 2)).toBeFalsy();
     expect(
       shortStepAllowed(project({ scriptApproved: true }), [], 2),

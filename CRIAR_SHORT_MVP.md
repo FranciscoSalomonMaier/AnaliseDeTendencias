@@ -10,8 +10,9 @@ Módulo independente em `?page=create-short`. O Video Remix permanece disponíve
 4. Gerar/editar o texto de narração e aprovar. Nenhum áudio é gerado automaticamente.
 5. Escolher uma voz, gerar e ouvir a narração. A duração real conduz a montagem.
 6. Solicitar cortes básicos ou ativar análise visual com IA, revisar os intervalos e as prévias dos originais, aprovar.
-7. Escolher recorte central ou fundo desfocado e renderizar em segundo plano.
-8. Reproduzir/baixar o MP4 validado. Meus Shorts permite continuar, visualizar, baixar e excluir projetos.
+7. **Opcional:** enviar uma música autorizada, ajustar volume/fades/loop/ducking ou continuar sem música. Veja [Trilha sonora](IMPLEMENTACAO_TRILHA_SONORA_SHORTS.md).
+8. Escolher recorte central ou fundo desfocado e renderizar em segundo plano.
+9. Reproduzir/baixar o MP4 validado. Meus Shorts permite continuar, visualizar, baixar e excluir projetos.
 
 Todas as operações de IA/TTS são iniciadas por botões explícitos. Revisar a página, listar projetos e reproduzir arquivos não executa IA. Regenerar pode gerar nova cobrança. O MVP não publica no YouTube.
 
@@ -24,6 +25,7 @@ No diretório `api`:
 ```bash
 npm run migrate:shorts
 npm run migrate:short-references
+npm run migrate:short-music
 npm run start:dev
 ```
 
@@ -89,7 +91,7 @@ A integração usa vídeos sintéticos e mocks de todos os providers pagos. Cobr
 - A IA não pesquisa nem verifica fatos na web. O prompt exige cautela, mas o usuário deve revisar afirmações.
 - Análise semântica usa amostras limitadas do centro dos intervalos detectados, preservadas pelos cortes centralizados; não compreende o vídeo inteiro nem garante correspondência perfeita. O modo básico não avalia significado.
 - A narração é uma faixa única. Com referências aprovadas, transcrição com timestamps reais sincroniza legendas e textos. Não há detecção de rostos para enquadramento.
-- Legendas, overlays e efeitos simples estão disponíveis com referências de edição aprovadas. Não há música, efeitos sonoros, transições elaboradas ou editor avançado; limites e testes estão no documento da evolução.
+- Legendas, overlays e efeitos simples estão disponíveis com referências de edição aprovadas. Música autorizada opcional está disponível na etapa Trilha sonora. Não há efeitos sonoros, transições elaboradas ou editor avançado; limites e testes estão nos documentos das evoluções.
 - Material insuficiente gera erro em vez de repetir automaticamente ou inventar cortes.
 - Saída fixa MP4 H.264/AAC, 1080×1920, 30 FPS. Renderizar requer CPU e espaço de disco local; progresso é por cortes e finalização.
 - Cada upload é enviado individualmente para limitar memória e permitir preservar os anteriores quando um arquivo falha. Um upload interrompido precisa ser reenviado.

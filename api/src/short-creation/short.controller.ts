@@ -1,3 +1,9 @@
+import { ConfigService } from '@nestjs/config';
+import { MULTER_MODULE_OPTIONS } from '@nestjs/platform-express/multer/files.constants';
+import type { MulterModuleOptions } from '@nestjs/platform-express/multer/interfaces/files-upload-module.interface';
+import { Inject, type NestInterceptor, type CallHandler } from '@nestjs/common';
+import { ShortSettings } from './short.settings';
+import { ShortSoundtrackService } from './short-music.service';
 import {
   Body,
   Controller,
@@ -24,6 +30,28 @@ import { videoRange } from '../video-render/video-render.controller';
 import type { RemixUpload } from '../video-remix/remix-import.settings';
 import { ShortService } from './short.service';
 @Injectable()
+export class ShortMusicUploadInterceptor implements NestInterceptor {
+  readonly delegate: NestInterceptor;
+  constructor(
+    config: ConfigService,
+    @Inject(MULTER_MODULE_OPTIONS) options: MulterModuleOptions,
+  ) {
+    const Interceptor = FileInterceptor('file', {
+      limits: {
+        ...options.limits,
+        fileSize: new ShortSettings(config).musicMaxBytes,
+        fields: 2,
+        fieldSize: 20,
+        parts: 4,
+      },
+    });
+    this.delegate = new Interceptor(options);
+  }
+  intercept(context: ExecutionContext, next: CallHandler) {
+    return this.delegate.intercept(context, next);
+  }
+}
+@Injectable()
 export class ShortUploadGuard implements CanActivate {
   constructor(readonly service: ShortService) {}
   async canActivate(ctx: ExecutionContext) {
@@ -36,7 +64,12 @@ export class ShortUploadGuard implements CanActivate {
       throw new BadRequestException('Projeto inválido.');
     const p = await this.service.project(id);
     if (
-      p.step !== (req.url.split('?')[0].endsWith('/references') ? 3 : 2) ||
+      p.step !==
+        (req.url.split('?')[0].endsWith('/music')
+          ? 7
+          : req.url.split('?')[0].endsWith('/references')
+            ? 3
+            : 2) ||
       !p.data.scriptApproved ||
       ['QUEUED', 'RUNNING'].includes(p.status)
     )
@@ -48,7 +81,10 @@ export class ShortUploadGuard implements CanActivate {
 }
 @Controller('shorts')
 export class ShortController {
-  constructor(readonly service: ShortService) {}
+  constructor(
+    readonly service: ShortService,
+    readonly soundtrack: ShortSoundtrackService,
+  ) {}
   @Get('options') options() {
     return this.service.options();
   }
@@ -85,6 +121,31 @@ export class ShortController {
     @Body('rights') rights: unknown,
   ) {
     return this.service.upload(id, file, rights);
+  }
+  @Post(':id/music')
+  @UseGuards(ShortUploadGuard)
+  @UseInterceptors(ShortMusicUploadInterceptor)
+  uploadMusic(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: RemixUpload | undefined,
+    @Body() body: unknown,
+  ) {
+    return this.soundtrack.upload(id, file, body);
+  }
+  @Delete(':id/music')
+  removeMusic(@Param('id', ParseUUIDPipe) id: string, @Body() raw: unknown) {
+    return this.service.patch(id, {
+      ...(typeof raw === 'object' && raw ? raw : {}),
+      removeMusic: true,
+    });
+  }
+  @Get(':id/music')
+  music(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('range') range: string | undefined,
+    @Res() res: Response,
+  ) {
+    return this.stream(id, 'music', range, res);
   }
   @Post(':id/references')
   @UseGuards(ShortUploadGuard)
@@ -143,7 +204,7 @@ export class ShortController {
   }
   async stream(
     id: string,
-    type: 'source' | 'reference' | 'audio' | 'video',
+    type: 'source' | 'reference' | 'audio' | 'video' | 'music',
     range: string | undefined,
     res: Response,
     fileId?: string,

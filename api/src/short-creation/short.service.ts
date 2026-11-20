@@ -1,3 +1,4 @@
+import { defaultShortMusic } from './short-music.schema';
 import {
   activeEditing,
   editingFeatures,
@@ -82,12 +83,16 @@ export class ShortService {
           [id],
         )
       ).rows[0] ?? null;
-    const { audio, output, ...data } = p.data;
+    const { audio, output, music, ...data } = p.data;
     return {
       ...p,
       owner_id: undefined,
       data: {
         ...data,
+        music: music
+          ? { ...music, key: undefined, url: `/shorts/${id}/music` }
+          : null,
+        musicSettings: data.musicSettings ?? defaultShortMusic(),
         audio: audio
           ? { ...audio, key: undefined, url: `/shorts/${id}/audio` }
           : null,
@@ -128,6 +133,8 @@ export class ShortService {
       aiEnabled: this.settings.enabled,
       voices: TTS_VOICES,
       maxBytes: this.settings.maxBytes,
+      musicMaxBytes: this.settings.musicMaxBytes,
+      musicMaxSeconds: this.settings.musicMaxSeconds,
       maxFiles: this.settings.maxFiles,
       maxDuration: this.settings.maxDuration,
       scanSeconds: this.settings.scanSeconds,
@@ -182,8 +189,13 @@ export class ShortService {
       );
   }
   async cleanupData(c: PoolClient, old: ShortData, next: ShortData) {
-    for (const key of [old.audio?.key, old.output?.key])
-      if (key && key !== next.audio?.key && key !== next.output?.key)
+    for (const key of [old.audio?.key, old.output?.key, old.music?.key])
+      if (
+        key &&
+        key !== next.audio?.key &&
+        key !== next.output?.key &&
+        key !== next.music?.key
+      )
         await c.query(
           'INSERT INTO short_storage_cleanup(storage_key) VALUES($1) ON CONFLICT DO NOTHING',
           [key],
@@ -315,6 +327,30 @@ export class ShortService {
           throw new BadRequestException('Selecione os trechos primeiro.');
         data.planApproved = true;
         step = 7;
+      }
+      if (
+        input.musicSettings !== undefined ||
+        input.musicEnabled !== undefined ||
+        input.removeMusic ||
+        input.skipMusic
+      ) {
+        if (p.step !== 7 || !data.audio || !data.planApproved)
+          throw new BadRequestException(
+            'Abra Trilha sonora após aprovar a montagem.',
+          );
+        const audibleMix = (value: ShortData) =>
+          value.music &&
+          value.musicEnabled !== false &&
+          (value.musicSettings?.volume ?? 0.15) > 0
+            ? [value.music, value.musicSettings ?? defaultShortMusic()]
+            : null;
+        const previous = JSON.stringify(audibleMix(data));
+        if (input.musicSettings) data.musicSettings = input.musicSettings;
+        if (input.musicEnabled !== undefined)
+          data.musicEnabled = input.musicEnabled;
+        if (input.removeMusic) delete data.music;
+        if (input.skipMusic) data.musicEnabled = false;
+        if (previous !== JSON.stringify(audibleMix(data))) delete data.output;
       }
       if (input.step !== undefined) step = input.step;
       if (!shortStepAllowed({ ...p, data }, await this.files(id, c), step))
@@ -572,6 +608,7 @@ export class ShortService {
           .map((f) => f.storage_key),
         p.data.audio?.key,
         p.data.output?.key,
+        p.data.music?.key,
       ].filter(Boolean);
       for (const key of keys)
         await c.query(
@@ -587,7 +624,7 @@ export class ShortService {
   }
   async media(
     id: string,
-    type: 'audio' | 'video' | 'source' | 'reference',
+    type: 'audio' | 'video' | 'source' | 'reference' | 'music',
     fileId?: string,
   ) {
     const p = await this.project(id);
@@ -606,11 +643,13 @@ export class ShortService {
         ? f
           ? { key: f.storage_key, bytes: Number(f.bytes), mime: f.mime }
           : null
-        : type === 'audio'
-          ? p.data.audio
-          : p.data.output
-            ? { ...p.data.output, mime: 'video/mp4' }
-            : null;
+        : type === 'music'
+          ? p.data.music
+          : type === 'audio'
+            ? p.data.audio
+            : p.data.output
+              ? { ...p.data.output, mime: 'video/mp4' }
+              : null;
     if (!asset || !this.storage.stat || !this.storage.openRead)
       throw new NotFoundException('Arquivo indisponível.');
     const stat = await this.storage.stat(asset.key);

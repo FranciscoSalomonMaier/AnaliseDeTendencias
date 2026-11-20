@@ -89,6 +89,48 @@ export function fitCaptionGroups(
     })
     .map((segment, index) => ({ ...segment, order: index + 1 }));
 }
+// Whole-segment provider timestamps cannot be subdivided into invented word times.
+// Fit those complete phrases in a bounded block inside the same safe area.
+export function shortCaptionLayout(
+  settings: ReturnType<typeof captionSettings>,
+  segments: ReturnType<typeof prepareAlignment>['segments'],
+) {
+  const fits = (candidate: typeof settings) => {
+    const layout = {
+      ...candidate,
+      maxCharacters: Math.min(
+        candidate.maxCharacters,
+        Math.floor(
+          (1080 * (1 - 2 * (candidate.horizontalMargin ?? 0.12))) /
+            candidate.fontSize,
+        ),
+      ),
+    };
+    try {
+      for (const segment of segments) wrapSubtitle(segment.text, layout);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  if (fits(settings)) return settings;
+  for (let size = Math.min(settings.fontSize, 32); size >= 24; size -= 2) {
+    for (let lines = 3; lines <= 6; lines++) {
+      const candidate = {
+        ...settings,
+        fontSize: size,
+        maxLines: lines,
+        maxCharacters: Math.floor(
+          (1080 * (1 - 2 * (settings.horizontalMargin ?? 0.12))) / size,
+        ),
+      };
+      if (fits(candidate)) return candidate;
+    }
+  }
+  throw Error(
+    'Legenda excede a área segura mesmo com ajuste automático. Gere uma nova montagem com timestamps de palavras ou revise a transcrição.',
+  );
+}
 const overlayResponse = z.object({
   items: z
     .array(
@@ -227,7 +269,12 @@ export function editingAss(data: ShortData) {
       (!config.overlays.enabled || !decorations.overlays.length))
   )
     return null;
-  const settings = captionSettings(config);
+  let settings = captionSettings(config);
+  const segments = config.captions.enabled
+    ? fitCaptionGroups(decorations.segments, settings)
+    : [];
+  if (config.captions.enabled)
+    settings = shortCaptionLayout(settings, segments);
   if (config.captions.highlightWord && !decorations.words?.length)
     settings.preset = config.captions.bold ? 'BOLD_SHORTS' : 'CLASSIC';
   // Existing libass writer uses exact provider intervals and safe vertical margins.
@@ -236,7 +283,7 @@ export function editingAss(data: ShortData) {
       settings,
       versions: [],
       segments: config.captions.enabled
-        ? decorations.segments.map((s) => ({ ...s, sceneId: 'short' }))
+        ? segments.map((s) => ({ ...s, sceneId: 'short' }))
         : [],
     },
     1080,

@@ -54,6 +54,12 @@ export class ShortSettings {
   get referenceMaxTokens() {
     return this.number('SHORT_REFERENCE_MAX_TOKENS', 12000, 2000, 50000);
   }
+  get musicMaxBytes() {
+    return this.number('SHORT_MUSIC_UPLOAD_MAX_MB', 50, 1, 200) * 1024 ** 2;
+  }
+  get musicMaxSeconds() {
+    return this.number('SHORT_MUSIC_MAX_SECONDS', 3600, 1, 21600);
+  }
   get tempDir() {
     return resolve(
       this.config.get<string>('SHORT_CREATION_TEMP_DIR') || 'storage/short-tmp',

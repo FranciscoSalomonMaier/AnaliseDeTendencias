@@ -38,6 +38,7 @@ describe('Short scene sampling', () => {
       profiles as never,
       vision as never,
       {} as never,
+      {} as never,
     );
     jest
       .spyOn(media, 'workspace')
