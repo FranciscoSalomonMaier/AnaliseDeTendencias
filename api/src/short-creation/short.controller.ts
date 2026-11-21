@@ -73,7 +73,9 @@ export class ShortUploadGuard implements CanActivate {
       );
     if (
       p.step !==
-        (req.url.split('?')[0].endsWith('/music')
+        (['/music', '/sound-effects'].some((s) =>
+          req.url.split('?')[0].endsWith(s),
+        )
           ? 7
           : req.url.split('?')[0].endsWith('/references')
             ? 3
@@ -120,6 +122,17 @@ export class ShortController {
   ) {
     return this.service.enqueue(id, raw);
   }
+  @Post(':id/intelligent-plan/review')
+  review(@Param('id', ParseUUIDPipe) id: string, @Body() raw: unknown) {
+    return this.service.reviewIntelligent(id, raw);
+  }
+  @Post(':id/jobs/:jobId/cancel')
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('jobId', ParseUUIDPipe) jobId: string,
+  ) {
+    return this.service.cancelIntelligent(id, jobId);
+  }
   @Post(':id/files')
   @UseGuards(ShortUploadGuard)
   @UseInterceptors(FileInterceptor('file'))
@@ -139,6 +152,16 @@ export class ShortController {
     @Body() body: unknown,
   ) {
     return this.soundtrack.upload(id, file, body);
+  }
+  @Post(':id/sound-effects')
+  @UseGuards(ShortUploadGuard)
+  @UseInterceptors(ShortMusicUploadInterceptor)
+  uploadEffect(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: RemixUpload | undefined,
+    @Body() body: unknown,
+  ) {
+    return this.soundtrack.upload(id, file, body, 'EFFECT');
   }
   @Delete(':id/music')
   removeMusic(@Param('id', ParseUUIDPipe) id: string, @Body() raw: unknown) {

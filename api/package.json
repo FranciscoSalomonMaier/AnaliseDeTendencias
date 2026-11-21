@@ -92,7 +92,11 @@
     "test:short-planning": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=planning",
     "test:short-planning:integration": "node test/shorts/planning/planning.integration.cjs",
     "test:short-execution": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=execution.spec",
-    "test:short-execution:integration": "node test/shorts/execution/plan-execution.integration.cjs"
+    "test:short-execution:integration": "node test/shorts/execution/plan-execution.integration.cjs",
+    "migrate:short-intelligent": "node scripts/migrate-short-intelligent.cjs",
+    "test:short-engine": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=\"short-engine|short-storage-safety|short-intelligent\"",
+    "test:short-engine:integration": "node test/shorts/intelligent.integration.cjs",
+    "test:short-engine:browser": "SHORT_BROWSER_ONLY=1 node test/shorts/intelligent.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

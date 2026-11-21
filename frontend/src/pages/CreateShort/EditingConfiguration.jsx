@@ -25,6 +25,7 @@ export function EditingConfiguration({
   onSave,
   onRetry,
 }) {
+  const intelligent = project.data.editingEngine?.mode === "INTELLIGENT";
   const [draft, setDraft] = useState(() =>
     editorialDraft(project, options?.editorialPreferences),
   );
@@ -68,8 +69,9 @@ export function EditingConfiguration({
         </p>
       </div>
       <p role="status" className="rounded-lg border border-border p-3 text-sm">
-        A execução da nova configuração ainda está em desenvolvimento. Por
-        enquanto, suas escolhas serão salvas como intenção editorial.
+        {intelligent
+          ? "Teste controlado: somente combinações autorizadas pelo servidor poderão ser planejadas. A ausência de evidências semânticas limita o plano a decisões técnicas."
+          : "A execução da nova configuração ainda está em desenvolvimento. Por enquanto, suas escolhas serão salvas como intenção editorial."}
       </p>
       {loading ? (
         <p role="status">Carregando opções de edição…</p>
@@ -236,9 +238,9 @@ export function EditingConfiguration({
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Salvar e continuar registra sua aprovação, mas mantém esta etapa
-            enquanto a execução estiver em desenvolvimento. Para produzir agora,
-            utilize o fluxo legado abaixo.
+            {intelligent
+              ? "Salvar e continuar valida a combinação no servidor e avança para a narração."
+              : "Salvar e continuar registra sua aprovação, mas mantém esta etapa enquanto a execução estiver em desenvolvimento. Para produzir agora, utilize o fluxo legado abaixo."}
           </p>
         </>
       )}

@@ -1,3 +1,4 @@
+import { ShortIntelligentService } from './short-intelligent.service';
 import { AudioMixService } from '../content-audio/audio-mix.service';
 import {
   ShortMusicValidator,
@@ -69,6 +70,11 @@ export async function shortUploadOptions(config: ConfigService) {
   controllers: [ShortController],
   providers: [
     ShortSettings,
+    ShortIntelligentService,
+    {
+      provide: 'SHORT_INTELLIGENT_ENGINE',
+      useExisting: ShortIntelligentService,
+    },
     AudioMixService,
     ShortMusicValidator,
     ShortMusicRenderer,

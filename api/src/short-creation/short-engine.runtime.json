@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "defaultEngine": "LEGACY",
+  "oldProjects": "LEGACY_UNLESS_EXPLICITLY_CHANGED",
+  "intelligentActivation": {
+    "enabledFlag": "SHORT_INTELLIGENT_ENGINE_ENABLED",
+    "paidPlanningFlag": "SHORT_INTELLIGENT_PAID_PLANNING",
+    "combinationAllowlist": "SHORT_INTELLIGENT_TEST_COMBINATIONS",
+    "combinationSyntax": "GAMEPLAY/GAMING/MINIMALIST",
+    "productionExperimentalOptIn": "SHORT_INTELLIGENT_ALLOW_EXPERIMENTAL",
+    "allFlagsDefaultDisabled": true,
+    "classificationCatalogAvailabilityUnchanged": true,
+    "semanticAnalysis": false,
+    "missingEvidence": "TECHNICAL_ONLY_OR_REJECTED",
+    "paidPlanningLimit": "SHORT_INTELLIGENT_PLANNING_LIMIT (default 10, max 100 per project)"
+  },
+  "jobs": {
+    "queue": "short_jobs",
+    "routing": "persisted project engine, checked against job snapshot",
+    "workerContract": 1,
+    "concurrency": "existing PostgreSQL session advisory lock across processes, one consumer",
+    "paidRetries": "NONE_AUTOMATIC",
+    "idempotency": "request UUID is job primary key; project row lock and unique active-job index",
+    "cancellation": "terminal CANCELLED; project stays locked until active worker acknowledges",
+    "recovery": "abandoned RUNNING jobs fail terminally, preserve data, manual retry only",
+    "disabledFlag": "new and queued intelligent PLAN/RENDER blocked; active operation retains captured authorization",
+    "executorTimeoutMs": 120000,
+    "plannerTimeoutMs": 45000,
+    "workerOuterTimeoutMs": 1800000,
+    "progress": "actual phase, no estimated percentage"
+  },
+  "persistence": {
+    "plans": "short_projects.data.intelligentPlan",
+    "planHistory": "short_projects.data.intelligentPlanHistory",
+    "resultHistory": "short_projects.data.resultHistory",
+    "approval": "explicit owner action, optimistic revision, source revalidation and approved plan SHA-256",
+    "fingerprint": "canonical settings, relevant script and voice, immutable asset keys, actual file SHA-256, probed context and contract versions",
+    "output": "private existing StorageProvider, byte count and readback SHA-256 before dispose and transactional completion",
+    "orphans": "existing short_storage_cleanup ledger; deletion retried after one hour",
+    "historyAccess": "retained privately; only current output has playback endpoint",
+    "migration": "025_short_intelligent_jobs.sql; terminal status and versioned worker claim guard only",
+    "uncertainCommit": "Query job state before deleting a generated file after an error; preserve committed output, defer cleanup to the existing ledger when database confirmation is unavailable."
+  },
+  "limits": {
+    "videoSourceSeconds": 600,
+    "videoSourceBytes": 536870912,
+    "audioSourceSeconds": 600,
+    "audioSourceBytes": 67108864,
+    "outputBytes": 134217728,
+    "output": "1080x1920 H264 yuv420p 30fps, AAC stereo48k only when audio operations exist",
+    "effectsUpload": 6,
+    "resourceLibraryVersion": 3,
+    "resourceLimits": "unchanged from stages 5-10"
+  },
+  "outOfScope": [
+    "visual recognition",
+    "ASR",
+    "automatic publication",
+    "timeline editor",
+    "stage 12"
+  ]
+}

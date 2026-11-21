@@ -1,3 +1,4 @@
+import { IntelligentPlanReview } from "./IntelligentPlanReview";
 import { NarrationMode, narrationMode } from "./NarrationMode";
 import { EditingConfiguration } from "./EditingConfiguration";
 import { editingMode } from "./editorialConfiguration";
@@ -197,6 +198,7 @@ export function CreateShort() {
     if (
       kind !== "SCRIPT" &&
       projectRef.current &&
+      projectRef.current.data.editingEngine?.mode !== "INTELLIGENT" &&
       editingMode(projectRef.current) === "EDITORIAL_CLASSIFICATION"
     )
       throw Error(
@@ -221,6 +223,10 @@ export function CreateShort() {
     if (step === 1) await save({ script: draft, approve: "SCRIPT" });
     else if (step === 2) await save({ step: 3 });
     else if (step === 3) {
+      if (intelligent) {
+        await save({ approve: "EDITORIAL" });
+        return;
+      }
       if (editingMode(project) === "EDITORIAL_CLASSIFICATION")
         throw Error("A execução editorial ainda está em desenvolvimento.");
       await save(
@@ -234,6 +240,7 @@ export function CreateShort() {
           ? { step: 5 }
           : { narrationText: text, approve: "TEXT" },
       );
+    else if (step === 6 && intelligent) await save({ step: 7 });
     else if (step === 6) await save({ approve: "PLAN" });
     else await save({ step: step + 1 });
   }
@@ -251,6 +258,7 @@ export function CreateShort() {
     updateUrl(null);
     void loadList().catch(fail);
   }
+  const intelligent = project?.data.editingEngine?.mode === "INTELLIGENT";
   const withoutNarration = narrationMode(project) === "WITHOUT_NARRATION";
   const step = project?.step ?? 1;
   const locked = busy || ["QUEUED", "RUNNING"].includes(project?.status);
@@ -264,11 +272,16 @@ export function CreateShort() {
           : step === 4
             ? withoutNarration || Boolean(text.trim())
             : step === 5
-              ? !withoutNarration && Boolean(project.data.audio)
+              ? (intelligent && withoutNarration) ||
+                (!withoutNarration && Boolean(project.data.audio))
               : step === 6
-                ? Boolean(project.data.plan?.clips.length)
+                ? intelligent
+                  ? project.data.intelligentPlan?.status === "APPROVED"
+                  : Boolean(project.data.plan?.clips.length)
                 : step === 7
-                  ? !dirty
+                  ? !dirty &&
+                    (!intelligent ||
+                      project.data.intelligentPlan?.status === "APPROVED")
                   : step === 8
                     ? Boolean(project.data.output)
                     : false;
@@ -378,7 +391,7 @@ export function CreateShort() {
                       ? "Na fila…"
                       : "Processando…"}
                 </p>
-                {project?.job && (
+                {project?.job && !intelligent && (
                   <progress
                     className="mt-2 w-full"
                     max="100"
@@ -388,6 +401,49 @@ export function CreateShort() {
               </div>
             )}
             <section className="space-y-5" aria-label={steps[step - 1]}>
+              {intelligent && project.job && (
+                <div role="status">
+                  {{
+                    PLANNING: "Planejando",
+                    VALIDATION: "Validando plano",
+                    PREFLIGHT: "Verificando arquivos",
+                    COMPILATION: "Preparando composição",
+                    GRAPHICS: "Preparando elementos gráficos",
+                    RENDER: "Renderizando",
+                    OUTPUT_VALIDATION: "Validando vídeo",
+                    PERSISTENCE: "Salvando vídeo",
+                    CANCELLED: "Cancelado",
+                    FAILED: "Falhou",
+                    COMPLETED: "Concluído",
+                    QUEUED: "Na fila",
+                    RUNNING: "Processando",
+                  }[
+                    ["QUEUED", "RUNNING"].includes(project.job.status)
+                      ? project.job.phase || project.job.status
+                      : project.job.status
+                  ] || project.job.status}
+                  {project.job.diagnostics?.map((d, i) => (
+                    <p key={i}>
+                      {d.code}: {d.message}
+                    </p>
+                  ))}
+                  {["QUEUED", "RUNNING"].includes(project.job.status) &&
+                    ["PLAN", "RENDER"].includes(project.job.kind) && (
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void act(async () =>
+                            accept(
+                              await shorts.cancel(project.id, project.job.id),
+                            ),
+                          )
+                        }
+                      >
+                        Cancelar processamento
+                      </button>
+                    )}
+                </div>
+              )}
               {step === 1 && (
                 <>
                   <label className="block">
@@ -568,6 +624,45 @@ export function CreateShort() {
                 </>
               )}
               {step === 3 && (
+                <label className="block">
+                  Motor de edição
+                  <select
+                    className={field}
+                    disabled={locked || dirty}
+                    value={intelligent ? "INTELLIGENT" : "LEGACY"}
+                    onChange={(e) => {
+                      const mode = e.target.value;
+                      if (
+                        window.confirm(
+                          "Trocar de motor exige novo planejamento. Materiais e histórico serão preservados.",
+                        )
+                      )
+                        void act(() =>
+                          save({ editingEngine: { version: 1, mode } }),
+                        );
+                    }}
+                  >
+                    <option value="LEGACY">Edição tradicional</option>
+                    {(options?.intelligentEngine?.enabled || intelligent) && (
+                      <option
+                        value="INTELLIGENT"
+                        disabled={!options?.intelligentEngine?.enabled}
+                      >
+                        Edição inteligente (teste controlado)
+                      </option>
+                    )}
+                  </select>
+                  {intelligent && (
+                    <p>
+                      Combinações autorizadas para teste:{" "}
+                      {options?.intelligentEngine?.combinations?.join(", ") ||
+                        "nenhuma"}
+                      . A cobertura editorial permanece indicada abaixo.
+                    </p>
+                  )}
+                </label>
+              )}
+              {step === 3 && (
                 <div className="space-y-6">
                   {editingMode(project) === "EDITORIAL_CLASSIFICATION" ? (
                     <EditingConfiguration
@@ -650,33 +745,36 @@ export function CreateShort() {
                       />
                     </>
                   )}
-                  <details className="border-t border-border pt-4">
-                    <summary className="cursor-pointer text-sm text-muted-foreground">
-                      Outras opções de edição
-                    </summary>
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      A troca preserva referências, preferências e resultados
-                      existentes. Cada modalidade utiliza suas próprias
-                      configurações.
-                    </p>
-                    <button
-                      className={`${button} mt-3`}
-                      disabled={locked}
-                      onClick={() => {
-                        const target =
-                          editingMode(project) === "EDITORIAL_CLASSIFICATION"
-                            ? "LEGACY_REFERENCE"
-                            : "EDITORIAL_CLASSIFICATION";
-                        const message = `${dirty ? "Descartar as alterações não salvas e " : ""}${target === "LEGACY_REFERENCE" ? "usar o fluxo legado para produzir o Short? A nova configuração ficará guardada e não será aplicada." : "usar a nova configuração? Suas referências serão preservadas, mas a execução editorial ainda está em desenvolvimento."}`;
-                        if (window.confirm(message))
-                          void act(() => save({ editingMode: target }));
-                      }}
-                    >
-                      {editingMode(project) === "EDITORIAL_CLASSIFICATION"
-                        ? "Usar fluxo legado de referências"
-                        : "Usar nova configuração editorial"}
-                    </button>
-                  </details>
+                  {!intelligent && (
+                    <details className="border-t border-border pt-4">
+                      <summary className="cursor-pointer text-sm text-muted-foreground">
+                        Outras opções de edição
+                      </summary>
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        A troca preserva referências, preferências e resultados
+                        existentes. Cada modalidade utiliza suas próprias
+                        configurações.
+                      </p>
+                      <button
+                        className={`${button} mt-3`}
+                        disabled={locked}
+                        onClick={() => {
+                          const target =
+                            !intelligent &&
+                            editingMode(project) === "EDITORIAL_CLASSIFICATION"
+                              ? "LEGACY_REFERENCE"
+                              : "EDITORIAL_CLASSIFICATION";
+                          const message = `${dirty ? "Descartar as alterações não salvas e " : ""}${target === "LEGACY_REFERENCE" ? "usar o fluxo legado para produzir o Short? A nova configuração ficará guardada e não será aplicada." : "usar a nova configuração? Suas referências serão preservadas, mas a execução editorial ainda está em desenvolvimento."}`;
+                          if (window.confirm(message))
+                            void act(() => save({ editingMode: target }));
+                        }}
+                      >
+                        {editingMode(project) === "EDITORIAL_CLASSIFICATION"
+                          ? "Usar fluxo legado de referências"
+                          : "Usar nova configuração editorial"}
+                      </button>
+                    </details>
+                  )}
                 </div>
               )}
               {step === 4 && (
@@ -691,8 +789,10 @@ export function CreateShort() {
                   {withoutNarration ? (
                     <p role="status">
                       Narração dispensada. Texto e geração de voz não são
-                      necessários. A montagem sem narração ainda não está
-                      disponível no fluxo atual.
+                      necessários.{" "}
+                      {intelligent
+                        ? "O plano poderá usar áudio original, música ou silêncio."
+                        : "A montagem sem narração ainda não está disponível no fluxo atual."}
                     </p>
                   ) : (
                     <>
@@ -737,10 +837,10 @@ export function CreateShort() {
               )}
               {step === 5 && withoutNarration && (
                 <p role="status">
-                  Etapa dispensada — nenhuma voz será gerada. A montagem, a
-                  trilha sonora e a renderização sem narração ainda não estão
-                  disponíveis. Volte para alterar o modo; o conteúdo anterior
-                  foi preservado.
+                  Etapa dispensada — nenhuma voz será gerada.{" "}
+                  {intelligent
+                    ? "Continue para planejar o vídeo."
+                    : "A montagem sem narração permanece indisponível no fluxo tradicional."}
                 </p>
               )}
               {step === 5 && !withoutNarration && (
@@ -798,7 +898,30 @@ export function CreateShort() {
                   )}
                 </>
               )}
-              {step === 6 && (
+              {intelligent && [6, 8].includes(step) && (
+                <IntelligentPlanReview
+                  record={project.data.intelligentPlan}
+                  locked={locked}
+                  enabled={
+                    options?.intelligentEngine?.enabled &&
+                    options?.intelligentEngine?.paidPlanning
+                  }
+                  onGenerate={() => {
+                    if (
+                      window.confirm(
+                        "Gerar planejamento consome sua API, sem nova tentativa automática. Confirmar?",
+                      )
+                    )
+                      void act(() => run("PLAN"));
+                  }}
+                  onReview={(action) =>
+                    void act(async () =>
+                      accept(await shorts.review(project, action)),
+                    )
+                  }
+                />
+              )}
+              {step === 6 && !intelligent && (
                 <>
                   <p>
                     Selecione automaticamente os cortes dos seus vídeos para
@@ -889,7 +1012,92 @@ export function CreateShort() {
                   )}
                 </>
               )}
-              {step === 7 && (
+              {step === 7 && intelligent && (
+                <div className="space-y-3">
+                  <p>
+                    A mixagem é executada somente pelo novo motor. Alterar a
+                    música invalida o plano e exige voltar à etapa 6, gerar e
+                    aprovar outro plano.
+                  </p>
+                  <ul>
+                    {project.data.intelligentPlan?.plan.audioOperations.map(
+                      (op) => (
+                        <li key={op.id}>
+                          {op.usage.resourceId}: {op.reason}
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                  <p>
+                    {project.data.music?.originalName ?? "Sem música enviada"}
+                  </p>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={rights}
+                      onChange={(e) => setRights(e.target.checked)}
+                    />{" "}
+                    Tenho autorização para utilizar a música.
+                  </label>
+                  <input
+                    aria-label="Música para o plano inteligente"
+                    type="file"
+                    accept="audio/*"
+                    disabled={locked || !rights}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file)
+                        void act(async () =>
+                          accept(await shorts.uploadMusic(project, file)),
+                        );
+                    }}
+                  />
+                  <label>
+                    Efeito sonoro autorizado
+                    <input
+                      aria-label="Efeito sonoro para o plano"
+                      type="file"
+                      accept="audio/*"
+                      disabled={locked || !rights}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file)
+                          void act(async () =>
+                            accept(await shorts.uploadEffect(project, file)),
+                          );
+                      }}
+                    />
+                  </label>
+                  <ul>
+                    {project.data.soundEffects?.map((e) => (
+                      <li key={e.id}>
+                        {e.originalName}{" "}
+                        <button
+                          disabled={locked}
+                          onClick={() =>
+                            void act(() => save({ removeEffect: e.id }))
+                          }
+                        >
+                          Remover efeito
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    disabled={locked}
+                    onClick={() => void act(() => save({ skipMusic: true }))}
+                  >
+                    Não utilizar música
+                  </button>
+                  <button
+                    disabled={locked}
+                    onClick={() => void act(() => save({ step: 6 }))}
+                  >
+                    Voltar ao planejamento
+                  </button>
+                </div>
+              )}
+              {step === 7 && !intelligent && (
                 <Soundtrack
                   key={`${project.id}:${project.revision}`}
                   project={project}
@@ -918,7 +1126,20 @@ export function CreateShort() {
                   }
                 />
               )}
-              {step === 8 && (
+              {step === 8 && intelligent && (
+                <button
+                  className={primary}
+                  disabled={
+                    locked ||
+                    !options?.intelligentEngine?.enabled ||
+                    project.data.intelligentPlan?.status !== "APPROVED"
+                  }
+                  onClick={() => void act(() => run("RENDER"))}
+                >
+                  Renderizar plano aprovado
+                </button>
+              )}
+              {step === 8 && !intelligent && (
                 <>
                   <p>
                     Seu Short será montado em formato vertical, usando os cortes
@@ -953,6 +1174,25 @@ export function CreateShort() {
               )}
               {step === 9 && project.data.output && (
                 <>
+                  {intelligent && (
+                    <>
+                      <p>
+                        Concluído ·{" "}
+                        {withoutNarration ? "Sem narração" : "Com narração"}
+                      </p>
+                      {project.data.output.diagnostics
+                        ?.filter(
+                          (d) =>
+                            d.level !== "INFO" &&
+                            d.code !== "EXECUTION_PREFLIGHT_REQUIRED",
+                        )
+                        .map((d, i) => (
+                          <p role="status" key={i}>
+                            {d.message}
+                          </p>
+                        ))}
+                    </>
+                  )}
                   <video
                     className="mx-auto max-h-[65vh] w-full rounded bg-black"
                     controls
@@ -1004,6 +1244,7 @@ export function CreateShort() {
                 {step < 9 &&
                   !(
                     step === 3 &&
+                    !intelligent &&
                     editingMode(project) === "EDITORIAL_CLASSIFICATION"
                   ) && (
                     <button
@@ -1013,7 +1254,7 @@ export function CreateShort() {
                     >
                       {step === 4 && withoutNarration
                         ? "Dispensar narração e continuar"
-                        : [1, 4, 6].includes(step)
+                        : [1, 4, ...(intelligent ? [] : [6])].includes(step)
                           ? "Aprovar e continuar"
                           : "Continuar"}
                     </button>

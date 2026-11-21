@@ -33,6 +33,13 @@ async function request(path, method = "GET", body) {
   return data;
 }
 export const shorts = {
+  review: (project, action) =>
+    request(`/${project.id}/intelligent-plan/review`, "POST", {
+      revision: project.revision,
+      planId: project.data.intelligentPlan.id,
+      action,
+    }),
+  cancel: (id, jobId) => request(`/${id}/jobs/${jobId}/cancel`, "POST", {}),
   options: () => request("/options"),
   list: () => request(""),
   create: (data) => request("", "POST", data),
@@ -42,6 +49,9 @@ export const shorts = {
   run: (project, kind, semantic = false) =>
     request(`/${project.id}/jobs`, "POST", {
       revision: project.revision,
+      ...(project.data?.editingEngine?.mode === "INTELLIGENT"
+        ? { requestId: crypto.randomUUID() }
+        : {}),
       kind,
       semantic,
       confirm: true,
@@ -64,6 +74,13 @@ export const shorts = {
     data.append("revision", String(project.revision));
     data.append("file", file);
     return request(`/${project.id}/music`, "POST", data);
+  },
+  uploadEffect: (project, file) => {
+    const data = new FormData();
+    data.append("rights", "true");
+    data.append("revision", String(project.revision));
+    data.append("file", file);
+    return request(`/${project.id}/sound-effects`, "POST", data);
   },
   removeMusic: (project) =>
     request(`/${project.id}/music`, "DELETE", { revision: project.revision }),

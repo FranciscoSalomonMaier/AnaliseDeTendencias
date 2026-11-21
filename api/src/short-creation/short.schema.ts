@@ -1,4 +1,9 @@
 import {
+  editingEngineSchema,
+  resolveEditingEngine,
+  type IntelligentPlan,
+} from './short-engine.schema';
+import {
   narrationSchema,
   resolveNarrationMode,
   type NarrationConfiguration,
@@ -42,6 +47,7 @@ export const scriptSchema = z
 export const createShortSchema = z
   .object({
     description: z.string().trim().min(10).max(6000),
+    editingEngine: editingEngineSchema.optional(),
     narration: narrationSchema.optional(),
     classification: shortClassificationSchema.optional(),
     editingMode: editingModeSchema.optional(),
@@ -52,6 +58,7 @@ export const createShortSchema = z
 export const patchShortSchema = z
   .object({
     revision: z.number().int().nonnegative(),
+    editingEngine: editingEngineSchema.optional(),
     narration: narrationSchema.optional(),
     classification: shortClassificationSchema.optional(),
     editingMode: editingModeSchema.optional(),
@@ -69,6 +76,7 @@ export const patchShortSchema = z
     musicSettings: shortMusicSettingsSchema.optional(),
     musicEnabled: z.boolean().optional(),
     removeMusic: z.literal(true).optional(),
+    removeEffect: z.string().uuid().optional(),
     skipMusic: z.literal(true).optional(),
     skipReferences: z.literal(true).optional(),
   })
@@ -76,6 +84,7 @@ export const patchShortSchema = z
 export const jobShortSchema = z
   .object({
     revision: z.number().int().nonnegative(),
+    requestId: z.string().uuid().optional(),
     kind: z.enum(['SCRIPT', 'REFERENCES', 'TEXT', 'AUDIO', 'PLAN', 'RENDER']),
     confirm: z.literal(true),
     semantic: z.boolean().default(false),
@@ -89,6 +98,11 @@ export interface ShortAudio {
   usage: unknown;
 }
 export interface ShortOutput {
+  engine?: 'INTELLIGENT';
+  planId?: string;
+  executionId?: string;
+  hasAudio?: boolean;
+  diagnostics?: import('./planning/planning.schema').PlanningDiagnostic[];
   key: string;
   bytes: number;
   duration: number;
@@ -104,12 +118,24 @@ export interface ShortClip {
   description: string;
 }
 export interface ShortData {
+  editingEngine?: z.infer<typeof editingEngineSchema>;
+  intelligentPlan?: IntelligentPlan;
+  intelligentPlanHistory?: IntelligentPlan[];
+  resultHistory?: ShortOutput[];
+  retainedKeys?: string[];
+  legacyPlanHistory?: Array<{
+    plan: NonNullable<ShortData['plan']>;
+    approved: boolean;
+    revision: number;
+    createdAt: string;
+  }>;
   narration?: NarrationConfiguration;
   classification?: ShortClassification;
   editingMode?: EditingMode;
   editorialPreferences?: EditorialPreferences;
   editorialReview?: EditorialReview;
   music?: ShortMusic;
+  soundEffects?: ShortMusic[];
   musicSettings?: ShortMusicSettings;
   musicEnabled?: boolean;
   editing?: EditingState;
@@ -167,6 +193,11 @@ export interface ShortJob {
     project: ShortProject;
     files: ShortFile[];
     references?: ShortFile[];
+    engine?: 'LEGACY' | 'INTELLIGENT';
+    planId?: string;
+    requestedRevision?: number;
+    attempt?: number;
+    phase?: string;
     semantic: boolean;
   };
   progress: number;
@@ -235,6 +266,25 @@ export function shortStepAllowed(
   step: number,
 ) {
   const d = p.data;
+  if (resolveEditingEngine(d) === 'INTELLIGENT') {
+    const ready = !!d.scriptApproved && files.length > 0;
+    const voice =
+      resolveNarrationMode(d) === 'WITHOUT_NARRATION' ||
+      !!(d.textApproved && d.audio);
+    return (
+      step === 1 ||
+      (step === 2 && !!d.scriptApproved) ||
+      ([3, 4].includes(step) && ready) ||
+      (step === 5 &&
+        ready &&
+        (resolveNarrationMode(d) === 'WITHOUT_NARRATION' ||
+          !!d.textApproved)) ||
+      (step === 6 && ready && voice) ||
+      (step === 7 && ready && voice && !!d.intelligentPlan) ||
+      (step === 8 && d.intelligentPlan?.status === 'APPROVED') ||
+      (step === 9 && !!d.output)
+    );
+  }
   if (
     effectiveEditingMode(d) === 'EDITORIAL_CLASSIFICATION' &&
     step >= 4 &&

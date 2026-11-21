@@ -4,6 +4,32 @@ import { resolve } from 'node:path';
 @Injectable()
 export class ShortSettings {
   constructor(readonly config: ConfigService) {}
+  get intelligentEnabled() {
+    return this.config.get('SHORT_INTELLIGENT_ENGINE_ENABLED') === 'true';
+  }
+  get intelligentPaidPlanning() {
+    return this.config.get('SHORT_INTELLIGENT_PAID_PLANNING') === 'true';
+  }
+  get intelligentPlanningLimit() {
+    return this.number('SHORT_INTELLIGENT_PLANNING_LIMIT', 10, 1, 100);
+  }
+  intelligentCombination(value: unknown) {
+    if (
+      this.config.get('NODE_ENV') === 'production' &&
+      this.config.get('SHORT_INTELLIGENT_ALLOW_EXPERIMENTAL') !== 'true'
+    )
+      return false;
+    if (!value || typeof value !== 'object') return false;
+    const c = value as Record<string, string>;
+    const key = [c.videoType, c.videoTopic, c.editingStyle].join('/');
+    // Explicit experimental allowlist; registry availability and knowledge coverage remain unchanged.
+    return (
+      this.config.get<string>('SHORT_INTELLIGENT_TEST_COMBINATIONS') ?? ''
+    )
+      .split(',')
+      .map((s) => s.trim())
+      .includes(key);
+  }
   get owner() {
     return this.config.get<string>('CONTENT_OWNER_ID') ?? 'local-owner';
   }

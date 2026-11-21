@@ -1,3 +1,18 @@
+import { z } from 'zod';
+const reviewIntelligentSchema = z
+  .object({
+    revision: z.number().int().nonnegative(),
+    planId: z.string().uuid(),
+    action: z.enum(['APPROVE', 'REJECT']),
+  })
+  .strict();
+import type { ShortIntelligentService } from './short-intelligent.service';
+import {
+  resolveEditingEngine,
+  invalidateIntelligent,
+  canonicalHash,
+  intelligentDependencies,
+} from './short-engine.schema';
 import {
   resolveNarrationMode,
   narrationJobBlock,
@@ -19,6 +34,9 @@ import {
 } from './short-editing.schema';
 import {
   Injectable,
+  Logger,
+  Optional,
+  Inject,
   BadRequestException,
   ConflictException,
   NotFoundException,
@@ -45,11 +63,15 @@ import {
 } from './short.schema';
 @Injectable()
 export class ShortService {
+  private readonly logger = new Logger(ShortService.name);
   constructor(
     readonly db: PostgresDatabaseService,
     readonly settings: ShortSettings,
     readonly storage: StorageProvider,
     readonly validator: RemixVideoValidator,
+    @Optional()
+    @Inject('SHORT_INTELLIGENT_ENGINE')
+    readonly intelligent?: ShortIntelligentService,
   ) {}
   async project(
     id: string,
@@ -92,17 +114,28 @@ export class ShortService {
     const job =
       (
         await this.db.query(
-          'SELECT id,kind,status,progress,error_message,created_at,usage FROM short_jobs WHERE project_id=$1 ORDER BY created_at DESC LIMIT 1',
+          "SELECT id,kind,status,progress,error_message,created_at,usage,input->>'phase' AS phase,input->'diagnostics' AS diagnostics FROM short_jobs WHERE project_id=$1 ORDER BY created_at DESC LIMIT 1",
           [id],
         )
       ).rows[0] ?? null;
-    const { audio, output, music, ...data } = p.data;
+    const {
+      audio,
+      output,
+      music,
+      soundEffects,
+      resultHistory,
+      retainedKeys,
+      ...data
+    } = p.data;
     return {
       ...p,
+      engineAvailable: this.settings.intelligentEnabled ?? false,
       editorialStatus: editorialConfigurationStatus(p.data),
       owner_id: undefined,
       data: {
         ...data,
+        soundEffects: soundEffects?.map(({ key, ...effect }) => effect),
+        resultHistory: resultHistory?.map(({ key, ...item }) => item),
         music: music
           ? { ...music, key: undefined, url: `/shorts/${id}/music` }
           : null,
@@ -144,6 +177,17 @@ export class ShortService {
   }
   options() {
     return {
+      intelligentEngine: {
+        enabled: this.settings.intelligentEnabled ?? false,
+        paidPlanning: this.settings.intelligentPaidPlanning ?? false,
+        combinations: (
+          this.settings.config?.get<string>(
+            'SHORT_INTELLIGENT_TEST_COMBINATIONS',
+          ) ?? ''
+        )
+          .split(',')
+          .filter(Boolean),
+      },
       aiEnabled: this.settings.enabled,
       classifications: shortClassificationCatalogs,
       editorialPreferences: editorialPreferenceOptions,
@@ -166,6 +210,8 @@ export class ShortService {
       throw new BadRequestException(
         'Descreva o Short e escolha 30, 45 ou 60 segundos.',
       );
+    if (v.data.editingEngine?.mode === 'INTELLIGENT')
+      this.intelligent!.assertEnabled();
     const id = randomUUID();
     await this.db.query(
       'INSERT INTO short_projects(id,owner_id,title,description,target_seconds,data) VALUES($1,$2,$3,$4,$5,$6)',
@@ -176,6 +222,7 @@ export class ShortService {
         v.data.description,
         v.data.targetSeconds,
         {
+          editingEngine: v.data.editingEngine ?? { version: 1, mode: 'LEGACY' },
           narration: v.data.narration ?? { version: 1, mode: 'WITH_NARRATION' },
           ...(v.data.classification
             ? { classification: v.data.classification }
@@ -215,9 +262,41 @@ export class ShortService {
       );
   }
   async cleanupData(c: PoolClient, old: ShortData, next: ShortData) {
+    if (
+      resolveEditingEngine(old) === 'INTELLIGENT' ||
+      resolveEditingEngine(next) === 'INTELLIGENT' ||
+      old.intelligentPlan
+    ) {
+      next.resultHistory = [...(next.resultHistory ?? old.resultHistory ?? [])];
+      if (
+        old.output?.key &&
+        old.output.key !== next.output?.key &&
+        !next.resultHistory.some((o) => o.key === old.output!.key)
+      )
+        next.resultHistory.push(old.output);
+      // Keep engine-dependent historical audio/music until explicit project deletion.
+      next.retainedKeys = Array.from(
+        new Set(
+          [
+            ...(old.retainedKeys ?? []),
+            ...(next.retainedKeys ?? []),
+            old.audio?.key,
+            old.music?.key,
+            ...(old.soundEffects ?? []).map((e) => e.key),
+          ].filter((k): k is string => !!k),
+        ),
+      );
+      if (
+        canonicalHash(intelligentDependencies(old)) !==
+        canonicalHash(intelligentDependencies(next))
+      )
+        invalidateIntelligent(next);
+    }
     for (const key of [old.audio?.key, old.output?.key, old.music?.key])
       if (
         key &&
+        !next.resultHistory?.some((o) => o.key === key) &&
+        !next.retainedKeys?.includes(key) &&
         key !== next.audio?.key &&
         key !== next.output?.key &&
         key !== next.music?.key
@@ -235,6 +314,47 @@ export class ShortService {
       this.checkRevision(p, input.revision);
       const data = { ...p.data };
       let step = p.step;
+      if (input.editingEngine) {
+        if (
+          Object.keys(input).some(
+            (k) => !['revision', 'editingEngine'].includes(k),
+          )
+        )
+          throw new BadRequestException(
+            'Salve a seleção do motor separadamente.',
+          );
+        if (input.editingEngine.mode === 'INTELLIGENT')
+          this.intelligent!.assertEnabled();
+        if (resolveEditingEngine(data) !== input.editingEngine.mode) {
+          this.logger.log(
+            `Short ${id}: motor ${input.editingEngine.mode}; revisão ${p.revision}.`,
+          );
+          if (resolveEditingEngine(data) === 'LEGACY' && data.plan)
+            data.legacyPlanHistory = [
+              ...(data.legacyPlanHistory ?? []),
+              {
+                plan: data.plan,
+                approved: !!data.planApproved,
+                revision: p.revision,
+                createdAt: new Date().toISOString(),
+              },
+            ];
+          data.editingEngine = input.editingEngine;
+          data.editingMode =
+            input.editingEngine.mode === 'INTELLIGENT'
+              ? 'EDITORIAL_CLASSIFICATION'
+              : 'LEGACY_REFERENCE';
+          invalidateIntelligent(data);
+          data.planApproved = false;
+          step = Math.min(step, 3);
+        }
+        await c.query(
+          "UPDATE short_projects SET data=$2,step=$3,revision=revision+1,status='DRAFT',updated_at=NOW() WHERE id=$1",
+          [id, data, step],
+        );
+        return;
+      }
+      const intelligent = resolveEditingEngine(data) === 'INTELLIGENT';
       if (input.narration !== undefined) {
         if (
           Object.keys(input).some(
@@ -272,6 +392,7 @@ export class ShortService {
         );
 
       if (
+        !intelligent &&
         resolveNarrationMode(data) === 'WITHOUT_NARRATION' &&
         ((input.step !== undefined && input.step >= 6 && input.step <= 8) ||
           input.approve === 'PLAN' ||
@@ -343,6 +464,22 @@ export class ShortService {
         }
       }
       if (metadataOnly) {
+        if (intelligent) {
+          if (data.editingMode !== 'EDITORIAL_CLASSIFICATION')
+            throw new BadRequestException(
+              'A edição inteligente utiliza a configuração editorial. Troque o motor para usar referências legadas.',
+            );
+          if (input.approve === 'EDITORIAL') {
+            this.intelligent!.assertEnabled({ ...p, data });
+            step = 4;
+          }
+          await this.cleanupData(c, p.data, data);
+          await c.query(
+            "UPDATE short_projects SET data=$2,step=$3,revision=revision+1,status='DRAFT',updated_at=NOW() WHERE id=$1",
+            [id, data, step],
+          );
+          return;
+        }
         await c.query(
           'UPDATE short_projects SET data=$2,revision=revision+1,updated_at=NOW() WHERE id=$1',
           [id, data],
@@ -350,6 +487,7 @@ export class ShortService {
         return;
       }
       if (
+        !intelligent &&
         effectiveEditingMode(data) === 'EDITORIAL_CLASSIFICATION' &&
         ((input.step !== undefined && input.step >= 4 && input.step <= 8) ||
           ['EDITING', 'TEXT', 'PLAN'].includes(input.approve ?? '') ||
@@ -368,6 +506,8 @@ export class ShortService {
         delete data.narrationText;
         data.textApproved = false;
         delete data.audio;
+        if (resolveEditingEngine(data) === 'INTELLIGENT')
+          invalidateIntelligent(data);
         delete data.plan;
         delete data.decorations;
         data.planApproved = false;
@@ -383,6 +523,8 @@ export class ShortService {
         data.narrationText = input.narrationText;
         data.textApproved = false;
         delete data.audio;
+        if (resolveEditingEngine(data) === 'INTELLIGENT')
+          invalidateIntelligent(data);
         delete data.plan;
         delete data.decorations;
         data.planApproved = false;
@@ -392,6 +534,8 @@ export class ShortService {
       if (input.voice && input.voice !== data.voice) {
         data.voice = input.voice;
         delete data.audio;
+        if (resolveEditingEngine(data) === 'INTELLIGENT')
+          invalidateIntelligent(data);
         delete data.plan;
         delete data.decorations;
         data.planApproved = false;
@@ -400,7 +544,7 @@ export class ShortService {
       }
       if (input.framing && input.framing !== data.framing) {
         data.framing = input.framing;
-        delete data.output;
+        if (!intelligent) delete data.output;
       }
       if (
         input.referenceFeatures !== undefined ||
@@ -455,6 +599,8 @@ export class ShortService {
         delete data.narrationText;
         data.textApproved = false;
         delete data.audio;
+        if (resolveEditingEngine(data) === 'INTELLIGENT')
+          invalidateIntelligent(data);
         delete data.plan;
         delete data.decorations;
         data.planApproved = false;
@@ -472,7 +618,7 @@ export class ShortService {
         data.textApproved = true;
         step = 5;
       }
-      if (input.approve === 'PLAN') {
+      if (!intelligent && input.approve === 'PLAN') {
         if (!data.audio || !data.plan?.clips.length)
           throw new BadRequestException('Selecione os trechos primeiro.');
         data.planApproved = true;
@@ -484,7 +630,10 @@ export class ShortService {
         input.removeMusic ||
         input.skipMusic
       ) {
-        if (p.step !== 7 || !data.audio || !data.planApproved)
+        if (
+          p.step !== 7 ||
+          (!intelligent && (!data.audio || !data.planApproved))
+        )
           throw new BadRequestException(
             'Abra Trilha sonora após aprovar a montagem.',
           );
@@ -501,6 +650,22 @@ export class ShortService {
         if (input.removeMusic) delete data.music;
         if (input.skipMusic) data.musicEnabled = false;
         if (previous !== JSON.stringify(audibleMix(data))) delete data.output;
+      }
+      if (intelligent && input.approve === 'PLAN')
+        throw new BadRequestException(
+          'Revise e aprove o plano inteligente na ação específica.',
+        );
+      if (input.removeEffect) {
+        if (!intelligent || p.step !== 7)
+          throw new BadRequestException(
+            'Abra a trilha sonora inteligente para remover efeitos.',
+          );
+        if (!data.soundEffects?.some((e) => e.id === input.removeEffect))
+          throw new NotFoundException('Efeito não encontrado.');
+        data.soundEffects = data.soundEffects.filter(
+          (e) => e.id !== input.removeEffect,
+        );
+        invalidateIntelligent(data);
       }
       if (input.step !== undefined) step = input.step;
       if (!shortStepAllowed({ ...p, data }, await this.files(id, c), step))
@@ -608,6 +773,8 @@ export class ShortService {
           data.textApproved = false;
           delete data.audio;
         }
+        if (resolveEditingEngine(data) === 'INTELLIGENT')
+          invalidateIntelligent(data);
         delete data.plan;
         delete data.decorations;
         data.planApproved = false;
@@ -664,6 +831,8 @@ export class ShortService {
         data.textApproved = false;
         delete data.audio;
       }
+      if (resolveEditingEngine(data) === 'INTELLIGENT')
+        invalidateIntelligent(data);
       delete data.plan;
       delete data.decorations;
       data.planApproved = false;
@@ -681,93 +850,284 @@ export class ShortService {
     if (!v.success)
       throw new BadRequestException('Confirme a operação e atualize a página.');
     const input = v.data;
+    if (input.requestId) {
+      await this.project(id);
+      const existing = await this.db.query(
+        'SELECT id,project_id,kind,input FROM short_jobs WHERE id=$1',
+        [input.requestId],
+      );
+      if (existing.rows[0]) {
+        const j = existing.rows[0];
+        if (
+          j.project_id !== id ||
+          j.kind !== input.kind ||
+          j.input.project.revision !== input.revision
+        )
+          throw new ConflictException(
+            'Identificador da solicitação já utilizado.',
+          );
+        return this.get(id);
+      }
+    }
+    let validationFailed = false;
+    try {
+      await this.locked(id, async (p, c) => {
+        this.checkRevision(p, input.revision);
+        if (
+          resolveEditingEngine(p.data) === 'LEGACY' &&
+          effectiveEditingMode(p.data) === 'EDITORIAL_CLASSIFICATION' &&
+          input.kind !== 'SCRIPT'
+        )
+          throw new BadRequestException(EDITORIAL_DEVELOPMENT_MESSAGE);
+        const files = await this.files(id, c);
+        const d = p.data;
+        const intelligent = resolveEditingEngine(d) === 'INTELLIGENT';
+        const engineOperation =
+          intelligent && ['PLAN', 'RENDER'].includes(input.kind);
+        if (engineOperation) {
+          this.intelligent!.assertEnabled(p);
+          if (
+            input.kind === 'PLAN' &&
+            (!this.settings.intelligentPaidPlanning || !this.settings.enabled)
+          )
+            throw new ServiceUnavailableException(
+              'Planejamento pago não autorizado no servidor.',
+            );
+          if (input.kind === 'RENDER') {
+            if (d.intelligentPlan?.status !== 'APPROVED')
+              throw new BadRequestException(
+                'Aprove o plano inteligente primeiro.',
+              );
+            try {
+              await this.intelligent!.validate(
+                p,
+                files,
+                d.intelligentPlan,
+                new AbortController().signal,
+              );
+            } catch (e) {
+              validationFailed = true;
+              throw e;
+            }
+          }
+        }
+        const blocked =
+          intelligent && ['PLAN', 'RENDER'].includes(input.kind)
+            ? null
+            : narrationJobBlock(d, input.kind);
+        if (blocked) throw new BadRequestException(blocked);
+        const references = await this.files(id, c, 'REFERENCE');
+        if (
+          input.kind === 'REFERENCES' &&
+          (!d.scriptApproved ||
+            p.step !== 3 ||
+            !references.length ||
+            !(d.editing?.features ?? editingFeatures).length)
+        )
+          throw new BadRequestException(
+            'Envie referências na etapa Referências de Edição.',
+          );
+        if (
+          ['SCRIPT', 'REFERENCES', 'TEXT'].includes(input.kind) &&
+          !this.settings.enabled
+        )
+          throw new ServiceUnavailableException(
+            'Configure a chave e o modelo de IA no servidor.',
+          );
+        if (input.kind === 'TEXT' && (!d.scriptApproved || !files.length))
+          throw new BadRequestException(
+            'Aprove o roteiro e envie os vídeos primeiro.',
+          );
+        if (
+          input.kind === 'AUDIO' &&
+          (!d.textApproved || !d.narrationText || !files.length)
+        )
+          throw new BadRequestException('Aprove o texto da narração primeiro.');
+        if (
+          !engineOperation &&
+          input.kind === 'PLAN' &&
+          (!d.audio || !files.length)
+        )
+          throw new BadRequestException(
+            'Gere a narração e envie vídeos primeiro.',
+          );
+        if (
+          !engineOperation &&
+          input.kind === 'PLAN' &&
+          input.semantic &&
+          !this.settings.enabled
+        )
+          throw new ServiceUnavailableException(
+            'Análise visual indisponível. Use a montagem básica.',
+          );
+        if (
+          !engineOperation &&
+          input.kind === 'RENDER' &&
+          (!d.audio || !d.planApproved || !d.plan?.clips.length)
+        )
+          throw new BadRequestException('Aprove o plano de cortes primeiro.');
+        if (engineOperation && input.kind === 'PLAN') {
+          const used = await c.query(
+            "SELECT count(*)::int n FROM short_jobs WHERE project_id=$1 AND kind='PLAN' AND input->>'engine'='INTELLIGENT'",
+            [id],
+          );
+          if (Number(used.rows[0].n) >= this.settings.intelligentPlanningLimit)
+            throw new BadRequestException(
+              'Limite de planejamentos inteligentes atingido.',
+            );
+          if (!input.requestId)
+            throw new BadRequestException(
+              'Identifique a solicitação de planejamento.',
+            );
+        }
+        if (
+          Number(
+            (
+              await c.query(
+                'SELECT count(*)::int n FROM short_jobs WHERE project_id=$1',
+                [id],
+              )
+            ).rows[0].n,
+          ) >= 100
+        )
+          throw new BadRequestException(
+            'Limite de 100 operações por projeto atingido.',
+          );
+        if (
+          Number(
+            (
+              await c.query(
+                "SELECT count(*)::int n FROM short_jobs WHERE status IN ('QUEUED','RUNNING')",
+              )
+            ).rows[0].n,
+          ) >= 20
+        )
+          throw new ServiceUnavailableException(
+            'Fila cheia. Tente mais tarde.',
+          );
+        await c.query(
+          'INSERT INTO short_jobs(id,project_id,kind,input) VALUES($1,$2,$3,$4)',
+          [
+            input.requestId ?? randomUUID(),
+            id,
+            input.kind,
+            {
+              project: p,
+              files,
+              references,
+              semantic: input.semantic,
+              engine: resolveEditingEngine(d),
+              planId: d.intelligentPlan?.id,
+              requestedRevision: p.revision,
+              attempt: 1,
+            },
+          ],
+        );
+        await c.query(
+          "UPDATE short_projects SET status='QUEUED',error_message=NULL,updated_at=NOW() WHERE id=$1",
+          [id],
+        );
+      });
+    } catch (e) {
+      if (validationFailed) await this.invalidateStoredPlan(id, input.revision);
+      throw e;
+    }
+    return this.get(id);
+  }
+  async invalidateStoredPlan(id: string, revision: number) {
     await this.locked(id, async (p, c) => {
-      this.checkRevision(p, input.revision);
-      if (
-        effectiveEditingMode(p.data) === 'EDITORIAL_CLASSIFICATION' &&
-        input.kind !== 'SCRIPT'
-      )
-        throw new BadRequestException(EDITORIAL_DEVELOPMENT_MESSAGE);
-      const files = await this.files(id, c);
-      const d = p.data;
-      const blocked = narrationJobBlock(d, input.kind);
-      if (blocked) throw new BadRequestException(blocked);
-      const references = await this.files(id, c, 'REFERENCE');
-      if (
-        input.kind === 'REFERENCES' &&
-        (!d.scriptApproved ||
-          p.step !== 3 ||
-          !references.length ||
-          !(d.editing?.features ?? editingFeatures).length)
-      )
-        throw new BadRequestException(
-          'Envie referências na etapa Referências de Edição.',
-        );
-      if (
-        ['SCRIPT', 'REFERENCES', 'TEXT'].includes(input.kind) &&
-        !this.settings.enabled
-      )
-        throw new ServiceUnavailableException(
-          'Configure a chave e o modelo de IA no servidor.',
-        );
-      if (input.kind === 'TEXT' && (!d.scriptApproved || !files.length))
-        throw new BadRequestException(
-          'Aprove o roteiro e envie os vídeos primeiro.',
-        );
-      if (
-        input.kind === 'AUDIO' &&
-        (!d.textApproved || !d.narrationText || !files.length)
-      )
-        throw new BadRequestException('Aprove o texto da narração primeiro.');
-      if (input.kind === 'PLAN' && (!d.audio || !files.length))
-        throw new BadRequestException(
-          'Gere a narração e envie vídeos primeiro.',
-        );
-      if (input.kind === 'PLAN' && input.semantic && !this.settings.enabled)
-        throw new ServiceUnavailableException(
-          'Análise visual indisponível. Use a montagem básica.',
-        );
-      if (
-        input.kind === 'RENDER' &&
-        (!d.audio || !d.planApproved || !d.plan?.clips.length)
-      )
-        throw new BadRequestException('Aprove o plano de cortes primeiro.');
-      if (
-        Number(
-          (
-            await c.query(
-              'SELECT count(*)::int n FROM short_jobs WHERE project_id=$1',
-              [id],
-            )
-          ).rows[0].n,
-        ) >= 100
-      )
-        throw new BadRequestException(
-          'Limite de 100 operações por projeto atingido.',
-        );
-      if (
-        Number(
-          (
-            await c.query(
-              "SELECT count(*)::int n FROM short_jobs WHERE status IN ('QUEUED','RUNNING')",
-            )
-          ).rows[0].n,
-        ) >= 20
-      )
-        throw new ServiceUnavailableException('Fila cheia. Tente mais tarde.');
+      if (p.revision !== revision) return;
+      const data = { ...p.data };
+      invalidateIntelligent(data);
       await c.query(
-        'INSERT INTO short_jobs(id,project_id,kind,input) VALUES($1,$2,$3,$4)',
+        "UPDATE short_projects SET data=$2,step=LEAST(step,6),revision=revision+1,status='DRAFT',updated_at=NOW() WHERE id=$1",
+        [id, data],
+      );
+    });
+  }
+  async reviewIntelligent(id: string, raw: unknown) {
+    const parsed = reviewIntelligentSchema.safeParse(raw);
+    if (!parsed.success)
+      throw new BadRequestException(
+        'Revise a ação, o plano e a revisão do projeto.',
+      );
+    const v = parsed.data;
+    await this.locked(id, async (p, c) => {
+      this.checkRevision(p, v.revision);
+      if (resolveEditingEngine(p.data) !== 'INTELLIGENT')
+        throw new BadRequestException('Motor incompatível.');
+      const record = p.data.intelligentPlan;
+      if (
+        !record ||
+        record.id !== v.planId ||
+        record.status !== 'READY_FOR_REVIEW'
+      )
+        throw new BadRequestException('Plano indisponível para revisão.');
+      if (v.action === 'APPROVE')
+        await this.intelligent!.validate(
+          p,
+          await this.files(id, c),
+          record,
+          new AbortController().signal,
+        );
+      this.logger.log(
+        `Short ${id}: plano ${record.id} ${v.action}; revisão ${p.revision}.`,
+      );
+      const updated = {
+        ...record,
+        status:
+          v.action === 'APPROVE'
+            ? ('APPROVED' as const)
+            : ('REJECTED' as const),
+        ...(v.action === 'APPROVE'
+          ? {
+              approvedAt: new Date().toISOString(),
+              approvalId: randomUUID(),
+              approvedPlanHash: canonicalHash(record.plan),
+            }
+          : {}),
+      };
+      await c.query(
+        "UPDATE short_projects SET data=$2,step=$3,revision=revision+1,status='DRAFT',updated_at=NOW() WHERE id=$1",
         [
-          randomUUID(),
           id,
-          input.kind,
-          { project: p, files, references, semantic: input.semantic },
+          { ...p.data, intelligentPlan: updated },
+          v.action === 'APPROVE' ? 7 : 6,
         ],
       );
-      await c.query(
-        "UPDATE short_projects SET status='QUEUED',error_message=NULL,updated_at=NOW() WHERE id=$1",
-        [id],
-      );
+    });
+    return this.get(id);
+  }
+  async cancelIntelligent(id: string, jobId: string) {
+    await this.db.withClient(async (c) => {
+      await c.query('BEGIN');
+      try {
+        const p = await this.project(id, c, true);
+        if (resolveEditingEngine(p.data) !== 'INTELLIGENT')
+          throw new BadRequestException(
+            'Cancelamento disponível para o motor inteligente.',
+          );
+        const j = await c.query(
+          "SELECT * FROM short_jobs WHERE id=$1 AND project_id=$2 AND status IN ('QUEUED','RUNNING') FOR UPDATE",
+          [jobId, id],
+        );
+        if (!j.rows.length || !['PLAN', 'RENDER'].includes(j.rows[0].kind))
+          throw new ConflictException('Job indisponível para cancelamento.');
+        await c.query(
+          "UPDATE short_jobs SET status='CANCELLED',error_message='Cancelado pelo usuário.',completed_at=NOW() WHERE id=$1",
+          [jobId],
+        );
+        // Keep project locked until a running subprocess acknowledges cancellation.
+        if (j.rows[0].status === 'QUEUED')
+          await c.query(
+            "UPDATE short_projects SET status='DRAFT',updated_at=NOW() WHERE id=$1",
+            [id],
+          );
+        await c.query('COMMIT');
+      } catch (e) {
+        await c.query('ROLLBACK');
+        throw e;
+      }
     });
     return this.get(id);
   }
@@ -780,6 +1140,9 @@ export class ShortService {
         p.data.audio?.key,
         p.data.output?.key,
         p.data.music?.key,
+        ...(p.data.resultHistory ?? []).map((o) => o.key),
+        ...(p.data.retainedKeys ?? []),
+        ...(p.data.soundEffects ?? []).map((e) => e.key),
       ].filter(Boolean);
       for (const key of keys)
         await c.query(

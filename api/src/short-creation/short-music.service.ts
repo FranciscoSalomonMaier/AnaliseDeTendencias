@@ -1,4 +1,8 @@
 import {
+  resolveEditingEngine,
+  invalidateIntelligent,
+} from './short-engine.schema';
+import {
   resolveNarrationMode,
   UNNARRATED_RENDER_MESSAGE,
 } from './short-narration.schema';
@@ -195,7 +199,12 @@ export class ShortSoundtrackService {
     readonly shorts: ShortService,
     readonly validator: ShortMusicValidator,
   ) {}
-  async upload(id: string, file: RemixUpload | undefined, body: unknown) {
+  async upload(
+    id: string,
+    file: RemixUpload | undefined,
+    body: unknown,
+    role: 'MUSIC' | 'EFFECT' = 'MUSIC',
+  ) {
     if (!file) throw new BadRequestException('Selecione uma música.');
     let key: string | undefined;
     let committed = false;
@@ -221,15 +230,30 @@ export class ShortSoundtrackService {
       );
       await this.shorts.locked(id, async (p, c) => {
         this.shorts.checkRevision(p, parsed.data.revision);
-        if (resolveNarrationMode(p.data) === 'WITHOUT_NARRATION')
+        if (
+          resolveEditingEngine(p.data) === 'LEGACY' &&
+          resolveNarrationMode(p.data) === 'WITHOUT_NARRATION'
+        )
           throw new BadRequestException(UNNARRATED_RENDER_MESSAGE);
-        if (p.step !== 7 || !p.data.audio || !p.data.planApproved)
+        if (
+          p.step !== 7 ||
+          (resolveEditingEngine(p.data) === 'LEGACY' &&
+            (!p.data.audio || !p.data.planApproved))
+        )
           throw new BadRequestException(
             'Abra Trilha sonora após aprovar a montagem.',
           );
         if (!this.shorts.storage.saveFile)
           throw new ServiceUnavailableException('Storage incompatível.');
         await this.shorts.storage.saveFile(key!, file.path);
+        if (
+          role === 'EFFECT' &&
+          (resolveEditingEngine(p.data) !== 'INTELLIGENT' ||
+            (p.data.soundEffects?.length ?? 0) >= 6)
+        )
+          throw new BadRequestException(
+            'Efeitos exigem edição inteligente e admitem até seis arquivos.',
+          );
         const data: ShortData = {
           ...p.data,
           music: {
@@ -250,6 +274,14 @@ export class ShortSoundtrackService {
           musicEnabled: true,
           output: undefined,
         };
+        if (role === 'EFFECT') {
+          const effect = data.music!;
+          data.music = p.data.music;
+          data.musicEnabled = p.data.musicEnabled;
+          data.soundEffects = [...(p.data.soundEffects ?? []), effect];
+        }
+        if (resolveEditingEngine(data) === 'INTELLIGENT')
+          invalidateIntelligent(data);
         await this.shorts.cleanupData(c, p.data, data);
         await c.query(
           "UPDATE short_projects SET data=$2,revision=revision+1,status='DRAFT',error_message=NULL,updated_at=NOW() WHERE id=$1",
