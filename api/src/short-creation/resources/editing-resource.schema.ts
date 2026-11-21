@@ -1,5 +1,5 @@
 import { z } from 'zod';
-export const RESOURCE_LIBRARY_VERSION = 1 as const;
+export const RESOURCE_LIBRARY_VERSION = 3 as const;
 export const RESOURCE_CONTRACT_VERSION = 1 as const;
 export const resourceCategorySchema = z.enum([
   'VIDEO_MANIPULATION',

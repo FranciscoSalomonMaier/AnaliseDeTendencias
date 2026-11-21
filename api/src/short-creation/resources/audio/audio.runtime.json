@@ -1,0 +1,95 @@
+{
+  "libraryVersion": 3,
+  "audioEngineVersion": 1,
+  "resourceVersions": 1,
+  "requestContractVersion": 1,
+  "integration": "Isolated internal AudioResourceExecutor only. No Nest module, route, database, job, upload, UI, prompt or TTS integration. The existing ShortMusicRenderer and AudioMixService behavior remains unchanged.",
+  "architecture": "Strict central resource contracts -> explicit technical audio composition -> authorized unique source lookup -> existing validators -> single internally compiled FFmpeg audio graph -> one audio encoding -> output validation and disposal. Video from the visual/graphics executor can be passed explicitly as an authorized H.264 asset and is stream-copied without video re-encoding.",
+  "reused": [
+    "MediaProcess",
+    "RenderSettings paths and tempDir",
+    "RemixVideoValidator",
+    "ShortMusicValidator including whole-track decode",
+    "existing AudioMixService normalization-to-48000-stereo, delay, bounded-trim, amix and explicit-limiter patterns",
+    "soundEffectIntentSchema and all ten conceptual sound effect categories",
+    "central registry, resource usage envelope, Zod JSON catalog, capabilities, versioned evidence and editorial preference/knowledge mapping",
+    "existing easingProgress curves"
+  ],
+  "execution": {
+    "entrypoint": "AudioResourceExecutor.execute(composition, authorizedLookup, AbortSignal?)",
+    "target": "COMPOSITION.clipId is the logical audio track identifier. Audio clips are declared by source resource operations with unique parameters.clipId. AUDIO_MIX targets a logical output bus.",
+    "duration": "Explicit composition duration up to 90 seconds, rounded to the nearest 1/48000-second sample. Output is padded with explicitly defined final silence and trimmed to that duration.",
+    "ordering": "Declare all clips for a track before applying its processors. One kind per track, unique clip IDs. Processor order follows declaration. AUDIO_MIX must be last, name all existing tracks exactly once and may be omitted to mix all declared tracks at unity gain.",
+    "outputs": [
+      "WAV PCM signed 16-bit, 48000 Hz stereo",
+      "MP4 with copied H.264 video and AAC 192 kb/s, 48000 Hz stereo",
+      "MP4 without any audio stream when explicitly requested with no audio operations"
+    ],
+    "narration": "An optional ordinary authorized audio input. No new voice generation, TTS calls, transcript or navigation changes. Empty compositions create a silent track unless a video plus silentOutput=NO_STREAM is explicitly requested.",
+    "temporaryFiles": "One private workspace; no intermediate audio render per effect. Cleanup on failure/cancellation/timeout, dispose() on successful result. Environment inspection cached per executor; each unique source is validated once per execution."
+  },
+  "timing": {
+    "sourceClock": "sourceStart/sourceEnd refer to the original source, before playback rate. Resampling to 48000 Hz precedes sample-accurate trimming.",
+    "compositionClock": "timelineStart/timelineEnd place source clips on the final output clock. Track processors use already processed track/composition seconds.",
+    "cut": "Explicit source interval. No automatic inference from a visual plan.",
+    "concat": "Declare consecutive clips on the same logical track with explicit timelineStart offsets.",
+    "speed": "rate 0.25-4 with pitch-preserving atempo stages, each in the range 0.5-2. At least 100 ms of source required for speed changes. A small analysis-window tail (up to 100 ms) is padded only to enforce the declared sample count.",
+    "repeat": "Clip repeat or AUDIO_LOOP with at most 16 finite plays. No infinite loops.",
+    "freeze": "ORIGINAL_AUDIO.freeze=SILENCE produces explicit silence; CONTINUE_SOURCE preserves existing ambient material and rejects insufficient source duration. An explicit timelineEnd and rate=1/repeat=1 are required.",
+    "crossfade": "Explicit overlap of two track clips with complementary fadeIn/fadeOut durations. No automatic translation from visual CROSSFADE and no automatic equal-power strategy.",
+    "offsets": "Only the first audio stream is selected. ORIGINAL_AUDIO rejects different video/audio start timestamps rather than silently losing synchronization. Timestamp-discontinuity correction and arbitrary stream selection require future explicit contracts."
+  },
+  "gain": {
+    "unit": "LINEAR_AMPLITUDE",
+    "neutral": 1,
+    "minimum": 0,
+    "maximum": 4,
+    "mute": "zero gain",
+    "progressive": "AUDIO_VOLUME can interpolate gain->endGain inside an explicit interval. Constant interval gain returns to neutral outside its interval.",
+    "cumulative": "Conservative source-path gain bound is checked through volume/fade processors; repeated gain operations cannot exceed 4 per source path. Overlap and track summation may still clip without explicit limiting.",
+    "master": "AUDIO_MIX gain is 0-1; amix normalize=0, dropout_transition=0.",
+    "protection": "Opt-in AUDIO_MIX.limiter uses alimiter with explicit peakLimit, level=0 and latency compensation. No mandatory loudnorm, loudness matching, normalization or automatic volume decisions.",
+    "perception": "Sample peaks/RMS describe signal level, not perceived loudness or LUFS. AAC can create intersample/codec overshoots; the limiter operates before encoding and is not a true-peak compliance guarantee."
+  },
+  "ducking": {
+    "available": "KNOWN_INTERVALS",
+    "parameters": [
+      "optional triggerTrackId",
+      "explicit ordered non-overlapping intervals",
+      "reduction (linear remaining gain)",
+      "minimumGain (relative floor)",
+      "attackSeconds",
+      "releaseSeconds"
+    ],
+    "behavior": "Attack ramps begin before each declared interval, recovery ends after it. Overlapping ramp tails combine using the minimum envelope, never multiplying attenuation. No requirement for a narration track.",
+    "unavailable": "SIGNAL/sidechaincompress strategy; metadata does not advertise signal-based ducking. Explicit interval ducking does not analyze whether the trigger actually contains speech."
+  },
+  "loops": "Finite aloop plus explicit atrim. BACKGROUND_MUSIC supports STOP, LOOP and PAD_SILENCE. AUDIO_LOOP selects a processed-track interval, count, duration and optional new timelineStart. CUT rejects duration beyond the finite repeats; PAD_SILENCE may fill the remainder with silence. No loop-boundary crossfade or automatic seam repair in version 1. Repeated processed intervals are limited to 90 seconds of sample buffer. When LOOP has timelineEnd, repeat must remain at its default because the finite play count is derived from that explicit duration.",
+  "formats": {
+    "standalone": ["MP3", "WAV", "AAC", "M4A", "OGG", "OPUS in Ogg", "FLAC"],
+    "validation": "Reuse ShortMusicValidator for extension/signature/container/codec/full decode and actual decoded duration. The isolated engine maps .opus to the existing Ogg validation contract without expanding uploads. Original video uses RemixVideoValidator plus audio-stream metadata and full audio decode. Runtime decoder availability and actual files are both checked.",
+    "sampleRates": "8000-192000 Hz input, 48000 Hz output",
+    "channels": "1-8 input, stereo output; FFmpeg's standard channel-layout conversion, no arbitrary channel matrix.",
+    "uploadChanges": "None"
+  },
+  "limits": {
+    "uniqueSourcesIncludingVideo": 8,
+    "tracks": 8,
+    "clips": 32,
+    "simultaneousSoundEffects": 8,
+    "audioOperations": 64,
+    "plays": 16,
+    "outputSeconds": 90,
+    "sourceSeconds": 600,
+    "audioSourceBytes": 67108864,
+    "videoSourceBytes": 536870912,
+    "outputBytes": 134217728,
+    "executionDeadlineSeconds": 120,
+    "ffmpegThreads": 1,
+    "duckingWindowsTotal": 128,
+    "filterGraphCharacters": 100000
+  },
+  "security": "Strict finite numeric/enumeration parameters and opaque IDs. Authorized lookup must enforce ownership and usage rights. realpath containment excludes external paths and URLs. Only internal FFmpeg expressions and file,pipe protocols; shell=false. All loops, gains, samples, source sizes and durations bounded. Full decode validation, global execution deadline and AbortSignal propagation.",
+  "availability": "Central AUDIO definitions require their schemas, audio engine version evidence, FFmpeg 7, FFprobe, PCM/AAC encoders, supported input decoders and their declared filters. Audio availability is independent of libx264 and font dependencies; audiovisual output additionally requires a validated H.264 source. All editorial classifications remain available=false.",
+  "nextStage": "Stage 8 may connect the tested library to production and adjust narration navigation only with separate authorization. No planner or editorial decisions are implemented here."
+}

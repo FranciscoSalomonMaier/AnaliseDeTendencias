@@ -1,4 +1,7 @@
+import { isAudioId } from './audio/audio.schema';
+import { isGraphicsId } from './graphics/graphics.schema';
 import {
+  RESOURCE_LIBRARY_VERSION,
   resourceCompositionSchema,
   resourceCanvasSchema,
   resourceAssetMetadataSchema,
@@ -51,6 +54,20 @@ export function compileResourceComposition(
   capabilities: readonly ResourceCapability[],
   canvasInput: Partial<ResourceCanvas> = {},
 ) {
+  if (
+    resourceCompositionSchema
+      .parse(raw)
+      .operations.some((u) => isAudioId(u.resourceId))
+  )
+    throw Error('Utilize AudioResourceExecutor para operações sonoras.');
+  if (
+    resourceCompositionSchema
+      .parse(raw)
+      .operations.some((u) => isGraphicsId(u.resourceId))
+  )
+    throw Error(
+      'Recursos gráficos exigem preparação de assets pelo EditingResourceExecutor.',
+    );
   const request = resourceCompositionSchema.parse(raw),
     canvas = resourceCanvasSchema.parse(canvasInput);
   const usages = request.operations.map((item) =>
@@ -394,7 +411,8 @@ export function compileResourceComposition(
     ),
   };
   return {
-    libraryVersion: 1,
+    libraryVersion: RESOURCE_LIBRARY_VERSION,
+    outputClipId: [...states.keys()][0],
     contractVersion: 1,
     filterGraph: graph.join(';'),
     outputLabel: final.label,

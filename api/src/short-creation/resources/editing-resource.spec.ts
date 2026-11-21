@@ -80,14 +80,14 @@ const compile = (operations: unknown[], assets = meta) =>
     height: 160,
   });
 describe('Editing resource contracts, availability and safe local composition', () => {
-  test('registers unique versioned definitions in seven categories and leaves text/audio reserved', () => {
+  test('registers unique versioned definitions in seven categories and keeps nonvisual resources dependent on their runtime', () => {
     expect(editingResourceRegistry).toHaveLength(55);
     expect(new Set(editingResourceRegistry.map((r) => r.id)).size).toBe(55);
     expect(new Set(editingResourceRegistry.map((r) => r.category)).size).toBe(
       7,
     );
     expect(caps.filter((r) => r.available)).toHaveLength(33);
-    expect(caps.filter((r) => !r.implemented)).toHaveLength(22);
+    expect(caps.filter((r) => !r.implemented)).toHaveLength(0);
     expect(
       editingResourceRegistry.every(
         (r) =>
@@ -110,7 +110,10 @@ describe('Editing resource contracts, availability and safe local composition', 
       ]),
     ).toThrow('contrato');
     expect(Object.keys(resourceExecutionEvidence).sort()).toEqual(
-      Object.keys(resourceParameterSchemas).sort(),
+      editingResourceRegistry
+        .filter((r) => r.implemented)
+        .map((r) => r.id)
+        .sort(),
     );
   });
   test('technical inspection parses filters, encoder and transition support without exposing paths', async () => {

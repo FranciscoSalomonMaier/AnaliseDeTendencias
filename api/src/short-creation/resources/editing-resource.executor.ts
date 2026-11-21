@@ -1,3 +1,12 @@
+import { isAudioId } from './audio/audio.schema';
+import { isGraphicsId } from './graphics/graphics.schema';
+import {
+  parseGraphicsUsage,
+  prepareGraphics,
+  graphicsAssetIds,
+} from './graphics/graphics-renderer';
+import { appendGraphicsGraph } from './graphics/graphics-animation';
+import { RESOURCE_LIBRARY_VERSION } from './editing-resource.schema';
 import { mkdir, mkdtemp, realpath, rm, stat, statfs } from 'node:fs/promises';
 import { extname, join, relative, isAbsolute } from 'node:path';
 import { MediaProcess } from '../../video-render/media-process';
@@ -70,18 +79,45 @@ export class EditingResourceExecutor {
     if (this.running)
       throw Error('Já há uma execução local de recursos em andamento.');
     const request = resourceCompositionSchema.parse(raw);
+    if (request.operations.some((u) => isAudioId(u.resourceId)))
+      throw Error('Utilize AudioResourceExecutor para operações sonoras.');
     this.running = true;
     let workspace: string | undefined,
       delivered = false;
     try {
       if (signal?.aborted) throw Error('Execução cancelada.');
       const capabilities = await this.capabilities();
-      request.operations.forEach((usage) =>
-        validateResourceUsage(usage, capabilities),
+      const graphical = request.operations.filter((u) =>
+        isGraphicsId(u.resourceId),
       );
+      const visual = request.operations.filter(
+        (u) => !isGraphicsId(u.resourceId),
+      );
+      request.operations.forEach((usage) => {
+        if (isGraphicsId(usage.resourceId)) {
+          if (
+            !capabilities.some((c) => c.id === usage.resourceId && c.available)
+          )
+            throw Error('Recurso gráfico indisponível.');
+          parseGraphicsUsage(usage);
+        } else validateResourceUsage(usage, capabilities);
+      });
+      if (!visual.length) {
+        const target = graphical[0].target;
+        if (target.scope !== 'COMPOSITION' || !target.clipId)
+          throw Error('Composição gráfica inválida.');
+        visual.push({
+          contractVersion: 1,
+          resourceId: 'FIT',
+          resourceVersion: 1,
+          target,
+          parameters: {},
+        });
+      }
+      const visualRequest = { contractVersion: 1, operations: visual };
       const ids = [
         ...new Set(
-          request.operations.flatMap(({ target: t }) =>
+          visual.flatMap(({ target: t }) =>
             t.scope === 'SOURCE_INTERVAL'
               ? [t.sourceId]
               : t.scope === 'BETWEEN_CLIPS'
@@ -94,6 +130,9 @@ export class EditingResourceExecutor {
       ];
       if (ids.length > 8)
         throw Error('A composição local aceita até oito origens.');
+      const imageIds = graphicsAssetIds(graphical);
+      if (new Set([...ids, ...imageIds]).size > 8)
+        throw Error('A composição aceita até oito origens de vídeo e imagem.');
       const root = await realpath(this.sourceRoot),
         assets: ResourceAssetMetadata[] = [],
         paths = new Map<string, string>();
@@ -132,16 +171,47 @@ export class EditingResourceExecutor {
         paths.set(id, path);
       }
       const compiled = compileResourceComposition(
-        request,
+        visualRequest,
         assets,
         capabilities,
         canvas,
       );
+      if (
+        graphical.some(
+          (u) =>
+            u.target.scope !== 'COMPOSITION' ||
+            u.target.clipId !== compiled.outputClipId,
+        )
+      )
+        throw Error(
+          'Gráficos devem referenciar o trecho sobrevivente da composição final.',
+        );
       await mkdir(this.settings.tempDir, { recursive: true, mode: 0o700 });
       const disk = await statfs(this.settings.tempDir);
       if (Number(disk.bavail) * Number(disk.bsize) < 256 * 1024 ** 2)
         throw Error('Espaço temporário insuficiente.');
       workspace = await mkdtemp(join(this.settings.tempDir, 'resource-'));
+      const prepared = await prepareGraphics(
+        graphical,
+        compiled.width,
+        compiled.height,
+        compiled.expectedDuration,
+        workspace,
+        async (id) => {
+          const path = await realpath(await lookup(id)),
+            inside = relative(root, path);
+          if (
+            !inside ||
+            inside === '..' ||
+            inside.startsWith('..' + requireSeparator()) ||
+            isAbsolute(inside)
+          )
+            throw Error('Imagem fora da raiz autorizada.');
+          return path;
+        },
+        signal,
+      );
+      const finalGraph = appendGraphicsGraph(compiled, prepared.elements);
       const output = join(workspace, 'output.mp4');
       const args = [
         '-hide_banner',
@@ -165,11 +235,24 @@ export class EditingResourceExecutor {
           '-i',
           paths.get(id)!,
         );
+      for (const e of prepared.elements)
+        args.push(
+          '-protocol_whitelist',
+          'file,pipe',
+          '-loop',
+          '1',
+          '-framerate',
+          '30',
+          '-t',
+          String(compiled.expectedDuration),
+          '-i',
+          e.path,
+        );
       args.push(
         '-filter_complex',
-        compiled.filterGraph,
+        finalGraph.filterGraph,
         '-map',
-        `[${compiled.outputLabel}]`,
+        `[${finalGraph.outputLabel}]`,
         '-an',
         '-sn',
         '-dn',
@@ -231,7 +314,12 @@ export class EditingResourceExecutor {
         width: metadata.width,
         height: metadata.height,
         fps: metadata.fps,
-        libraryVersion: 1,
+        libraryVersion: RESOURCE_LIBRARY_VERSION,
+        graphics: {
+          elements: prepared.elements.length,
+          warnings: prepared.warnings,
+          texturePixels: prepared.texturePixels,
+        },
         contractVersion: 1,
         impacts: compiled.impacts,
         audio: 'NONE' as const,

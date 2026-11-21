@@ -1,3 +1,12 @@
+import {
+  audioParameterSchemas,
+  type AudioResourceId,
+} from './audio/audio.schema';
+import {
+  audioRequiredFilters,
+  audioResourceFilters,
+} from './audio/audio.resources';
+import { graphicsParameterSchemas } from './graphics/graphics.schema';
 import { z } from 'zod';
 import { resourceParameterSchemas } from './definitions/visual.resources';
 import {
@@ -453,38 +462,60 @@ const futureNames: Record<string, string> = {
   AUDIO_LOOP: 'Repetição de áudio',
   AUDIO_MIX: 'Mixagem',
 };
-const future: ResourceDefinition[] = [...futureText, ...futureAudio].map(
-  (id) => {
-    const text = futureText.includes(id),
-      stage = text ? 6 : 7;
-    return {
-      id,
-      version: 1,
-      name: futureNames[id],
-      description: `Reservado para a etapa ${stage}; sem contrato executável nesta biblioteca.`,
-      category: text ? 'TEXT_AND_GRAPHICS' : 'AUDIO',
-      scopes: ['CLIP'],
-      implemented: false,
-      changesDuration: id === 'AUDIO_LOOP',
-      requiredFilters: [],
-      parametersSchema: null,
-      restrictions: [
-        `Adaptação e testes de execução pendentes da etapa ${stage}.`,
-      ],
-      ...(['CAPTIONS', 'WORD_HIGHLIGHT', 'TEMPORARY_TEXT'].includes(id)
-        ? {
-            legacyImplementation:
-              'editingAss / ShortEditingEffectsService: implementação legada preservada; sem adaptador novo.',
-          }
-        : !text
-          ? {
-              legacyImplementation:
-                'Infraestrutura legada de narração/mixagem preservada; sem adaptador de áudio novo.',
-            }
-          : {}),
-    };
-  },
-);
+const graphics: ResourceDefinition[] = futureText.map((id) => ({
+  id,
+  version: 1,
+  name: futureNames[id],
+  description:
+    'Recurso gráfico isolado, validado e composto após os efeitos do vídeo.',
+  category: 'TEXT_AND_GRAPHICS',
+  scopes: ['COMPOSITION'],
+  implemented: true,
+  changesDuration: false,
+  requiredFilters: ['overlay', 'colorchannelmixer', 'geq'],
+  parametersSchema:
+    graphicsParameterSchemas[id as keyof typeof graphicsParameterSchemas],
+  restrictions: [
+    'Coordenadas relativas à composição final; relógio final após transformações de vídeo. Não sincroniza automaticamente gráficos a recortes ou mudanças de velocidade.',
+    'Até 160 elementos, 32 simultâneos, 120 legendas, 160 palavras, 20 posições, 64 animações, 20000 caracteres processados e 32 telas de texturas.',
+    'Camadas ordenadas por layer e ordem de declaração; efeitos visuais são aplicados antes dos gráficos. Intervalos [start,end).',
+    'Fontes e emojis locais versionados. Caracteres sem glifos e imagens não autorizadas são rejeitados.',
+    'Margens seguras estimadas e configuráveis; autorizar explicitamente posicionamento fora delas.',
+    'TYPEWRITER: uma linha, um segmento, até 80 grafemas; até quatro animações por elemento. Rankings mantêm slots fixos, sem rotação.',
+    'Áudio ausente; nenhum vínculo com jobs ou produção.',
+  ],
+  legacyImplementation:
+    'Sharp existente para rasterização; ASS/SRT e renderizadores legados preservados. Dados sincronizados fornecidos pelo chamador.',
+}));
+const audio: ResourceDefinition[] = futureAudio.map((id) => ({
+  id,
+  version: 1,
+  name: futureNames[id],
+  description:
+    'Operação de áudio isolada, com fontes e relógios explícitos, sem narração obrigatória.',
+  category: 'AUDIO',
+  scopes: ['COMPOSITION'],
+  implemented: true,
+  changesDuration: id === 'AUDIO_LOOP',
+  requiredFilters: [
+    ...audioRequiredFilters,
+    ...audioResourceFilters[id as AudioResourceId],
+  ],
+  parametersSchema: audioParameterSchemas[id as AudioResourceId],
+  legacyImplementation:
+    'ShortMusicValidator, MediaProcess, RemixVideoValidator e padrões de AudioMixService; produção inalterada.',
+  restrictions: [
+    'Executado por AudioResourceExecutor. Target COMPOSITION.clipId identifica a faixa lógica; AUDIO_MIX usa a saída lógica.',
+    'Fontes originais usam segundos da fonte; timelineStart usa segundos da composição final. Intervalos de operações usam a faixa já processada.',
+    'Até oito fontes/faixas, 32 clipes, oito efeitos simultâneos, 64 operações, 16 repetições e 90 segundos.',
+    'Ganho linear entre 0 e 4; neutro 1, mute 0. AUDIO_MIX.gain limitado a 1. Sem loudness automático; limiter apenas explicitamente solicitado.',
+    'Ducking KNOWN_INTERVALS: redução linear e rampas de ataque/recuperação; sem sidechain por sinal nesta versão.',
+    'Loop finito, sem crossfade entre ciclos. Crossfades sonoros exigem sobreposição e fades explícitos.',
+    'Congele com SILENCE ou CONTINUE_SOURCE explícitos. Não há tradução automática de planos visuais. Original usa apenas a primeira faixa sonora e rejeita offsets entre streams.',
+    'Declare clipes de uma faixa antes de suas operações; AUDIO_MIX deve listar todas as faixas e aparecer por último.',
+    'Saída WAV PCM 48 kHz estéreo ou MP4 H.264 copiado/AAC 48 kHz; NO_STREAM apenas para vídeo sem operações de áudio.',
+  ],
+}));
 export function defineResourceRegistry(
   input: readonly ResourceDefinition[],
 ): readonly ResourceDefinition[] {
@@ -503,7 +534,8 @@ export function defineResourceRegistry(
 }
 export const editingResourceRegistry = defineResourceRegistry([
   ...visual,
-  ...future,
+  ...graphics,
+  ...audio,
 ]);
 export function getResourceDefinition(id: string) {
   const item = editingResourceRegistry.find((item) => item.id === id);

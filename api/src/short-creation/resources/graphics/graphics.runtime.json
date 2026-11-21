@@ -1,0 +1,85 @@
+{
+  "rendererVersion": 1,
+  "libraryVersion": 3,
+  "requestContractVersion": 1,
+  "usage": "INTERNAL_ISOLATED_EXECUTOR_ONLY",
+  "installation": {
+    "development": "Use the existing npm ci dependencies and npm run build in api. No new npm dependencies. Fonts, emoji PNGs, hashes and licenses are copied by nest-cli assets into dist/src/short-creation/resources/graphics/assets.",
+    "productionAndDocker": "Include the full api dist/src tree with graphics/assets and production node_modules. Use Node and a CPU/OS supported by the installed sharp, ffmpeg-static and ffprobe-static packages. The FFmpeg 7 compatibility profile, libx264 and required filters must be present. Sharp must expose working libvips/Pango and librsvg; inspectGraphicsDependencies fails closed otherwise. Standard sharp prebuilt packages include these components; custom libvips builds must explicitly include them. No host font package or external network lookup is required.",
+    "verification": "npm run test:short-graphics; npm run test:short-graphics:integration; npm run test:short-resources:integration",
+    "environmentVariables": "None added. No new routes, modules, jobs, database changes or production workflow integration."
+  },
+  "fontBundle": {
+    "version": 1,
+    "families": [
+      "Noto Sans Regular/Bold/Italic/BoldItalic",
+      "Noto Sans Mono Regular/Bold"
+    ],
+    "weights": [400, 700],
+    "license": "SIL Open Font License 1.1; included copyright and license text. Original unmodified binaries. SHA-256 manifest pins the exact files.",
+    "coverage": "Portuguese and other glyphs present in the bundled faces. Glyph coverage is validated against the selected font cmap. Missing glyphs and unsupported emoji are rejected, never silently replaced by boxes or an arbitrary machine font. Automatic cross-family fallback is not exposed in version 1. Adding a fallback requires a versioned bundled font and coverage validation.",
+    "suggestedFontsNotBundled": "Inter, Montserrat, Poppins, Roboto, Anton, Bebas Neue and Oswald were not required; no unavailable family is advertised."
+  },
+  "emoji": {
+    "source": "https://github.com/jdecked/twemoji/tree/v17.0.2/assets/72x72",
+    "count": 15,
+    "license": "CC BY 4.0; unmodified PNGs, attribution and full license included in assets.",
+    "exportAttribution": "Emoji graphics by Twemoji (https://github.com/jdecked/twemoji), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Preserve this attribution when publishing demonstrations or exports containing the graphics.",
+    "unsupported": "Rejected explicitly, including unsupported emoji embedded inside text. No dependency on color-font rendering in FFmpeg."
+  },
+  "textStrategy": "Sharp's existing libvips/Pango stack measures and rasterizes validated escaped markup into transparent PNGs. Glyphs, outlines, shadows, colors, opacity and background are composed centrally. Only internally generated rectangle SVGs are used for rounded backgrounds. Incoming SVG/HTML and paths are rejected. Legacy ASS/SRT timing/export and ShortEditingEffectsService remain unchanged; this engine accepts already synchronized cues and uses the same central graphic layout rather than duplicating a second subtitle-format renderer.",
+  "layout": {
+    "space": "FINAL_COMPOSITION; all positions/dimensions relative to output width/height. Typography uses 1080-wide reference pixels, proportionally scaled to output.",
+    "clock": "FINAL_PROCESSED_VIDEO_SECONDS; graphic timestamps are not automatically remapped by speed changes or cuts.",
+    "anchors": 9,
+    "safeAreas": "GENERIC_VERTICAL, YOUTUBE_SHORTS, INSTAGRAM_REELS and TIKTOK are conceptual profile labels with explicitly configurable estimated margins; defaults are generic estimates, never guarantees of platform UI geometry. No automatic relocation. Outside estimates requires allowOutsideSafeArea=true; actual out-of-canvas geometry is rejected.",
+    "layers": "Video-local visual effects run first. Graphics are sorted by layer, then declaration order, and overlaid on the final video. Source zoom does not zoom titles. Whole-composition effects after graphics are intentionally not exposed yet.",
+    "overflow": "WRAP at whitespace, SHRINK down to the declared minimum, TRUNCATE whole excess lines with an explicit warning, or REJECT. A single unbreakable token wider than the box is rejected unless SHRINK makes it fit. There is no silent character removal.",
+    "verticalAlignment": "Nine anchors place the complete block. Within a mixed-style line glyph boxes are bottom aligned; advanced typographic baseline shaping across differently styled segments is not claimed.",
+    "ranking": "1-20 arbitrary unique positions, horizontal/vertical layout, fixed-size slots. Reveal events reference the panel and can arrive in any numeric order. Hidden/space/number/question/custom states reuse each slot. Highlight duration/color are configurable. Rankings do not decide item order, support per-item animation, or rotate as a group in version 1.",
+    "wordHighlight": "Static highlighting accepts size/font/weight overrides. Synchronized highlighting requires supplied ordered timestamps and preserves font geometry; layout-changing overrides are rejected. No transcription or inferred word timestamps."
+  },
+  "animations": {
+    "implemented": [
+      "NONE",
+      "FADE_IN",
+      "FADE_OUT",
+      "SLIDE_IN",
+      "SLIDE_OUT",
+      "SCALE_IN",
+      "SCALE_OUT",
+      "POP",
+      "BOUNCE",
+      "SHAKE",
+      "TYPEWRITER",
+      "PULSE"
+    ],
+    "curves": ["LINEAR", "EASE_IN", "EASE_OUT", "EASE_IN_OUT"],
+    "limits": "At most four per element, 64 total, one simultaneous scale animation per element. Only BOUNCE/SHAKE/PULSE accept up to five repeats. Curves apply to interpolated fade/slide/scale/pop, oscillatory motions use their bounded sine cycle.",
+    "typewriter": "Text only, a single line/run of at most 80 Unicode graphemes, one animation/repetition, at least one frame per grapheme. Cached prefix textures retain the final block geometry. Not an unrestricted rich-text/typewriter or font-color-emoji engine.",
+    "ranking": "A panel-level animation is applied to each fixed slot. Individual item animation and per-reveal emoji changes are not advertised; item emoji are supplied up front."
+  },
+  "limits": {
+    "operations": 12,
+    "authorizedSourcesIncludingImages": 8,
+    "outputSeconds": 90,
+    "outputBytes": 134217728,
+    "ffmpegTimeoutSeconds": 120,
+    "graphicElements": 160,
+    "simultaneousElements": 32,
+    "textCharactersPerInput": 1000,
+    "styledRuns": 32,
+    "captionCues": 120,
+    "words": 160,
+    "rankingItems": 20,
+    "revealEvents": 20,
+    "totalProcessedTextCharacters": 20000,
+    "totalTexturePixels": 66355200,
+    "imageBytes": 16777216,
+    "imageSidePixels": 4096,
+    "imagePixels": 16777216,
+    "note": "Limits combine: a valid cue/word count may still exceed aggregate element or texture budgets. Each word/cue/ranking item is not a separate visual operation. One final encoding, no per-element video encoding."
+  },
+  "security": "Opaque asset/font identifiers only. Internal authorized lookup plus realpath containment. PNG/JPEG/WebP signatures and bounded Sharp decoding; animated/malformed/SVG sources rejected. Text never enters FFmpeg expressions. No shell, URLs, user filter expressions, arbitrary font/image paths, or paid APIs. Temporary workspaces cleaned on failure/cancellation and explicitly disposed on success.",
+  "nextStage": "Audio resources are provided independently by AudioResourceExecutor. Planner, orchestrator and production integration remain future work requiring separate authorization. All editorial classifications remain unavailable."
+}

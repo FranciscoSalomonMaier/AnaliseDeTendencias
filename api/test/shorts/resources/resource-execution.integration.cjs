@@ -255,7 +255,7 @@ const region = (data, x, y, w, h, width = 90) => {
     ]);
     assets.moving = moving;
     const capabilities = await executor.capabilities();
-    assert.equal(capabilities.filter((c) => c.available).length, 33);
+    assert.equal(capabilities.filter((c) => c.available).length, 55);
     const env = await inspectResourceEnvironment(processMedia, settings);
     assert.ok(env.filters.has('xfade'));
     assert.ok(env.filters.has('tmix'));
@@ -716,7 +716,13 @@ const region = (data, x, y, w, h, width = 90) => {
     }
     assert.deepEqual(
       new Set(cases.map((c) => c[0])),
-      new Set(capabilities.filter((c) => c.available).map((c) => c.id)),
+      new Set(
+        capabilities
+          .filter(
+            (c) => c.available && Object.hasOwn(resourceParameterSchemas, c.id),
+          )
+          .map((c) => c.id),
+      ),
     );
     // Every additional parameterized variant is executed and inspected, not merely accepted by Zod.
     for (const factor of [0.25, 0.5, 4]) {
@@ -1021,7 +1027,9 @@ const region = (data, x, y, w, h, width = 90) => {
       ),
     );
     assert.equal(
-      editingResourceRegistry.filter((r) => r.implemented).length,
+      editingResourceRegistry.filter(
+        (r) => r.implemented && Object.hasOwn(resourceParameterSchemas, r.id),
+      ).length,
       results.length,
     );
     await baseline.dispose();

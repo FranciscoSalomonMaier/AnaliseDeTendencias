@@ -1,22 +1,25 @@
+import type { audioParameterSchemas } from './audio/audio.schema';
+import type { graphicsParameterSchemas } from './graphics/graphics.schema';
 import type { z } from 'zod';
 import type {
   ResourceUsage,
   ResourceScope,
   ResourceCategory,
 } from './editing-resource.registry';
-import type {
-  ImplementedResourceId,
-  resourceParameterSchemas,
-} from './definitions/visual.resources';
+import type { resourceParameterSchemas } from './definitions/visual.resources';
+type ExecutableParameterSchemas = typeof resourceParameterSchemas &
+  typeof graphicsParameterSchemas &
+  typeof audioParameterSchemas;
+type ExecutableResourceId = keyof ExecutableParameterSchemas;
 export type ValidatedResourceUsage = {
-  [K in ImplementedResourceId]: Omit<
+  [K in ExecutableResourceId]: Omit<
     ResourceUsage,
     'resourceId' | 'parameters'
   > & {
     resourceId: K;
-    parameters: z.infer<(typeof resourceParameterSchemas)[K]>;
+    parameters: z.infer<ExecutableParameterSchemas[K]>;
   };
-}[ImplementedResourceId];
+}[ExecutableResourceId];
 export interface ResourceDefinition {
   id: string;
   version: number;
@@ -42,6 +45,9 @@ export interface ResourceCapability {
   reasons: string[];
 }
 export interface ResourceEnvironment {
+  graphicsAvailable?: boolean;
+  audioEncoders?: ReadonlySet<string>;
+  audioDecoders?: ReadonlySet<string>;
   ffmpegVersion: string;
   ffprobeAvailable: boolean;
   filters: ReadonlySet<string>;

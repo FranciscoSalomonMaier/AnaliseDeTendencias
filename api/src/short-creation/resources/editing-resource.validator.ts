@@ -31,7 +31,9 @@ export function validateResourceUsage(
   )
     throw Error('CONCAT exige uma sequência ordenada de trechos.');
   if (
-    definition.category === 'COMPOSITION' &&
+    (definition.category === 'COMPOSITION' ||
+      definition.category === 'TEXT_AND_GRAPHICS' ||
+      definition.category === 'AUDIO') &&
     (value.target.scope !== 'COMPOSITION' || !value.target.clipId)
   )
     throw Error('A composição visual exige um trecho individual.');

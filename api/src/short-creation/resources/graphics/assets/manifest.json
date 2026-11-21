@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "twemojiVersion": "17.0.2",
+  "files": {
+    "ATTRIBUTION": "85ae14e5da63bd759cccf1fc18edc03d3a839d92978885450ec6b6da1decd5a6",
+    "emoji/1f3c6.png": "926ce5a398578129b6aae74a837809c7ead80dae6714c7b07ee90d8463b7479a",
+    "emoji/1f440.png": "487739c941203283fc25b1bac02b4b8f3d59672e3dec2154f575060206bbb86a",
+    "emoji/1f480.png": "9fd5d570065aa68949bb713242f3915938d5bbaf7e24fe319b0553214c63e085",
+    "emoji/1f525.png": "b0f4c358afcce0ddcde029e72ea2d6054eece0ce5a34c9a7e0c5761ff4f33a25",
+    "emoji/1f602.png": "c252a58367211c11d839155e50dc5e98551826c64b8d2e8d6267124c054ceae0",
+    "emoji/1f62d.png": "c22c89c24607d04f39094af2216b611d1d033055b31afafbc6a185990982b844",
+    "emoji/1f631.png": "42e6b438eba01cf441e8e1bdde37ddb2bd9278ac26526acbb930c1557a75e0b7",
+    "emoji/1f923.png": "4a371ef1123fee52185f3098d3d3b65dc7f695fdd574ea977ea2afedff963ad5",
+    "emoji/1f92f.png": "5a0faea28d801cea8ed034ea8518b6e4fec78035a7158f3b012d47cae63286f8",
+    "emoji/1f947.png": "41ea4ddf7822fcd58d0147d394824cd634e02da6f3f72fcbdbe14b1178051e59",
+    "emoji/1f948.png": "7f47866788cadc4910113c4d2c774a711c55a3e65cead58374e18f9f1517476a",
+    "emoji/1f949.png": "c8593c2996b948cb3854d0a3c46666cbeccfa205050f5d42716da3326857525f",
+    "emoji/26a0.png": "7a03a74a92cb2f04b7f3e0338f51a3c4dfc1491a8f046b722f8a951502a7740e",
+    "emoji/2705.png": "e3cc2f7251c41ff1f4b2e07a3ccd074d21288160fbd9893f0f0e4fc62d2c63c5",
+    "emoji/274c.png": "3dc3ebd43d1d85af678ac5a72b0305df7bcd20b621f95291d76b827f5e47d89f",
+    "emoji/LICENSE-GRAPHICS": "8ae9438818c26e4873b91d8c6ad620526c011e27e125677f13031eda903f007c",
+    "fonts/LICENSE": "075f91382875da1c4b491f1facf2586f55448705133264d98ce15cab6211b125",
+    "fonts/NotoSans-Bold.ttf": "e83493c945848ecd4a9ad0f6d19164541a0d3e23a9c952304a00a46e00272ac5",
+    "fonts/NotoSans-BoldItalic.ttf": "4315b26e5afb62f70f5ffe0edaa3363e57765ff2af2beda12b6fef197e3e5f5a",
+    "fonts/NotoSans-Italic.ttf": "5d7618dda819443fd07301c84adcee9fe8960c873ea5e5e1f0f59db384b78082",
+    "fonts/NotoSans-Regular.ttf": "89c3c497f618fdaa0b2d1e98fef93582f28c71debd2c4a8cdf41f190ced2909d",
+    "fonts/NotoSansMono-Bold.ttf": "b22563d5f03b345a62115e78d8789c9ed99c2cfa8059fad6e7a5c4ced288e21e",
+    "fonts/NotoSansMono-Regular.ttf": "6b692c4b6d15ccf59f1c1fe8d11cb8a92f51960f3e9f1f523781755a3af7e29f"
+  }
+}
