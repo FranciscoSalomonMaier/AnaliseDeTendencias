@@ -1,4 +1,8 @@
 import {
+  resolveNarrationMode,
+  UNNARRATED_RENDER_MESSAGE,
+} from './short-narration.schema';
+import {
   Injectable,
   BadRequestException,
   ServiceUnavailableException,
@@ -217,6 +221,8 @@ export class ShortSoundtrackService {
       );
       await this.shorts.locked(id, async (p, c) => {
         this.shorts.checkRevision(p, parsed.data.revision);
+        if (resolveNarrationMode(p.data) === 'WITHOUT_NARRATION')
+          throw new BadRequestException(UNNARRATED_RENDER_MESSAGE);
         if (p.step !== 7 || !p.data.audio || !p.data.planApproved)
           throw new BadRequestException(
             'Abra Trilha sonora após aprovar a montagem.',
@@ -282,6 +288,8 @@ export class ShortMusicRenderer {
     dir: string,
     signal: AbortSignal,
   ) {
+    if (resolveNarrationMode(data) === 'WITHOUT_NARRATION')
+      throw Error(UNNARRATED_RENDER_MESSAGE);
     const music = data.music,
       settings = shortMusicSettingsSchema.parse(data.musicSettings ?? {}),
       total = data.audio!.duration;

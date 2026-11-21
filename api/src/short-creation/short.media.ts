@@ -1,3 +1,4 @@
+import { narrationJobBlock } from './short-narration.schema';
 import { ShortMusicRenderer } from './short-music.service';
 import { activeEditing, applyCutRhythm } from './short-editing.schema';
 import { editingAss } from './short-editing-effects.service';
@@ -63,6 +64,8 @@ export class ShortMedia {
     progress: (n: number) => Promise<void>,
     usage: (value: unknown) => Promise<void>,
   ) {
+    const blocked = narrationJobBlock(p.data, 'PLAN');
+    if (blocked) throw Error(blocked);
     return this.workspace(
       files.reduce((n, f) => n + Number(f.bytes), 0),
       async (dir) => {
@@ -172,6 +175,8 @@ export class ShortMedia {
     signal: AbortSignal,
     progress: (n: number) => Promise<void>,
   ) {
+    const blocked = narrationJobBlock(p.data, 'RENDER');
+    if (blocked) throw Error(blocked);
     return this.workspace(
       files.reduce((n, f) => n + Number(f.bytes), 0) +
         (p.data.music?.bytes ?? 0),

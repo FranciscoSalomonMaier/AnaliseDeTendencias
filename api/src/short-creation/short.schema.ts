@@ -1,4 +1,9 @@
 import {
+  narrationSchema,
+  resolveNarrationMode,
+  type NarrationConfiguration,
+} from './short-narration.schema';
+import {
   editingModeSchema,
   editorialPreferencesSchema,
   effectiveEditingMode,
@@ -37,6 +42,7 @@ export const scriptSchema = z
 export const createShortSchema = z
   .object({
     description: z.string().trim().min(10).max(6000),
+    narration: narrationSchema.optional(),
     classification: shortClassificationSchema.optional(),
     editingMode: editingModeSchema.optional(),
     editorialPreferences: editorialPreferencesSchema.optional(),
@@ -46,6 +52,7 @@ export const createShortSchema = z
 export const patchShortSchema = z
   .object({
     revision: z.number().int().nonnegative(),
+    narration: narrationSchema.optional(),
     classification: shortClassificationSchema.optional(),
     editingMode: editingModeSchema.optional(),
     editorialPreferences: editorialPreferencesSchema.optional(),
@@ -97,6 +104,7 @@ export interface ShortClip {
   description: string;
 }
 export interface ShortData {
+  narration?: NarrationConfiguration;
   classification?: ShortClassification;
   editingMode?: EditingMode;
   editorialPreferences?: EditorialPreferences;
@@ -233,12 +241,16 @@ export function shortStepAllowed(
     step <= 8
   )
     return false;
+  const without = resolveNarrationMode(d) === 'WITHOUT_NARRATION';
+  if (without && step >= 6 && step <= 8) return false;
   return (
     step === 1 ||
     (step === 2 && d.scriptApproved) ||
     (step === 3 && d.scriptApproved && files.length > 0) ||
     (step === 4 && d.scriptApproved && files.length > 0) ||
-    (step === 5 && d.textApproved && files.length > 0) ||
+    (step === 5 &&
+      (without ? d.scriptApproved : d.textApproved) &&
+      files.length > 0) ||
     (step === 6 && d.textApproved && d.audio && files.length > 0) ||
     (step === 7 && d.audio && d.planApproved) ||
     (step === 8 && d.audio && d.planApproved) ||

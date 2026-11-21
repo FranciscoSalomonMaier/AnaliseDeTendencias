@@ -1,4 +1,9 @@
 import {
+  resolveNarrationMode,
+  narrationJobBlock,
+  UNNARRATED_RENDER_MESSAGE,
+} from './short-narration.schema';
+import {
   effectiveEditingMode,
   editorialConfigurationStatus,
   editorialPreferenceOptions,
@@ -171,6 +176,7 @@ export class ShortService {
         v.data.description,
         v.data.targetSeconds,
         {
+          narration: v.data.narration ?? { version: 1, mode: 'WITH_NARRATION' },
           ...(v.data.classification
             ? { classification: v.data.classification }
             : {}),
@@ -229,6 +235,52 @@ export class ShortService {
       this.checkRevision(p, input.revision);
       const data = { ...p.data };
       let step = p.step;
+      if (input.narration !== undefined) {
+        if (
+          Object.keys(input).some(
+            (key) => !['revision', 'narration'].includes(key),
+          )
+        )
+          throw new BadRequestException(
+            'Salve o modo de narração separadamente.',
+          );
+        const changed = resolveNarrationMode(data) !== input.narration.mode;
+        data.narration = input.narration;
+        // Keep historical narration and approvals. Only dependent composition is stale.
+        if (changed) {
+          delete data.plan;
+          delete data.decorations;
+          data.planApproved = false;
+          delete data.output;
+          step = Math.min(step, 4);
+        }
+        await this.cleanupData(c, p.data, data);
+        await c.query(
+          'UPDATE short_projects SET data=$2,step=$3,revision=revision+1,status=$4,error_message=NULL,updated_at=NOW() WHERE id=$1',
+          [id, data, step, data.output ? 'COMPLETED' : 'DRAFT'],
+        );
+        return;
+      }
+      if (
+        resolveNarrationMode(data) === 'WITHOUT_NARRATION' &&
+        (input.narrationText !== undefined ||
+          input.voice !== undefined ||
+          input.approve === 'TEXT')
+      )
+        throw new BadRequestException(
+          'Narração dispensada. Ative Com narração para editar ou aprovar a voz.',
+        );
+
+      if (
+        resolveNarrationMode(data) === 'WITHOUT_NARRATION' &&
+        ((input.step !== undefined && input.step >= 6 && input.step <= 8) ||
+          input.approve === 'PLAN' ||
+          input.musicSettings !== undefined ||
+          input.musicEnabled !== undefined ||
+          input.removeMusic ||
+          input.skipMusic)
+      )
+        throw new BadRequestException(UNNARRATED_RENDER_MESSAGE);
       // Intention edits and explicit mode switches preserve all production artifacts.
       const metadataKeys = [
         'revision',
@@ -638,6 +690,8 @@ export class ShortService {
         throw new BadRequestException(EDITORIAL_DEVELOPMENT_MESSAGE);
       const files = await this.files(id, c);
       const d = p.data;
+      const blocked = narrationJobBlock(d, input.kind);
+      if (blocked) throw new BadRequestException(blocked);
       const references = await this.files(id, c, 'REFERENCE');
       if (
         input.kind === 'REFERENCES' &&

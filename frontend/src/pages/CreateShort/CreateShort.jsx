@@ -1,3 +1,4 @@
+import { NarrationMode, narrationMode } from "./NarrationMode";
 import { EditingConfiguration } from "./EditingConfiguration";
 import { editingMode } from "./editorialConfiguration";
 import { Soundtrack } from "./Soundtrack";
@@ -227,7 +228,12 @@ export function CreateShort() {
           ? { approve: "EDITING" }
           : { skipReferences: true },
       );
-    } else if (step === 4) await save({ narrationText: text, approve: "TEXT" });
+    } else if (step === 4)
+      await save(
+        withoutNarration
+          ? { step: 5 }
+          : { narrationText: text, approve: "TEXT" },
+      );
     else if (step === 6) await save({ approve: "PLAN" });
     else await save({ step: step + 1 });
   }
@@ -245,6 +251,7 @@ export function CreateShort() {
     updateUrl(null);
     void loadList().catch(fail);
   }
+  const withoutNarration = narrationMode(project) === "WITHOUT_NARRATION";
   const step = project?.step ?? 1;
   const locked = busy || ["QUEUED", "RUNNING"].includes(project?.status);
   const canNext =
@@ -255,9 +262,9 @@ export function CreateShort() {
         : step === 3
           ? !dirty && editingMode(project) === "LEGACY_REFERENCE"
           : step === 4
-            ? Boolean(text.trim())
+            ? withoutNarration || Boolean(text.trim())
             : step === 5
-              ? Boolean(project.data.audio)
+              ? !withoutNarration && Boolean(project.data.audio)
               : step === 6
                 ? Boolean(project.data.plan?.clips.length)
                 : step === 7
@@ -306,6 +313,7 @@ export function CreateShort() {
           <>
             <p className="text-sm text-muted-foreground">
               Etapa {step} de 9 · {steps[step - 1]}
+              {step === 5 && withoutNarration ? " · Dispensada" : ""}
             </p>
             {error && (
               <p
@@ -673,44 +681,69 @@ export function CreateShort() {
               )}
               {step === 4 && (
                 <>
-                  <p>
-                    Transforme o roteiro aprovado em um texto natural para
-                    narração.
-                  </p>
-                  <button
-                    className={primary}
-                    disabled={locked || dirty || !options?.aiEnabled}
-                    onClick={() => void act(() => run("TEXT"))}
-                  >
-                    {project.data.narrationText
-                      ? "Regenerar texto"
-                      : "Gerar texto da narração"}
-                  </button>
-                  <label className="block">
-                    Texto da narração
-                    <textarea
-                      className={`${field} min-h-64`}
-                      maxLength={4096}
-                      value={text}
-                      disabled={locked}
-                      onChange={(e) => {
-                        setText(e.target.value);
-                        edit();
-                      }}
-                    />
-                  </label>
-                  <button
-                    className={button}
-                    disabled={locked || !dirty || !text.trim()}
-                    onClick={() =>
-                      void act(() => save({ narrationText: text }))
+                  <NarrationMode
+                    project={project}
+                    disabled={locked || dirty}
+                    onChange={(narration) =>
+                      void act(() => save({ narration }))
                     }
-                  >
-                    Salvar texto
-                  </button>
+                  />
+                  {withoutNarration ? (
+                    <p role="status">
+                      Narração dispensada. Texto e geração de voz não são
+                      necessários. A montagem sem narração ainda não está
+                      disponível no fluxo atual.
+                    </p>
+                  ) : (
+                    <>
+                      <p>
+                        Transforme o roteiro aprovado em um texto natural para
+                        narração.
+                      </p>
+                      <button
+                        className={primary}
+                        disabled={locked || dirty || !options?.aiEnabled}
+                        onClick={() => void act(() => run("TEXT"))}
+                      >
+                        {project.data.narrationText
+                          ? "Regenerar texto"
+                          : "Gerar texto da narração"}
+                      </button>
+                      <label className="block">
+                        Texto da narração
+                        <textarea
+                          className={`${field} min-h-64`}
+                          maxLength={4096}
+                          value={text}
+                          disabled={locked}
+                          onChange={(e) => {
+                            setText(e.target.value);
+                            edit();
+                          }}
+                        />
+                      </label>
+                      <button
+                        className={button}
+                        disabled={locked || !dirty || !text.trim()}
+                        onClick={() =>
+                          void act(() => save({ narrationText: text }))
+                        }
+                      >
+                        Salvar texto
+                      </button>
+                    </>
+                  )}
                 </>
               )}
-              {step === 5 && (
+              {step === 5 && withoutNarration && (
+                <p role="status">
+                  Etapa dispensada — nenhuma voz será gerada. A montagem, a
+                  trilha sonora e a renderização sem narração ainda não estão
+                  disponíveis. Volte para alterar o modo; o conteúdo anterior
+                  foi preservado.
+                </p>
+              )}
+              {step === 5 && !withoutNarration && (
                 <>
                   <p>
                     O áudio será gerado somente a partir do texto aprovado. A
@@ -978,9 +1011,11 @@ export function CreateShort() {
                       disabled={locked || !canNext}
                       onClick={() => void act(next)}
                     >
-                      {[1, 4, 6].includes(step)
-                        ? "Aprovar e continuar"
-                        : "Continuar"}
+                      {step === 4 && withoutNarration
+                        ? "Dispensar narração e continuar"
+                        : [1, 4, 6].includes(step)
+                          ? "Aprovar e continuar"
+                          : "Continuar"}
                     </button>
                   )}
               </nav>

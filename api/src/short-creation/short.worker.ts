@@ -1,3 +1,4 @@
+import { narrationJobBlock } from './short-narration.schema';
 import { ShortEditingReferenceAnalysisService } from './short-reference-analysis.service';
 import {
   ShortEditingEffectsService,
@@ -138,6 +139,8 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
       ]);
     };
     try {
+      const blocked = narrationJobBlock(p.data, job.kind);
+      if (blocked) throw Error(blocked);
       await s.db.query(
         "UPDATE short_projects SET status='RUNNING',error_message=NULL WHERE id=$1",
         [p.id],
@@ -173,6 +176,7 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
         });
         await consume(result.usage);
         data = {
+          narration: data.narration,
           classification: data.classification,
           editingMode: data.editingMode,
           editorialPreferences: data.editorialPreferences,
@@ -238,6 +242,7 @@ export class ShortWorker implements OnApplicationBootstrap, OnModuleDestroy {
         data = {
           script: data.script,
           scriptApproved: true,
+          narration: data.narration,
           classification: data.classification,
           editingMode: data.editingMode,
           editorialPreferences: data.editorialPreferences,
