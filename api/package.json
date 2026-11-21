@@ -90,7 +90,9 @@
     "test:short-audio-resources": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=resources/audio",
     "test:short-audio-resources:integration": "node test/shorts/resources/audio-execution.integration.cjs",
     "test:short-planning": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=planning",
-    "test:short-planning:integration": "node test/shorts/planning/planning.integration.cjs"
+    "test:short-planning:integration": "node test/shorts/planning/planning.integration.cjs",
+    "test:short-execution": "jest --config jest.ai-cache.config.cjs --runInBand --testPathPatterns=execution.spec",
+    "test:short-execution:integration": "node test/shorts/execution/plan-execution.integration.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

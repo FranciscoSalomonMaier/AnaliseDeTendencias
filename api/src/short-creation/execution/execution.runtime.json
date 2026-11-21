@@ -1,0 +1,737 @@
+{
+  "version": 1,
+  "planVersion": 1,
+  "libraryVersion": 3,
+  "title": "Etapa 10 — Executor isolado do plano de edição",
+  "status": "IMPLEMENTED_ISOLATED_NO_PRODUCTION_INTEGRATION",
+  "architecture": [
+    {
+      "file": "execution.schema.ts",
+      "role": "Envelope Zod estrito version1, executionId lógico, contextInputSchema e planningResponseSchema reutilizados. Autoridade de arquivos e configurações confiáveis são argumentos separados, nunca campos fornecidos pela IA."
+    },
+    {
+      "file": "execution.service.ts",
+      "role": "EditingPlanExecutor.execute: validação estrutural/editorial antes de subprocessos; capacidades reais; snapshot privado; preflight; timeline e compilação; preparação gráfica; codificação única; validação; evidências; limpeza. Sem @Injectable/registro Nest, endpoints, jobs ou banco."
+    },
+    {
+      "file": "execution-source-resolver.ts",
+      "role": "Permissão por ID, callback confiável, realpath e contenção na raiz, open O_NOFOLLOW, descriptor/inode estável, limites de bytes/espaço, pipeline cancelável, hash SHA256 e cópia privada. O original nunca recebe chmod nem é substituído."
+    },
+    {
+      "file": "execution-preflight.ts",
+      "role": "RemixVideoValidator para assinatura/codec, FFprobe real, comparação com planejamento, decodificação inteira com -xerror; ResourceAudioSourceValidator/ShortMusicValidator para áudio; Sharp e assinatura para imagens; offsets e rotação verificados."
+    },
+    {
+      "file": "execution-compiler.ts",
+      "role": "Adaptador fino de compileResourceComposition, prepareGraphics/appendGraphicsGraph e compileAudioComposition. Resolve aliases de vídeo e índices de áudio, reutiliza input original quando possível, separa labels de áudio. Sem reimplementação de efeitos."
+    },
+    {
+      "file": "execution-output-validator.ts",
+      "role": "FFprobe com contagem real de frames, codec, pixel format, dimensões, FPS, duração, streams, áudio48k estéreo AAC, timestamps; decodificação completa AV e duração de áudio separada."
+    },
+    {
+      "file": "execution.spec.ts",
+      "role": "36 testes unitários de contratos, rejeição antes de subprocessos, autoridade, versões, snapshot, preflight, clocks, silêncio, limites, saída e concorrência."
+    },
+    {
+      "file": "test/shorts/execution/plan-execution.integration.cjs",
+      "role": "34 vídeos sintéticos reais e17 rejeições/cancelamentos/timeouts; quatro demonstrações, planos JSON, capturas PNG, relatório e métricas. Nenhuma chamada externa."
+    }
+  ],
+  "reused": {
+    "planning": "buildPlanningContext + validatePlanningResponse reconstroem conhecimento, catálogo, validação editorial e timeline. Não é aceito marcador validated:true. Intenções/classificações não são habilitadas em produção.",
+    "catalog": "editingResourceRegistry + validateResourceUsage, inspectResourceEnvironment + resourceCapabilities e evidências versionadas dos55 recursos.",
+    "visual": "compileResourceComposition:33 recursos, resourceDuration, resourceInterval e arredondamento30FPS já usados pelo planejador. Nenhuma matemática temporal nova.",
+    "graphics": "prepareGraphics/appendGraphicsGraph:12 recursos; Sharp/libvips/Pango, Noto e Twemoji locais, posicionamento, áreas seguras, camadas, animações e limites reais.",
+    "audio": "compileAudioComposition:10 recursos,48kHz estéreo, ganho, fades, loops finitos, ducking KNOWN_INTERVALS e limiter somente quando solicitado.",
+    "infrastructure": "MediaProcess sem shell, cancelamentoSIGTERM/SIGKILL e stdout limitado; RenderSettings fornece caminhos de FFmpeg/FFprobe/tempDir; RemixVideoValidator e ShortMusicValidator são usados apenas nas cópias privadas."
+  },
+  "inputContract": {
+    "json": "{version:1, executionId, context:<planningInputSchema>, plan:<planningResponseSchema>}. Estrito, sem campos desconhecidos. O plano já validado é revalidado e normalizado antes da execução.",
+    "authority": "{authorizedAssetIds:ReadonlySet<string>, resolve:(id)=>Promise<string>}. Fornecida pelo servidor após verificar proprietário e direitos de uso. Resolver IDs não comprova licença jurídica. Não aceitar autoridade ou caminhos vindos do modelo.",
+    "settings": "Construtor recebe ffmpegPath, ffprobePath, tempDir e sourceRoot confiáveis. timeoutMs e outputBytes podem somente apertar os limites. onPhase é observador interno para testes/cancelamento.",
+    "outputSettings": "Vêm do contexto versionado: vertical9:16, dimensões pares dentro do resourceCanvasSchema e30FPS. Testados270x480,540x960 e1080x1920. Não há override silencioso de duração ou formato."
+  },
+  "outputContract": {
+    "success": "executionId, version1, libraryVersion3, status SUCCESS, output com caminho privado, bytes e metadados reais, diagnostics, metrics, evidence e dispose().",
+    "failure": "status FAILED, CANCELLED ou TIMED_OUT, diagnostics seguros e métricas. Sem output parcial e sem dispose. Versões incompatíveis são rejeitadas; nenhuma migração aproximada.",
+    "disposal": "Antes de SUCCESS, snapshots/font textures/artefatos de trabalho são removidos; somente output.mp4 permanece. dispose() remove também a saída. Falhas e cancelamentos removem o workspace inteiro.",
+    "evidence": "Versões, modo de narração, cobertura editorial, recursos e contagens, IDs/hashes/tamanhos das fontes, spans planejados, duração real, gráficos e faixas, codificações e tempos. Sem caminhos originais ou credenciais. output.path é referência privada interna, não URL pública."
+  },
+  "preflight": {
+    "sources": "Somente fontes usadas são copiadas e inspecionadas. Metadados de contexto permanecem vinculados à autoridade. Vídeo<=512MiB/600s/4K, áudio<=64MiB/600s, imagem<=16MiB/4096px estática.",
+    "comparison": "Resolução e presença de áudio exatas; codec quando informado; sample rate e canais exatos. Duração de vídeo até1frame de diferença; FPS até0,01. Áudio admite padding técnico de até max(1/30s,2048/sampleRate). O plano não é reescrito para corrigir arquivos alterados.",
+    "timestamps": "Streams usados como áudio original devem ter início conhecido e alinhado dentro de1/48000s; fonte com rotação não zero, pixels não quadrados ou r_frame_rate divergente de avg_frame_rate é rejeitada. Sem remapeamento implícito de VFR/rotação.",
+    "integrity": "Assinaturas reais e decodificação completa antes de renderizar; FFprobe usa show_streams/show_format por compatibilidade com o binário instalado. Não consulta generic side_data, que ativa frames/packets e JSON inválido em versões antigas.",
+    "images": "Cabeçalho PNG/JPEG/WebP, páginas, dimensões e orçamento de pixels reais conferidos; rasterização posterior aplica os validadores gráficos completos."
+  },
+  "dependenciesAndTimeline": {
+    "strategy": "Preserva ordem editorial das operações. CUT precede transformações de cada alias; CONCAT/transições consomem entradas e mantêm o primeiro ID. Referências ausentes, ciclos ou estados já consumidos são rejeitados pelos validadores/compiladores centrais.",
+    "clocks": "Fonte original, clipe processado, composição final e faixas sonoras permanecem distintos. O planejador calcula spans e impactos com a matemática central; executor recompila o mesmo contrato.",
+    "graphics": "Somente após a timeline visual estar resolvida; camadas ordenadas por layer e declaração. Zoom e efeitos de vídeo não ampliam títulos ou legendas.",
+    "audio": "Intervalos e velocidades do áudio original devem corresponder aos spans; repetição exige clipes explícitos por ocorrência, congelamento exige SILENCE ou CONTINUE_SOURCE explícito. Fades e sobreposições não são inventados.",
+    "events": "Horários já validados de ranking, gráficos e efeitos são executados; o executor não decide nem altera eventos editoriais."
+  },
+  "rendering": {
+    "strategy": "Um único filter_complex combina grafo visual, overlays PNG preparados e grafo sonoro. Uma codificação H264/libx264 e, quando necessário, uma codificação AAC. Não há MP4 intermediário nem uma execução por efeito.",
+    "sourceReuse": "Áudio original aponta para input de vídeo existente quando possível; aliases repetidos podem exigir inputs separados, preservando a semântica de trechos independentes. Preflight, render e validação decodificam em fases distintas por integridade.",
+    "output": "MP4 H264/yuv420p/30FPS, AAC192kbps/48000Hz/2canais somente se houver operações sonoras. Duração e frames explícitos; metadados e capítulos de origem não são copiados.",
+    "silence": "Plano sem operações de áudio usa -an e não contém anullsrc nem arquivo de voz fictício. Silêncio de um congelamento expressamente solicitado pode usar a implementação técnica SILENCE do motor existente.",
+    "narration": "WITH_NARRATION exige arquivo autorizado existente; WITHOUT_NARRATION proíbe NARRATION e não usa TTS como relógio. Nenhuma geração de voz.",
+    "filters": "Filtros são fornecidos pelos compiladores centrais, nunca por texto da IA. Famílias: trim/setpts/fps/concat/xfade/scale/crop/pad; efeitos e colorimetria centrais; overlay/format/alpha/scale para gráficos; aresample/aformat/atrim/asetpts/atempo/aloop/adelay/afade/volume/amix/alimiter para áudio. Ducking é envelope por intervalos conhecidos, sem sidechaincompress substituto."
+  },
+  "limits": {
+    "globalTimeoutMs": 120000,
+    "outputBytes": 134217728,
+    "activeExecutionsPerProcess": 1,
+    "threads": 1,
+    "visualAndImageOrigins": 8,
+    "visualAndGraphicOperationsCombined": 12,
+    "durationSeconds": 90,
+    "graphicsElements": 160,
+    "graphicsConcurrent": 32,
+    "captions": 120,
+    "animations": 64,
+    "audioOrigins": 8,
+    "audioTracks": 8,
+    "audioClips": 32,
+    "simultaneousSoundEffects": 8,
+    "audioOperations": 64,
+    "audioRepetitions": 16,
+    "combinedFilterGraphCharacters": 120000,
+    "minimumFreeWorkspaceBytes": 268435456,
+    "details": "Antes de copiar uma fonte, exige bytes da fonte mais256MiB livres. Limite de grafo abaixo do limite usual de um argumento do sistema. Contagens seguem a biblioteca: visuais e gráficos compartilham12 operações locais, áudio possui orçamento separado."
+  },
+  "cancellationAndTimeout": {
+    "strategy": "Deadline global começa na chamada, inclui resolução, preflight, gráficos, render e validação. AbortSignal.any combina cancelamento e timeout; cada subprocesso recebe apenas o orçamento restante. Não há retry automático.",
+    "children": "MediaProcess encerra FFmpeg/FFprobe com SIGTERM e escalona SIGKILL após1500ms. O coordenador acompanha todas as promises de subprocessos e aguarda seu encerramento antes de limpar/liberar a execução.",
+    "nativeGraphics": "Sharp cancela cooperativamente nos checkpoints existentes; uma operação nativa já iniciada pode precisar terminar para permitir limpeza segura. O prazo é orçamento de trabalho, com eventual graça de encerramento. Não há novo worker/kill de thread nativa."
+  },
+  "outputValidation": {
+    "mandatory": "Arquivo não vazio abaixo do limite; H264/yuv420p, dimensões,30FPS e contagem exata de frames; duração de vídeo até meio frame, início próximo de zero; presença/ausência de áudio conforme plano. AAC48k estéreo, início AV alinhado e duração compatível. Decodificação completa AV e de áudio isolado.",
+    "tolerance": "AAC e progresso decodificado admitem até2048/48000s de padding técnico, com margem de10ms para progresso; não se usa isso para encobrir truncamentos maiores.",
+    "diagnostic": "Não há detecção semântica automática de tela preta, congelamento, silêncio ou clipping. Tais efeitos podem ser intencionais. Sem limiter explícito é retornado aviso; nenhum limiter/loudnorm é inserido automaticamente.",
+    "realAssertions": "Fixtures verificam pixels não pretos, estabilidade perceptual do freeze tolerando quantização H264, RMS em janelas sonoras/silenciosas, tons de origem após CUT2..6 e velocidade2x (880Hz), efeito temporizado e silêncio de congelamento/terror."
+  },
+  "tests": {
+    "backend": {
+      "tests": 999,
+      "suites": 67,
+      "passed": true,
+      "newExecutionUnitTests": 36
+    },
+    "real": {
+      "successfulVideos": 34,
+      "negativeCases": 17,
+      "demos": 4,
+      "frames": 5,
+      "paidCalls": 0,
+      "originalSourcesPreserved": true
+    },
+    "adversarial": [
+      "versões e recursos desconhecidos",
+      "campos/parâmetros extras",
+      "caminhos, URL e shell em IDs",
+      "origem não autorizada/inexistente",
+      "symlink fora da raiz",
+      "arquivo corrompido",
+      "metadados alterados",
+      "dependências ausentes/cíclicas",
+      "narração proibida",
+      "limites de operações e tamanho",
+      "saída final corrompida depois de renderizar",
+      "cancelamento em todas as fases e durante Sharp/FFmpeg",
+      "timeout durante FFmpeg",
+      "saída -fs insuficiente"
+    ],
+    "regression": "Suíte completa backend e harness reais anteriores de recursos visuais, gráficos e áudio. Planejador e conhecimento não alterados.",
+    "commands": {
+      "unit": "cd api && npm run test:short-execution",
+      "build": "cd api && npm run build",
+      "real": "cd api && npm run test:short-execution:integration",
+      "allBackend": "cd api && npm test -- --config jest.ai-cache.config.cjs --runInBand"
+    },
+    "build": "npm run build aprovado",
+    "regressionEvidence": {
+      "visual": {
+        "passed": true,
+        "resources": 33,
+        "log": "/tmp/trends-execution-visual-regression.log"
+      },
+      "graphics": {
+        "passed": true,
+        "resources": 12,
+        "log": "/tmp/trends-execution-graphics-regression.log"
+      },
+      "audio": {
+        "passed": true,
+        "resources": 10,
+        "log": "/tmp/trends-execution-audio-regression.log"
+      }
+    }
+  },
+  "performance": {
+    "nature": "Medições de fixtures sintéticas locais; não representam benchmark ou previsão de produção.",
+    "units": "Milissegundos, bytes e segundos de mídia.",
+    "cases": [
+      {
+        "id": "01-cut-silent",
+        "duration": 2,
+        "bytes": 50653,
+        "metrics": {
+          "validationMs": 198.13915500000007,
+          "preflightMs": 168.57530199999997,
+          "compilationMs": 2.005829000000176,
+          "graphicsMs": 2.1869349999999486,
+          "renderMs": 175.52245599999992,
+          "outputValidationMs": 75.73610400000007,
+          "totalMs": 622.3641880000002
+        },
+        "sources": 1,
+        "operations": 1
+      },
+      {
+        "id": "26-mix",
+        "duration": 2,
+        "bytes": 96996,
+        "metrics": {
+          "validationMs": 126.00197900000057,
+          "preflightMs": 288.6291119999987,
+          "compilationMs": 1.5577349999985017,
+          "graphicsMs": 0.028379999999742722,
+          "renderMs": 274.5835880000013,
+          "outputValidationMs": 124.96207299999878,
+          "totalMs": 815.7857130000011
+        },
+        "sources": 3,
+        "operations": 5
+      },
+      {
+        "id": "28-visual-graphic",
+        "duration": 2,
+        "bytes": 55626,
+        "metrics": {
+          "validationMs": 126.17038400000092,
+          "preflightMs": 162.33168899999873,
+          "compilationMs": 0.5277229999992414,
+          "graphicsMs": 90.046832,
+          "renderMs": 209.94735100000253,
+          "outputValidationMs": 74.33181600000171,
+          "totalMs": 663.380427
+        },
+        "sources": 1,
+        "operations": 3
+      },
+      {
+        "id": "demo-a-ranking",
+        "duration": 4,
+        "bytes": 328339,
+        "metrics": {
+          "validationMs": 148.0368849999977,
+          "preflightMs": 507.2112589999997,
+          "compilationMs": 2.7958049999979266,
+          "graphicsMs": 868.7670959999996,
+          "renderMs": 2001.2858650000016,
+          "outputValidationMs": 365.92697399999815,
+          "totalMs": 3894.0569959999993
+        },
+        "sources": 4,
+        "operations": 15
+      },
+      {
+        "id": "demo-b-curiosity",
+        "duration": 4,
+        "bytes": 350240,
+        "metrics": {
+          "validationMs": 105.82551299999977,
+          "preflightMs": 577.1103540000004,
+          "compilationMs": 1.230675999999221,
+          "graphicsMs": 593.8743849999992,
+          "renderMs": 1093.8221840000006,
+          "outputValidationMs": 343.169926999999,
+          "totalMs": 2715.055991000001
+        },
+        "sources": 4,
+        "operations": 11
+      },
+      {
+        "id": "demo-c-gameplay",
+        "duration": 4,
+        "bytes": 226831,
+        "metrics": {
+          "validationMs": 139.55500499999835,
+          "preflightMs": 222.870257999999,
+          "compilationMs": 1.5602680000010878,
+          "graphicsMs": 0.026797000002261484,
+          "renderMs": 952.0651199999993,
+          "outputValidationMs": 348.5148440000012,
+          "totalMs": 1664.621282
+        },
+        "sources": 2,
+        "operations": 10
+      },
+      {
+        "id": "demo-d-horror",
+        "duration": 4,
+        "bytes": 324913,
+        "metrics": {
+          "validationMs": 142.13098100000207,
+          "preflightMs": 346.8435359999967,
+          "compilationMs": 1.4232310000006692,
+          "graphicsMs": 116.9624049999984,
+          "renderMs": 1597.9436980000028,
+          "outputValidationMs": 387.0935030000037,
+          "totalMs": 2592.4207659999993
+        },
+        "sources": 3,
+        "operations": 11
+      }
+    ]
+  },
+  "demoNotes": "As faixas de narração são tons sintéticos já existentes, não fala sintetizada. Legendas e palavras são fixtures fornecidas, não transcrição. Vídeos são padrões de teste, não templates ou conteúdo editorial real.",
+  "limitations": [
+    "Sem integração com produção. Classificações permanecem indisponíveis.",
+    "A autorização jurídica e de proprietário é responsabilidade do chamador confiável antes de fornecer ExecutionAuthority.",
+    "VFR, rotação não zero, pixels não quadrados e múltiplas faixas de áudio/vídeo são rejeitados; não há correção silenciosa.",
+    "Não há verificador semântico de truthfulness, tela escura, silêncio, congelamento ou clipping; os validadores e as evidências não substituem revisão editorial.",
+    "Sem LUFS/true-peak automático ou ducking por sinal.",
+    "Combinações fora dos contratos existentes continuam rejeitadas, incluindo loops posteriores do áudio original sem remapeamento e legendas em relógios complexos não suportados pelo planejador.",
+    "Tempo de encerramento de processos e conclusão de uma operação nativa Sharp em curso podem exceder ligeiramente o deadline cooperativo."
+  ],
+  "stage11": "Integrar autenticação/autoridade, jobs, persistência, aprovação, interface, navegação, cópia de resultado aprovado para armazenamento, descarte e recuperação de falhas. Não implementado nesta etapa.",
+  "isolation": {
+    "legacyFlowChanged": false,
+    "jobsChanged": false,
+    "publicEndpoints": false,
+    "frontendChanged": false,
+    "projectWrites": false,
+    "legacyNarrationBlocksRemoved": false,
+    "classificationsEnabled": false,
+    "paidCalls": 0,
+    "migrations": 0,
+    "commits": 0
+  },
+  "files": {
+    "created": [
+      "api/src/short-creation/execution/execution.spec.ts",
+      "api/src/short-creation/execution/execution-output-validator.ts",
+      "api/src/short-creation/execution/execution.schema.ts",
+      "api/src/short-creation/execution/execution-preflight.ts",
+      "api/src/short-creation/execution/execution-compiler.ts",
+      "api/src/short-creation/execution/execution.service.ts",
+      "api/src/short-creation/execution/execution-source-resolver.ts",
+      "api/src/short-creation/execution/execution.runtime.json",
+      "api/test/shorts/execution/plan-execution.integration.cjs"
+    ],
+    "modified": ["api/package.json"]
+  },
+  "examples": {
+    "executable": {
+      "version": 1,
+      "executionId": "01-cut-silent",
+      "context": {
+        "version": 1,
+        "planningId": "01-cut-silent",
+        "classification": {
+          "version": 1,
+          "videoType": "GAMEPLAY",
+          "videoTopic": "GAMING",
+          "editingStyle": "MINIMALIST"
+        },
+        "editorialPreferences": {
+          "version": 1,
+          "additionalInstructions": "",
+          "cutRhythm": "AUTO",
+          "resources": {
+            "titles": "AUTO",
+            "captions": "AUTO",
+            "textOverlays": "AUTO",
+            "emojis": "AUTO",
+            "dynamicZoom": "AUTO",
+            "cameraShake": "AUTO",
+            "motionBlur": "AUTO",
+            "soundEffects": "AUTO",
+            "originalAudio": "AUTO"
+          }
+        },
+        "narration": {
+          "version": 1,
+          "mode": "WITHOUT_NARRATION"
+        },
+        "target": {
+          "width": 270,
+          "height": 480,
+          "fps": 30,
+          "durationSeconds": 2
+        },
+        "videos": [
+          {
+            "metadata": {
+              "id": "video1",
+              "duration": 6,
+              "width": 640,
+              "height": 360,
+              "fps": 30
+            },
+            "hasAudio": true,
+            "audio": {
+              "id": "video1",
+              "duration": 6,
+              "sampleRate": 48000,
+              "channels": 2,
+              "codec": "aac",
+              "kind": "VIDEO"
+            },
+            "usableIntervals": [
+              {
+                "start": 0,
+                "end": 6
+              }
+            ],
+            "description": "Padrão de teste sintético gerado localmente.",
+            "codec": "h264"
+          }
+        ],
+        "audios": [
+          {
+            "metadata": {
+              "id": "music1",
+              "duration": 6,
+              "sampleRate": 48000,
+              "channels": 2,
+              "codec": "pcm_s16le",
+              "kind": "AUDIO"
+            },
+            "role": "MUSIC",
+            "usableIntervals": [
+              {
+                "start": 0,
+                "end": 6
+              }
+            ]
+          },
+          {
+            "metadata": {
+              "id": "effect1",
+              "duration": 1,
+              "sampleRate": 48000,
+              "channels": 2,
+              "codec": "pcm_s16le",
+              "kind": "AUDIO"
+            },
+            "role": "EFFECT",
+            "usableIntervals": [
+              {
+                "start": 0,
+                "end": 1
+              }
+            ]
+          },
+          {
+            "metadata": {
+              "id": "voice1",
+              "duration": 6,
+              "sampleRate": 48000,
+              "channels": 2,
+              "codec": "pcm_s16le",
+              "kind": "AUDIO"
+            },
+            "role": "NARRATION",
+            "usableIntervals": [
+              {
+                "start": 0,
+                "end": 6
+              }
+            ]
+          }
+        ],
+        "images": [],
+        "observations": [
+          {
+            "id": "ob1",
+            "sourceId": "video1",
+            "interval": {
+              "start": 0,
+              "end": 2
+            },
+            "description": "Padrão sintético A.",
+            "origin": "USER"
+          },
+          {
+            "id": "ob2",
+            "sourceId": "video1",
+            "interval": {
+              "start": 2,
+              "end": 4
+            },
+            "description": "Continuação do padrão sintético A.",
+            "origin": "USER"
+          }
+        ],
+        "timedText": [],
+        "displayTexts": [
+          {
+            "id": "copy",
+            "text": "Teste sintético",
+            "origin": "USER"
+          }
+        ],
+        "additionalInstructions": ""
+      },
+      "plan": {
+        "version": 1,
+        "libraryVersion": 3,
+        "planningId": "01-cut-silent",
+        "durationSeconds": 2,
+        "intent": "EDITORIAL",
+        "clips": [
+          {
+            "clipId": "c1",
+            "sourceId": "video1"
+          }
+        ],
+        "visualOperations": [
+          {
+            "id": "cut1",
+            "usage": {
+              "contractVersion": 1,
+              "resourceId": "CUT",
+              "resourceVersion": 1,
+              "target": {
+                "scope": "SOURCE_INTERVAL",
+                "sourceId": "c1",
+                "start": 0,
+                "end": 2
+              },
+              "parameters": {}
+            },
+            "reason": "Seleção técnica/editorial controlada para o cenário de teste.",
+            "observationIds": []
+          }
+        ],
+        "graphicOperations": [],
+        "audioOperations": [],
+        "events": [],
+        "ruleDecisions": []
+      }
+    },
+    "rejected": {
+      "version": 1,
+      "executionId": "01-cut-silent",
+      "context": {
+        "version": 1,
+        "planningId": "01-cut-silent",
+        "classification": {
+          "version": 1,
+          "videoType": "GAMEPLAY",
+          "videoTopic": "GAMING",
+          "editingStyle": "MINIMALIST"
+        },
+        "editorialPreferences": {
+          "version": 1,
+          "additionalInstructions": "",
+          "cutRhythm": "AUTO",
+          "resources": {
+            "titles": "AUTO",
+            "captions": "AUTO",
+            "textOverlays": "AUTO",
+            "emojis": "AUTO",
+            "dynamicZoom": "AUTO",
+            "cameraShake": "AUTO",
+            "motionBlur": "AUTO",
+            "soundEffects": "AUTO",
+            "originalAudio": "AUTO"
+          }
+        },
+        "narration": {
+          "version": 1,
+          "mode": "WITHOUT_NARRATION"
+        },
+        "target": {
+          "width": 270,
+          "height": 480,
+          "fps": 30,
+          "durationSeconds": 2
+        },
+        "videos": [
+          {
+            "metadata": {
+              "id": "video1",
+              "duration": 6,
+              "width": 640,
+              "height": 360,
+              "fps": 30
+            },
+            "hasAudio": true,
+            "audio": {
+              "id": "video1",
+              "duration": 6,
+              "sampleRate": 48000,
+              "channels": 2,
+              "codec": "aac",
+              "kind": "VIDEO"
+            },
+            "usableIntervals": [
+              {
+                "start": 0,
+                "end": 6
+              }
+            ],
+            "description": "Padrão de teste sintético gerado localmente.",
+            "codec": "h264"
+          }
+        ],
+        "audios": [
+          {
+            "metadata": {
+              "id": "music1",
+              "duration": 6,
+              "sampleRate": 48000,
+              "channels": 2,
+              "codec": "pcm_s16le",
+              "kind": "AUDIO"
+            },
+            "role": "MUSIC",
+            "usableIntervals": [
+              {
+                "start": 0,
+                "end": 6
+              }
+            ]
+          },
+          {
+            "metadata": {
+              "id": "effect1",
+              "duration": 1,
+              "sampleRate": 48000,
+              "channels": 2,
+              "codec": "pcm_s16le",
+              "kind": "AUDIO"
+            },
+            "role": "EFFECT",
+            "usableIntervals": [
+              {
+                "start": 0,
+                "end": 1
+              }
+            ]
+          },
+          {
+            "metadata": {
+              "id": "voice1",
+              "duration": 6,
+              "sampleRate": 48000,
+              "channels": 2,
+              "codec": "pcm_s16le",
+              "kind": "AUDIO"
+            },
+            "role": "NARRATION",
+            "usableIntervals": [
+              {
+                "start": 0,
+                "end": 6
+              }
+            ]
+          }
+        ],
+        "images": [],
+        "observations": [
+          {
+            "id": "ob1",
+            "sourceId": "video1",
+            "interval": {
+              "start": 0,
+              "end": 2
+            },
+            "description": "Padrão sintético A.",
+            "origin": "USER"
+          },
+          {
+            "id": "ob2",
+            "sourceId": "video1",
+            "interval": {
+              "start": 2,
+              "end": 4
+            },
+            "description": "Continuação do padrão sintético A.",
+            "origin": "USER"
+          }
+        ],
+        "timedText": [],
+        "displayTexts": [
+          {
+            "id": "copy",
+            "text": "Teste sintético",
+            "origin": "USER"
+          }
+        ],
+        "additionalInstructions": ""
+      },
+      "plan": {
+        "version": 1,
+        "libraryVersion": 3,
+        "planningId": "01-cut-silent",
+        "durationSeconds": 2,
+        "intent": "EDITORIAL",
+        "clips": [
+          {
+            "clipId": "c1",
+            "sourceId": "video1"
+          }
+        ],
+        "visualOperations": [
+          {
+            "id": "cut1",
+            "usage": {
+              "contractVersion": 1,
+              "resourceId": "CUT",
+              "resourceVersion": 1,
+              "target": {
+                "scope": "SOURCE_INTERVAL",
+                "sourceId": "c1",
+                "start": 0,
+                "end": 2
+              },
+              "parameters": {
+                "filter": "arbitrary"
+              }
+            },
+            "reason": "Seleção técnica/editorial controlada para o cenário de teste.",
+            "observationIds": []
+          }
+        ],
+        "graphicOperations": [],
+        "audioOperations": [],
+        "events": [],
+        "ruleDecisions": []
+      }
+    },
+    "rejectedReason": "CUT não admite parâmetros de filtro; rejeitado antes de qualquer subprocesso."
+  },
+  "artifacts": {
+    "directory": "/tmp/trends-plan-execution-YnpAa5",
+    "report": "/tmp/trends-plan-execution-YnpAa5/execution-report.json",
+    "demonstrations": [
+      {
+        "video": "demo-a-ranking.mp4",
+        "plan": "demo-a-ranking.plan.json",
+        "frame": "demo-a-ranking.png"
+      },
+      {
+        "video": "demo-b-curiosity.mp4",
+        "plan": "demo-b-curiosity.plan.json",
+        "frame": "demo-b-curiosity.png"
+      },
+      {
+        "video": "demo-c-gameplay.mp4",
+        "plan": "demo-c-gameplay.plan.json",
+        "frame": "demo-c-gameplay.png"
+      },
+      {
+        "video": "demo-d-horror.mp4",
+        "plan": "demo-d-horror.plan.json",
+        "frame": "demo-d-horror.png"
+      }
+    ]
+  }
+}
