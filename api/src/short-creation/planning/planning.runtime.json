@@ -1,0 +1,400 @@
+{
+  "contractVersion": 1,
+  "plannerVersion": 1,
+  "resourceLibraryVersion": 3,
+  "editorialKnowledgeVersion": 1,
+  "title": "Etapa 9 — Planejador de edição isolado",
+  "status": "IMPLEMENTED_ISOLATED_REQUIRES_EXECUTION_PREFLIGHT",
+  "architecture": [
+    {
+      "component": "planning.schema.ts",
+      "responsibility": "Entrada e resposta versionadas, Zod estrito e limites de JSON. planningInputSchema e contextInputSchema são o mesmo contrato público."
+    },
+    {
+      "component": "planning-context.ts",
+      "responsibility": "Validar metadados, autorizações, intervalos, evidências, textos temporizados e ranking; resolver conhecimento e catálogo central."
+    },
+    {
+      "component": "planning-model.schema.ts",
+      "responsibility": "Derivar 55 alternativas de parâmetros dos schemas centrais; projetar campos opcionais/defaults em campos anuláveis obrigatórios para resposta estruturada; validar antes de remover null."
+    },
+    {
+      "component": "planning-prompt.ts",
+      "responsibility": "Separar regras do sistema de metadados e textos não confiáveis; fornecer contratos, conhecimento, preferências e limites sem caminhos ou credenciais."
+    },
+    {
+      "component": "planning-ai.adapter.ts",
+      "responsibility": "SimulatedPlanningAdapter com fixture; LlmPlanningAdapter com LlmProvider existente, modelo explícito e allowPaidPlanning:true; disableRetries:true."
+    },
+    {
+      "component": "planning-temporal.ts",
+      "responsibility": "Validação contextual pelo compilador visual puro existente; descarte do grafo; resourceDuration/resourceInterval/toFrames/toSeconds para mapear relógios, cortes, velocidade parcial, congelamento, repetição e transições."
+    },
+    {
+      "component": "planning-validator.ts",
+      "responsibility": "Validar recursos e versões, fontes, gráficos, áudio, eventos, preferências e obrigações; produzir metadados normalizados e diagnósticos. Compilador de áudio puro reaproveitado sem executar FFmpeg."
+    },
+    {
+      "component": "planning-diagnostics.ts",
+      "responsibility": "Erros seguros de domínio; nenhuma mensagem bruta do provedor é retornada."
+    },
+    {
+      "component": "planning.service.ts",
+      "responsibility": "Orquestrar contexto, prompt, adaptador e validação; deadline específico, cancelamento, resultado estruturado, zero persistência."
+    },
+    {
+      "component": "planning.fixtures.ts",
+      "responsibility": "Dados sintéticos e encoder de testes para o dialeto do provedor; nunca registrado em produção."
+    }
+  ],
+  "existingDependencies": {
+    "classifications": "classification/short-classification.schema.ts e catálogos registrados. Não utiliza available como autorização de produção; todos permanecem false.",
+    "preferences": "short-editorial.schema.ts: editorialPreferencesSchema e correspondências de resources/editing-resource.mapping.ts.",
+    "narration": "short-narration.schema.ts: narrationSchema; escolha obrigatória no contexto isolado, sem alterar o resolvedor legado.",
+    "knowledge": "knowledge/editorial-knowledge.resolver.ts: resolveEditorialKnowledge; preserva origem, versões, conflitos e COMPLETE/PARTIAL/MISSING. TOP_X/HUMOR/DYNAMIC contém 63 orientações.",
+    "resources": "resources/editing-resource.registry.ts: editingResourceRegistry/getResourceDefinition; parametersSchema e validateResourceUsage são autoridades. Nenhuma lista paralela de IDs.",
+    "visual": "compileResourceComposition e resourceDuration: até 12 operações combinadas visuais/gráficas no executor local, oito aliases/fontes de vídeo e imagem, 30 FPS vertical9:16, até90s.",
+    "audio": "compileAudioComposition e schemas existentes: relógio48kHz, oito fontes e faixas,32clipes,8efeitos simultâneos,64operações,16repetições.",
+    "graphics": "graphics.schema.ts; parâmetros, fontes, emojis, ranking e animações reutilizados. Medição rasterizada não é executada pelo planejador.",
+    "llm": "ai/llm.provider.ts: generateStructuredOutput, AbortSignal, maxOutputTokens, disableRetries. Nenhuma nova infraestrutura global.",
+    "legacyReviewed": "short.service.ts/short.worker.ts/short.schema.ts/short-editing.schema.ts e CreateShort.jsx continuam com seus jobs e bloqueios. frontend/services/shortCreationService.js não foi modificado."
+  },
+  "inputContract": {
+    "version": 1,
+    "identity": "planningId lógico, sem caminhos",
+    "editorial": "classification e editorialPreferences existentes, narration explícita, roteiro opcional, additionalInstructions como dado não confiável.",
+    "materials": "videos com metadata, hasAudio e audio compatível quando presente; usableIntervals obrigatórios. audios com papéis NARRATION/MUSIC/EFFECT/AMBIENCE. images com IDs e dimensões.",
+    "evidence": "observations opcionais com ID, fonte, intervalo, descrição, origem USER/PRIOR_ANALYSIS e confiança opcional. description:null significa desconhecimento explícito.",
+    "timedText": "tokens previamente fornecidos de CAPTION/WORD em segundos da fonte de narração. Sem transcrição ou timestamps inventados.",
+    "displayTexts": "Cópias opcionais explicitamente fornecidas para textos estáticos. Também podem ser usados campos exatos do roteiro ou descrições de observações; não são geradas paráfrases factuais sem evidência.",
+    "ranking": "Critério, itens, posições, rótulos e observationIds fornecidos pelo chamador. Ordem de revelação livre; não representa verificação factual independente.",
+    "authority": "PlanningAuthority é argumento separado de servidor: authorizedAssetIds e snapshot completo de capacidades. O chamador deve comprovar proprietário e permissões antes de construir esse argumento. Nunca aceitar grants de um cliente não autenticado. Metadados não demonstram direitos autorais."
+  },
+  "outputContract": {
+    "result": "ok:false com diagnostics, ou ok:true com mode, validation, compatibility e usage opcional.",
+    "validation": "contractVersion1; plan normalizado; contextSnapshot; knowledgeStatus/version; pacing; visual.spans e impacts; audio.tracks e impacts; diagnostics.",
+    "plan": "version1/libraryVersion3/planningId/durationSeconds/intent, clips aliases, visualOperations, graphicOperations, audioOperations, events, ruleDecisions.",
+    "operation": "id, usage do contrato central, reason objetivo obrigatório, observationIds e timedTextId opcionais.",
+    "compatibility": "productionEnabled:false e executionPreflightRequired:true. Resultado não é autorização de execução nem aprovação de projeto.",
+    "normalization": "Defaults centrais aplicados; null do dialeto do provedor removido somente após validação estrita desse dialeto. Ordem editorial preservada; duração arredondada ao frame quando compatível com o alvo. Operações inválidas nunca são descartadas."
+  },
+  "editorialValidation": {
+    "required": "Toda obrigação exige decisão explícita SATISFIED. Ranking verifica dados fornecidos e trechos selecionados. Obrigações futuras sem verificador conhecido bloqueiam com REQUIRED_RULE_REVIEW. O critério do ranking precisa aparecer como texto fornecido em uma operação gráfica.",
+    "forbidden": "Recursos mapeados proibidos são bloqueados; proibições sem recurso, como fabricação, exigem decisão explícita e são complementadas por evidências para ranking/eventos/textos. Não é validação automática da verdade de uma descrição humana.",
+    "recommendations": "RECOMMENDED/OPTIONAL não viram obrigações; DISCOURAGED usado sem decisão recebe aviso. PREFER não obriga seleção; AVOID contrariado recebe aviso e preserva reason da operação.",
+    "conflicts": "UNRESOLVED bloqueia; CONTEXTUAL/PRIORITIZED gera diagnóstico e preserva regras. Condições não são resolvidas por NLP nem presumidas aplicáveis silenciosamente.",
+    "coverage": "PARTIAL/MISSING gera aviso explícito; não cria perfis. Sem observações, só TECHNICAL_ONLY conservador e sem ranking/eventos observados.",
+    "pacing": "Ritmo é orientação do prompt e estatística da timeline; não há duração fixa universal ou template automático por classificação."
+  },
+  "temporalAndMediaValidation": {
+    "duration": "Alvo explícito independente de TTS; composição visual deve coincidir até arredondamento de meio frame. Não preenche lacunas com material inventado.",
+    "visual": "CUT obrigatório por alias, dentro de intervalo autorizado; grafo deve resultar em saída única; operações consumidas não podem ser reutilizadas; composição/transições validadas pelo compilador puro.",
+    "originalAudio": "Segmentos devem corresponder à fonte, tempo, velocidade e colocação de spans visuais. Repetição requer clipes explícitos por trecho. Congelamento exige política explícita SILENCE/CONTINUE_SOURCE. Loop posterior na faixa original é rejeitado para evitar dessincronização.",
+    "narration": "WITHOUT_NARRATION proíbe NARRATION. WITH_NARRATION exige fonte existente com papel NARRATION, mas não assume duração TTS como duração final.",
+    "captions": "Reproduzem tokens/timestamps fornecidos e mapeados por narração com velocidade1 e sem repetição. Fluxos mais complexos exigem integração futura; não se inventam alinhamentos.",
+    "graphics": "Composição final obrigatória, limites temporais, animações, estados de ranking/typewriter, elementos e simultaneidade verificados. Fontes/emojis/estilos via schemas centrais. Layout, glyphs e pixels reais dependem de rasterização futura.",
+    "audio": "Papéis de fontes e intervalos autorizados; mixagem, fades, loops, ducking e limites contextuais pelo compilador puro. Silêncio é plano de áudio vazio, não arquivo fictício.",
+    "events": "OBSERVED corresponde a observação visível no timestamp da composição; RANKING_REVEAL corresponde a posição e horário existentes; efeitos e entradas gráficas associados devem coincidir temporalmente."
+  },
+  "limits": {
+    "contextBytes": 524288,
+    "responseBytes": 262144,
+    "promptBytes": 1048576,
+    "modelTimeoutDefaultMs": 45000,
+    "modelTimeoutMaxMs": 120000,
+    "maxOutputTokens": 16000,
+    "durationSeconds": 90,
+    "visualAndGraphicOperationsCombined": 12,
+    "visualAndImageOrigins": 8,
+    "graphicElements": 160,
+    "graphicConcurrent": 32,
+    "captions": 120,
+    "animations": 64,
+    "processedCharacters": 20000,
+    "audioSources": 8,
+    "audioTracks": 8,
+    "audioClips": 32,
+    "simultaneousEffects": 8,
+    "audioOperations": 64,
+    "audioRepetitions": 16,
+    "futureOutputBytes": 134217728,
+    "futureExecutionTimeoutSeconds": 120
+  },
+  "limitsNotYetMeasurable": "128MiB de saída, codecs/decodificação reais, offsets reais dos streams, layout/glyphs, pixels, memória e tempo de renderização só poderão ser garantidos no preflight/execução das etapas10/11. Timeout do modelo é separado do timeout futuro de renderização.",
+  "operationModes": {
+    "simulated": "new EditorialPlanningService(new SimulatedPlanningAdapter(fixture), authority).plan(context). Sem chamadas externas.",
+    "real": "new EditorialPlanningService(new LlmPlanningAdapter(existingLlmProvider, configuredModel, {allowPaidPlanning:true}), authority).plan(context). Somente invocação explícita, nenhum registro automático em Nest. Não foi chamado modelo real nesta entrega. Adequação da janela de contexto e aceitação remota do schema pelo modelo configurado ainda precisam de teste autorizado; conversão do SDK foi validada offline.",
+    "failures": "Sem retry automático; cancelamento e timeout com Promise.race mesmo se adaptador não honrar AbortSignal; falha de provedor não vira plano fictício. Uso reportado preservado quando recebido; timeout pode ocorrer antes de conhecer o consumo."
+  },
+  "commands": {
+    "unit": "cd api && npm run test:short-planning",
+    "build": "cd api && npm run build",
+    "integration": "cd api && npm run test:short-planning:integration",
+    "regression": "cd api && npm test -- --config jest.ai-cache.config.cjs --runInBand"
+  },
+  "testEvidence": {
+    "controlledScenarios": [
+      "TOP_X/HUMOR/DYNAMIC sem narração",
+      "CURIOSITY/GENERAL_CURIOSITIES/DOCUMENTARY narrado",
+      "GAMEPLAY/GAMING/MINIMALIST sem narração",
+      "VIBE/HORROR/ANALOG_HORROR sem narração",
+      "TECHNICAL_ONLY sem observações"
+    ],
+    "sdk": "Conversão e parsing do formato estruturado pelo SDK instalado, offline; não equivale a teste de aceitação do servidor/modelo real.",
+    "adversarial": [
+      "IDs e recursos inventados",
+      "parâmetros desconhecidos",
+      "caminhos absolutos e URLs como fontes",
+      "shell em identificadores",
+      "tempo negativo/NaN/infinito/fora de fonte",
+      "NARRATION proibida",
+      "referências duplicadas/circulares",
+      "posição de ranking inexistente",
+      "legendas sem timestamps",
+      "áudio em fonte sem stream",
+      "limites de operações/clipes/efeitos/ganho",
+      "texto factual não fornecido",
+      "prompt injection tratada como dado",
+      "cancelamento, timeout e falha sem retry"
+    ],
+    "backend": {
+      "suites": 66,
+      "tests": 963,
+      "newPlannerTests": 72,
+      "passed": true
+    },
+    "build": "npm run build: aprovado",
+    "integration": {
+      "scenarios": 5,
+      "passed": true,
+      "providerSdkConversionAndParsing": "passed offline",
+      "externalCalls": 0,
+      "renderedFiles": 0
+    },
+    "broadTypecheck": {
+      "command": "node node_modules/typescript/bin/tsc --noEmit",
+      "result": "Falha em arquivos de testes preexistentes; nenhum erro no diretório planning.",
+      "unchangedFiles": [
+        "resources/graphics/graphics.spec.ts",
+        "short-editorial.spec.ts",
+        "video-remix/remix-story.spec.ts"
+      ],
+      "normalBuild": "Aprovado; os arquivos de testes são excluídos pelo build normal."
+    }
+  },
+  "futureDependencies": {
+    "stage10": "Interpretar o contrato, resolver aliases para arquivos autorizados, revalidar metadados reais, integridade, layouts e disponibilidade; compilar/executar, validar saída e AV sync. Ainda não implementado.",
+    "stage11": "Conectar persistência, revisão/aprovação, interface, jobs, retomada de falhas e compatibilidade legada. Ainda não implementado."
+  },
+  "isolation": {
+    "newPublicEndpoints": false,
+    "nestRegistration": false,
+    "projectPersistence": false,
+    "migrations": false,
+    "productionJobs": false,
+    "ffmpegExecution": false,
+    "paidCalls": false,
+    "automaticCommits": false,
+    "legacyNarrationBlocksRemoved": false,
+    "classificationsEnabled": false
+  },
+  "examples": {
+    "validInput": {
+      "version": 1,
+      "planningId": "fixture-insufficient",
+      "classification": {
+        "version": 1,
+        "videoType": "GAMEPLAY",
+        "videoTopic": "GAMING",
+        "editingStyle": "MINIMALIST"
+      },
+      "editorialPreferences": {
+        "version": 1,
+        "additionalInstructions": "",
+        "cutRhythm": "AUTO",
+        "resources": {
+          "titles": "AUTO",
+          "captions": "AUTO",
+          "textOverlays": "AUTO",
+          "emojis": "AUTO",
+          "dynamicZoom": "AUTO",
+          "cameraShake": "AUTO",
+          "motionBlur": "AUTO",
+          "soundEffects": "AUTO",
+          "originalAudio": "AUTO"
+        }
+      },
+      "narration": {
+        "version": 1,
+        "mode": "WITHOUT_NARRATION"
+      },
+      "target": {
+        "width": 1080,
+        "height": 1920,
+        "fps": 30,
+        "durationSeconds": 6
+      },
+      "videos": [
+        {
+          "metadata": {
+            "id": "video1",
+            "duration": 12,
+            "width": 1280,
+            "height": 720,
+            "fps": 30
+          },
+          "hasAudio": true,
+          "audio": {
+            "id": "video1",
+            "duration": 12,
+            "sampleRate": 48000,
+            "channels": 2,
+            "codec": "pcm_s16le",
+            "kind": "VIDEO"
+          },
+          "usableIntervals": [
+            {
+              "start": 0,
+              "end": 12
+            }
+          ],
+          "description": null
+        }
+      ],
+      "audios": [
+        {
+          "metadata": {
+            "id": "music1",
+            "duration": 6,
+            "sampleRate": 48000,
+            "channels": 2,
+            "codec": "pcm_s16le",
+            "kind": "AUDIO"
+          },
+          "role": "MUSIC",
+          "usableIntervals": [
+            {
+              "start": 0,
+              "end": 6
+            }
+          ]
+        },
+        {
+          "metadata": {
+            "id": "effect1",
+            "duration": 1,
+            "sampleRate": 48000,
+            "channels": 2,
+            "codec": "pcm_s16le",
+            "kind": "AUDIO"
+          },
+          "role": "EFFECT",
+          "usableIntervals": [
+            {
+              "start": 0,
+              "end": 1
+            }
+          ]
+        }
+      ],
+      "images": [],
+      "observations": [],
+      "timedText": [],
+      "displayTexts": [],
+      "additionalInstructions": ""
+    },
+    "validResponse": {
+      "version": 1,
+      "libraryVersion": 3,
+      "planningId": "fixture-insufficient",
+      "durationSeconds": 6,
+      "intent": "TECHNICAL_ONLY",
+      "clips": [
+        {
+          "clipId": "clip1",
+          "sourceId": "video1"
+        }
+      ],
+      "visualOperations": [
+        {
+          "id": "cut1",
+          "usage": {
+            "contractVersion": 1,
+            "resourceId": "CUT",
+            "resourceVersion": 1,
+            "target": {
+              "scope": "SOURCE_INTERVAL",
+              "sourceId": "clip1",
+              "start": 0,
+              "end": 6
+            },
+            "parameters": {}
+          },
+          "reason": "Seleção técnica/editorial controlada para o cenário de teste.",
+          "observationIds": []
+        }
+      ],
+      "graphicOperations": [],
+      "audioOperations": [],
+      "events": [],
+      "ruleDecisions": []
+    },
+    "invalidResponse": {
+      "version": 1,
+      "libraryVersion": 3,
+      "planningId": "fixture-insufficient",
+      "durationSeconds": 6,
+      "intent": "TECHNICAL_ONLY",
+      "clips": [
+        {
+          "clipId": "clip1",
+          "sourceId": "video1"
+        }
+      ],
+      "visualOperations": [
+        {
+          "id": "cut1",
+          "usage": {
+            "contractVersion": 1,
+            "resourceId": "CUT",
+            "resourceVersion": 1,
+            "target": {
+              "scope": "SOURCE_INTERVAL",
+              "sourceId": "clip1",
+              "start": 0,
+              "end": 6
+            },
+            "parameters": {
+              "filter": "arbitrary"
+            }
+          },
+          "reason": "Seleção técnica/editorial controlada para o cenário de teste.",
+          "observationIds": []
+        }
+      ],
+      "graphicOperations": [],
+      "audioOperations": [],
+      "events": [],
+      "ruleDecisions": []
+    },
+    "invalidExplanation": "Rejeitado: CUT não permite parâmetro filter. Isso nunca é convertido em filtro executável."
+  },
+  "files": {
+    "created": [
+      "api/src/short-creation/planning/planning-ai.adapter.ts",
+      "api/src/short-creation/planning/planning-context.ts",
+      "api/src/short-creation/planning/planning-diagnostics.ts",
+      "api/src/short-creation/planning/planning-model.schema.ts",
+      "api/src/short-creation/planning/planning-prompt.ts",
+      "api/src/short-creation/planning/planning-temporal.ts",
+      "api/src/short-creation/planning/planning-validator.ts",
+      "api/src/short-creation/planning/planning.fixtures.ts",
+      "api/src/short-creation/planning/planning.runtime.json",
+      "api/src/short-creation/planning/planning.schema.ts",
+      "api/src/short-creation/planning/planning.service.ts",
+      "api/src/short-creation/planning/planning.spec.ts",
+      "api/test/shorts/planning/planning.integration.cjs"
+    ],
+    "modified": ["api/package.json"]
+  }
+}
